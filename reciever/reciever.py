@@ -1,13 +1,17 @@
+
 # --- Imports ---
+
 import cv2
 import time
 import numpy as np
 
 # --- Definitions ---
+
 binary_duration = 0.3
 delimiter_duration = 0.5
 
 # --- Setup camera ---
+
 cap = cv2.VideoCapture(0)  # 0 = default webcam
 
 if not cap.isOpened():
@@ -15,10 +19,20 @@ if not cap.isOpened():
     exit()
 
 # --- Helper functions ---
+
 def read_color(frame):
     """
     Detects the dominant color (black, white, red) in the center of the frame.
     Returns one of: 'black', 'white', 'red'
+
+    Arguments:
+        frame : numpy.ndarray
+            The current video frame captured from the camera (BGR format).
+
+    Returns: 
+        str
+            A string indicating the dominant color detected: "black", "white", or "red".
+
     """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -53,6 +67,20 @@ def read_color(frame):
 
 # --- Main function ---
 def receive_message(duration_per_bit=binary_duration, delimiter_time=delimiter_duration):
+    """ 
+    Captures video from the camera and decodes a binary message based on detected screen colors.
+
+    Arguments:
+        duration_per_bit : float, optional
+            Duration in seconds that represents one bit (default = binary_duration).
+        delimiter_time : float, optional
+            Duration in seconds used to detect character delimiters (default = delimiter_duration).
+
+    Returns:
+        None
+            Displays live video and prints the decoded message to the console.
+
+    """
     bits = ""
     message = ""
     last_color = None
