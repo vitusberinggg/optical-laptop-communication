@@ -1,5 +1,5 @@
 
- # --- Imports ---
+# --- Imports ---
 
 import cv2
 import numpy as np
@@ -7,16 +7,18 @@ import time
 
 # ---- Definitions ----
 
+message = "HELLO"
+
 output_width = 1920
 output_height = 1200
 
 reference_image_seed = 42
 reference_image_duration = 2.0
 
-fps = 15
+fps = 30
 
-columns = 1
-rows = 1
+columns = 8
+rows = 8
 
 bit_time = 0.5
 
@@ -133,28 +135,6 @@ def create_color_frame(color):
 
     return np.full((output_height, output_width, 3), color, dtype = np.uint8)
 
-def show_and_wait(win, frame, delay_ms):
-
-    """
-    Shows a frame in a window and waits.
-
-    Arguments:
-        "win" (str): The window name.
-        "frame" (np.ndarray): The frame to be shown.
-        "delay_ms" (int): The delay in milliseconds.
-    
-    Returns:
-        
-    
-    """
-
-    cv2.imshow(win, frame)
-    key = cv2.waitKey(delay_ms) & 0xFF # Waits for a key press for the specified delay
-    if key == ord('q') or key == 27:
-        return True
-    
-    return False
-
 # --- Main function ---
 
 def send_message(message = "HELLO"):
@@ -189,40 +169,55 @@ def send_message(message = "HELLO"):
     cv2.namedWindow(win, cv2.WINDOW_NORMAL) # Creates a window with the specified name
     cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
+    start_time = time.time()
+
+    while time.time() - start_time < reference_image_duration:
+
+        cv2.imshow(win, reference_image_bgr)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            return
+
     try:
-
-        start_time = time.time()
-        delay_ms = max(1, int(1000 / fps))
-
-        while time.time() - start_time < reference_image_duration: # While the elapsed time is less than the reference image duration:
-
-            if show_and_wait(win, reference_image_bgr, delay_ms):
-                return
 
         while True:
 
-            sync_duration = 0.3
             sync_start = time.time()
-            while time.time() - sync_start < sync_duration:
-                if show_and_wait(win, sync_frame, delay_ms):
+
+            while time.time() - sync_start < 0.3:
+
+                cv2.imshow(win, sync_frame)
+
+                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
                     return
 
-            samples_per_bit = max(1, int(bit_time * fps))
             for frame in data_frames:
-                for _ in range(samples_per_bit):
-                    if show_and_wait(win, frame, delay_ms):
+
+                frame_duration = bit_time
+                frame_start = time.time()
+
+                while time.time() - frame_start < frame_duration:
+
+                    cv2.imshow(win, frame)
+
+                    if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
                         return
 
-            end_duration = 0.3
             end_start = time.time()
-            while time.time() - end_start < end_duration:
-                if show_and_wait(win, end_frame, delay_ms):
+
+            while time.time() - end_start < 0.3:
+                cv2.imshow(win, end_frame)
+
+                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
                     return
 
-            black_duration = 0.5
             black_start = time.time()
-            while time.time() - black_start < black_duration:
-                if show_and_wait(win, black_frame, delay_ms):
+
+            while time.time() - black_start < 0.5:
+                cv2.imshow(win, black_frame)
+
+                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
                     return
 
     except KeyboardInterrupt:
@@ -232,4 +227,4 @@ def send_message(message = "HELLO"):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    send_message("HELLO")
+    send_message(message)
