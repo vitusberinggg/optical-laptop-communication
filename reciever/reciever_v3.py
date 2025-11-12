@@ -108,9 +108,10 @@ def receive_message():
 
     while True:
         ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame")
-            break
+        if not ret or screen_frame is None: 
+            print("Warning: failed to capture frame")
+            continue
+           
 
         frame = cv2.flip(frame, 1)
         frame_vis = frame.copy()
