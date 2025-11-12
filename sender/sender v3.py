@@ -44,7 +44,7 @@ def generate_reference_image():
 
     return reference_image
 
-def message_to_frame_arrays(message):
+def message_to_frame_bit_arrays(message):
 
     """
     Turns a message into a list of frames represented as 2D NumPy arrays of bits.
@@ -53,7 +53,7 @@ def message_to_frame_arrays(message):
         "message" (str): The message to be converted.
 
     Returns:
-        "frame_arrays": A list of 2D NumPy arrays representing the frames.
+        "frame_bit_arrays": A list of 2D NumPy arrays representing the frames.
     
     """
 
@@ -67,7 +67,7 @@ def message_to_frame_arrays(message):
     bits = "".join(binary_list) # Merge all strings in the binary list into a single string
 
     frame_capacity = rows * columns
-    frame_arrays = []
+    frame_bit_arrays = []
 
     for start_index in range(0, len(bits), frame_capacity): # For each starting index in the range 0 - len(bits), stepping with the frame capacity:
 
@@ -78,9 +78,9 @@ def message_to_frame_arrays(message):
 
         frame_array = np.array(list(chunk), dtype = np.uint8).reshape((rows, columns)) # Convert the chunk to a list, convert the list into an NumPy array (more efficient) and then reshape the one-dimensional array into a 2D array
 
-        frame_arrays.append(frame_array) # Add the frame array into the list of frames
+        frame_bit_arrays.append(frame_array) # Add the frame array into the list of frames
 
-    return frame_arrays
+    return frame_bit_arrays
 
 def render_frame(bitgrid):
 
@@ -136,66 +136,68 @@ def create_color_frame(color):
 
 # --- Main function ---
 
-def show_sequence(message="HELLO"):
-    # generate reference image and convert to BGR for display
-    ref = generate_reference_image()
-    ref_bgr = cv2.cvtColor(ref, cv2.COLOR_GRAY2BGR)
+def send_message(message = "HELLO"):
 
-    # prepare frames
-    bit_frames = message_to_frame_arrays_bits(message)
-    data_frames = [render_frame(f) for f in bit_frames]
+    """
+    Sends a message by displaying frames on the screen.
 
-    SYNC_FRAME = create_color_frame((0,255,0))   # green indicates start-of-data
-    END_FRAME  = create_color_frame((0,0,255))   # red indicates end-of-message
-    BLACK_FRAME = create_color_frame((0,0,0))
+    Arguments:
+        "message" (str): The message to be sent.
+
+    Returns:
+        None
+    
+    """
+
+    reference_image = generate_reference_image() # Generates the reference image
+    reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
+
+    frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
+
+    data_frames = []
+
+    for frame_bit_array in frame_bit_arrays: # For each frame bit array:
+        rendered_frame = render_frame(frame_bit_array) # Render the frame
+        data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
+
+    sync_frame = create_color_frame((0, 255, 0))
+    end_frame  = create_color_frame((0, 0, 255))
+    black_frame = create_color_frame((0, 0, 0))
 
     win = "SENDER"
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.namedWindow(win, cv2.WINDOW_NORMAL) # Creates a window with the specified name
+    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-    print("Sender: showing reference. Position receiver and press 'q' to stop.")
-    # show reference for reference_image_duration
-    start = time.time()
-    while time.time() - start < reference_image_duration:
-        cv2.imshow(win, ref_bgr)
-        if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            return
+    start_time = time.time()
 
-    # Now transmit in a loop
+    while time.time() - start_time < reference_image_duration: # While the elapsed time is less than the reference image duration:
+
+        cv2.imshow(win, reference_image_bgr) # Show the reference image
+
     try:
+
         while True:
-            # SYNC
-            for _ in range(int(fps * 0.3)):  # short green pulse
-                cv2.imshow(win, SYNC_FRAME)
-                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                    raise KeyboardInterrupt
 
-            # send each data frame for bit_time seconds
-            for df in data_frames:
-                samples = max(1, int(bit_time * fps))
-                for _ in range(samples):
-                    cv2.imshow(win, df)
-                    if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                        raise KeyboardInterrupt
-
-            # END pulse
             for _ in range(int(fps * 0.3)):
-                cv2.imshow(win, END_FRAME)
-                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                    raise KeyboardInterrupt
+                cv2.imshow(win, sync_frame) # Show the sync frame
 
-            # short gap
+            for frame in data_frames:
+                samples = max(1, int(bit_time * fps)) # Calculate the number of samples per bit
+
+                for _ in range(samples): # For each sample:
+                    cv2.imshow(win, frame) # Show the data frame
+
+            for _ in range(int(fps * 0.3)):
+                cv2.imshow(win, end_frame) # Show the end frame
+
             for _ in range(int(fps * 0.5)):
-                cv2.imshow(win, BLACK_FRAME)
-                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                    raise KeyboardInterrupt
+                cv2.imshow(win, black_frame) # Show a black frame
 
     except KeyboardInterrupt:
         pass
+    
     finally:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    # change message here
-    show_sequence("HELLO FROM SENDER! THIS IS ECC-BASED LINK.")
+    send_message("HELLO")
