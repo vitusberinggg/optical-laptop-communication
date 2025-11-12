@@ -1,8 +1,8 @@
 
 # --- Imports ---
 
-import cv2
-import numpy as np
+import cv2 # Imports the OpenCV library for image processing
+import numpy as np # Imports the NumPy library for numerical operations
 import time
 
 from utilities.generate_reference_image import generate_reference_image
@@ -16,9 +16,7 @@ from utilities.global_definitions import (
 
 # ---- Definitions ----
 
-message = "HELLO"
-
-fps = 30
+message = "HELLO, THIS IS A TEST MESSAGE!"
 
 # --- Helper functions ---
 
@@ -39,7 +37,7 @@ def create_color_frame(color):
 
 # --- Main function ---
 
-def send_message(message = "HELLO"):
+def send_message(message):
 
     """
     Sends a message by displaying frames on the screen.
@@ -64,58 +62,51 @@ def send_message(message = "HELLO"):
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     end_frame  = create_color_frame((0, 0, 255))
-    black_frame = create_color_frame((0, 0, 0))
 
-    win = "SENDER"
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL) # Creates a window with the specified name
-    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
+    window = "SENDER" # The name of the OpenCV window
+    cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
+    cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-    start_time = time.time()
+    start_time = time.time() # Records the start time for the reference image display
 
-    while time.time() - start_time < reference_image_duration:
+    while time.time() - start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
 
-        cv2.imshow(win, reference_image_bgr)
+        cv2.imshow(window, reference_image_bgr) # Display the reference image
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            return
+        if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+            cv2.destroyAllWindows() # Close all OpenCV windows
+            return # Exit the function
 
     try:
 
         while True:
 
-            for frame in data_frames:
+            for frame in data_frames: # For each frame:
 
-                frame_start = time.time()
+                frame_start_time = time.time() # Records the start time for the current frame
 
-                while time.time() - frame_start < frame_duration:
+                while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
-                    cv2.imshow(win, frame)
+                    cv2.imshow(window, frame) # Display the current frame in the window
 
-                    if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                        return
+                    if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                        return # Exit the function
 
-            end_start = time.time()
+            end_frame_start_time = time.time() # Records the start time for the end frame
 
-            while time.time() - end_start < 0.3:
-                cv2.imshow(win, end_frame)
+            while time.time() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
+                cv2.imshow(window, end_frame) # Display the end frame in the window
 
-                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                    return
-
-            black_start = time.time()
-
-            while time.time() - black_start < 0.5:
-                cv2.imshow(win, black_frame)
-
-                if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
-                    return
-
-    except KeyboardInterrupt:
-        pass
+                if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                    return # Exit the function
+            
+            break # Break the loop after displaying the end frame
+            
+    except KeyboardInterrupt: # If a keyboard interrupt occurs (e.g., Ctrl+C):
+        pass # Continue to the cleanup section
 
     finally:
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows() # Close all OpenCV windows
 
 if __name__ == "__main__":
     send_message(message)
