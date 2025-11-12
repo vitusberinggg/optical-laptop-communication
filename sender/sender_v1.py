@@ -43,6 +43,7 @@ def send_message(message):
         None
     
     """
+    update_screen_color("green", binary_duration * 3)
 
     for character in message: # For each character in the message:
 
