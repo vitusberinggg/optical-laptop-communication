@@ -1,17 +1,22 @@
+
+# --- Imports ---
+
 import cv2
 import numpy as np
 import time
 
-# ----- Config -----
-sender_output_width = 1920
-sender_output_height = 1200
-reference_image_seed = 42
-DETECT_THRESHOLD = 0.55   # template match threshold (tune: 0.5-0.8)
-ROWS = 8
-COLUMNS = 8
-BIT_TIME = 0.5
+from utilities.global_definitions import (
+    sender_output_width, sender_output_height,
+    reference_image_seed,
+    number_of_columns, number_of_rows,
+    frame_duration)
 
-# ----- Camera init -----
+# --- Definitions ---
+
+detection_threshold = 0.55 # Threshold for detecting reference image match
+
+# --- Camera initialization ---
+
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     raise SystemExit("Error: Cannot open camera")
@@ -57,17 +62,17 @@ def read_cell_color(cell):
         "black": int(cv2.countNonZero(bmask))
     }
     # return the color with highest count
-    color = max(counts, key=counts.get)
+    color = max(counts, key = counts.get)
     return color
 
-def extract_bits_from_screen(screen_frame, rows=ROWS, cols=COLUMNS, threshold=127):
+def extract_bits_from_screen(screen_frame, threshold=127):
     gray = cv2.cvtColor(screen_frame, cv2.COLOR_BGR2GRAY)
     h, w = gray.shape
-    ch = max(1, h // rows)
-    cw = max(1, w // cols)
+    ch = max(1, h // number_of_rows)
+    cw = max(1, w // number_of_columns)
     bits = ""
-    for r in range(rows):
-        for c in range(cols):
+    for r in range(number_of_rows):
+        for c in range(number_of_columns):
             y1 = r*ch; y2 = min(h, (r+1)*ch)
             x1 = c*cw; x2 = min(w, (c+1)*cw)
             cell = gray[y1:y2, x1:x2]
@@ -110,7 +115,7 @@ def receive_message():
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         score, loc, ref_shape = safe_match_template(frame_gray, reference_gray)
 
-        if score >= DETECT_THRESHOLD:
+        if score >= detection_threshold:
             rx, ry = loc
             rh, rw = ref_shape
             # check bounds
@@ -183,19 +188,19 @@ def receive_message():
             time.sleep(0.05)
             continue
         else:
-            # data frame: sample a window of time equal to BIT_TIME and aggregate frames
+            # data frame: sample a window of time equal to frame_duration and aggregate frames
             now = time.time()
             if last_sample_time is None:
                 last_sample_time = now
 
-            # for a simple first pass: wait BIT_TIME then sample the current screen only
-            if now - last_sample_time < BIT_TIME:
+            # for a simple first pass: wait frame_duration then sample the current screen only
+            if now - last_sample_time < frame_duration:
                 # you can do aggregation (collect multiple frames) here for robustness
                 continue
             last_sample_time = now
 
             # read bits from the screen crop
-            bits = extract_bits_from_screen(screen, ROWS, COLUMNS)
+            bits = extract_bits_from_screen(screen)
             accumulated_bits += bits
             print("Read bits:", bits)
 
