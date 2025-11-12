@@ -115,6 +115,8 @@ def message_to_frames(message, bit_time = 0.35, fps = 15):
     for character in message:
         bits = format(ord(character), "08b")
 
+        print(f"Sending character: {character} -> {bits}")
+
         for bit in bits:
 
             if bit == "1":
