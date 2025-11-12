@@ -1,4 +1,5 @@
 import cv2
+import time
 import os
 
 print("Current working directory:", os.getcwd())
@@ -12,16 +13,28 @@ if not cap.isOpened():
 fps = cap.get(cv2.CAP_PROP_FPS)
 if fps == 0:
     fps = 30  # fallback if OpenCV can’t read it
-delay = int(1000 / fps)
+
+frame_time = 1.0 / fps  # target time per frame in seconds
 
 while True:
+    start_time = time.time()
+
     ret, frame = cap.read()
     if not ret:
         break
 
     cv2.imshow("Feed", frame)
 
-    if cv2.waitKey(delay) & 0xFF == ord('q'):
+    # calculate how long frame processing took
+    elapsed = time.time() - start_time
+    sleep_time = frame_time - elapsed
+
+    # only sleep if we’re ahead of schedule
+    if sleep_time > 0:
+        time.sleep(sleep_time)
+
+    # quit with 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
