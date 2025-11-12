@@ -134,6 +134,28 @@ def create_color_frame(color):
 
     return np.full((OUT_H, OUT_W, 3), color, dtype = np.uint8)
 
+def show_and_wait(win, frame, delay_ms):
+
+    """
+    Shows a frame in a window and waits.
+
+    Arguments:
+        "win" (str): The window name.
+        "frame" (np.ndarray): The frame to be shown.
+        "delay_ms" (int): The delay in milliseconds.
+    
+    Returns:
+        
+    
+    """
+
+    cv2.imshow(win, frame)
+    key = cv2.waitKey(delay_ms) & 0xFF # Waits for a key press for the specified delay
+    if key == ord('q') or key == 27:
+        return True
+    
+    return False
+
 # --- Main function ---
 
 def send_message(message = "HELLO"):
@@ -168,34 +190,45 @@ def send_message(message = "HELLO"):
     cv2.namedWindow(win, cv2.WINDOW_NORMAL) # Creates a window with the specified name
     cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-    start_time = time.time()
-
-    while time.time() - start_time < reference_image_duration: # While the elapsed time is less than the reference image duration:
-
-        cv2.imshow(win, reference_image_bgr) # Show the reference image
-
     try:
+
+        start_time = time.time()
+        delay_ms = max(1, int(1000 / fps))
+
+        while time.time() - start_time < reference_image_duration: # While the elapsed time is less than the reference image duration:
+
+            if show_and_wait(win, reference_image_bgr, delay_ms):
+                return
 
         while True:
 
-            for _ in range(int(fps * 0.3)):
-                cv2.imshow(win, sync_frame) # Show the sync frame
+            sync_duration = 0.3
+            sync_start = time.time()
+            while time.time() - sync_start < sync_duration:
+                if show_and_wait(win, sync_frame, delay_ms):
+                    return
 
+            samples_per_bit = max(1, int(bit_time * fps))
             for frame in data_frames:
-                samples = max(1, int(bit_time * fps)) # Calculate the number of samples per bit
+                for _ in range(samples_per_bit):
+                    if show_and_wait(win, frame, delay_ms):
+                        return
 
-                for _ in range(samples): # For each sample:
-                    cv2.imshow(win, frame) # Show the data frame
+            end_duration = 0.3
+            end_start = time.time()
+            while time.time() - end_start < end_duration:
+                if show_and_wait(win, end_frame, delay_ms):
+                    return
 
-            for _ in range(int(fps * 0.3)):
-                cv2.imshow(win, end_frame) # Show the end frame
-
-            for _ in range(int(fps * 0.5)):
-                cv2.imshow(win, black_frame) # Show a black frame
+            black_duration = 0.5
+            black_start = time.time()
+            while time.time() - black_start < black_duration:
+                if show_and_wait(win, black_frame, delay_ms):
+                    return
 
     except KeyboardInterrupt:
         pass
-    
+
     finally:
         cv2.destroyAllWindows()
 
