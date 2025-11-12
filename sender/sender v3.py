@@ -8,8 +8,8 @@ import math
 
 # ---- Definitions ----
 
-OUT_W = 800
-OUT_H = 600
+output_width = 1920
+output_height = 1200
 
 reference_image_seed = 42
 reference_image_duration = 2.0
@@ -21,8 +21,8 @@ rows = 1
 
 bit_time = 0.5
 
-bit_cell_width = OUT_W // columns
-bit_cell_height = OUT_H // rows
+bit_cell_width = output_width // columns
+bit_cell_height = output_height // rows
 
 # --- Helper functions ---
 
@@ -40,7 +40,7 @@ def generate_reference_image():
     """
 
     bit_generator = np.random.RandomState(reference_image_seed)
-    reference_image = bit_generator.randint(0, 256, (OUT_H, OUT_W), dtype = np.uint8)
+    reference_image = bit_generator.randint(0, 256, (output_height, output_width), dtype = np.uint8)
 
     return reference_image
 
@@ -95,7 +95,7 @@ def render_frame(bitgrid):
 
     """
 
-    image = np.zeros((OUT_H, OUT_W, 3), dtype = np.uint8)
+    image = np.zeros((output_height, output_width, 3), dtype = np.uint8)
 
     for row in range(rows): # For each row:
 
@@ -132,7 +132,7 @@ def create_color_frame(color):
 
     """
 
-    return np.full((OUT_H, OUT_W, 3), color, dtype = np.uint8)
+    return np.full((output_height, output_width, 3), color, dtype = np.uint8)
 
 def show_and_wait(win, frame, delay_ms):
 
