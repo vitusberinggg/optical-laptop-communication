@@ -17,6 +17,8 @@ frame_padding = 120
 bit_time = 0.35
 fps = 30
 
+start_color = (0, 255, 0)
+
 # --- ArUco marker setup ---
 
 arUco_dictionnary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50) # Gets the 4 x 4 ArUco dictionary with 50 unique markers
@@ -107,6 +109,9 @@ def message_to_frames(message, bit_time = 0.35, fps = 15):
 
     samples_per_bit = max(1, int(bit_time * fps))
 
+    start_frame = create_frame(center_color = start_color)
+    frames += [start_frame] * samples_per_bit * 3  
+    
     for character in message:
         bits = format(ord(character), "08b")
 
