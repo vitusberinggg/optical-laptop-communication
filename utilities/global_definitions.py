@@ -2,6 +2,7 @@
 # --- General definitions ---
 
 end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
+start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
 
 # --- Reference image definitions ---
 
@@ -26,3 +27,4 @@ frame_duration = 0.3  # Duration for each frame in seconds
 
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
+start_frame_detection_tolerance = 40 # Tolerance for start frame color detection
