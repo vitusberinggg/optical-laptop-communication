@@ -8,7 +8,7 @@ binary_duration = 0.3
 delimiter_duration = 0.5
 
 # --- Camera setup ---
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)  # Change to video path if needed
 if not cap.isOpened():
     print("Error: Cannot open camera.")
     exit()
@@ -23,18 +23,20 @@ def read_color(frame):
     """Detects dominant color (black, white, red, green) in center region."""
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # HSV ranges for colors
-    red_mask = cv2.inRange(hsv, (0, 80, 50), (10, 255, 255)) | cv2.inRange(hsv, (160, 80, 50), (179, 255, 255))
-    green_mask = cv2.inRange(hsv, (40, 80, 50), (85, 255, 255))
-    white_mask = cv2.inRange(hsv, (0, 0, 200), (180, 30, 255))
-    black_mask = cv2.inRange(hsv, (0, 0, 0), (180, 255, 60))
+    # HSV ranges for colors (tuned for screen light)
+    red_mask = cv2.inRange(hsv, (0, 70, 50), (10, 255, 255)) | cv2.inRange(hsv, (160, 70, 50), (179, 255, 255))
+    green_mask = cv2.inRange(hsv, (40, 50, 50), (85, 255, 255))
+    white_mask = cv2.inRange(hsv, (0, 0, 180), (180, 50, 255))
+    black_mask = cv2.inRange(hsv, (0, 0, 0), (180, 255, 50))
 
     counts = {
-        "red": int(cv2.countNonZero(red_mask)),
-        "green": int(cv2.countNonZero(green_mask)),
-        "white": int(cv2.countNonZero(white_mask)),
-        "black": int(cv2.countNonZero(black_mask)),
+        "red": cv2.countNonZero(red_mask),
+        "green": cv2.countNonZero(green_mask),
+        "white": cv2.countNonZero(white_mask),
+        "black": cv2.countNonZero(black_mask),
     }
+
+    # Return color with max detected pixels
     return max(counts, key=counts.get)
 
 # --- Main function ---
@@ -42,47 +44,46 @@ def receive_message():
     bits = ""
     message = ""
     decoding = False
+    preparing = False
     last_color = None
-    start_sync = False
 
-    print("Receiver ready. Press 's' to start decoding, 'q' to quit.")
+    print("Receiver ready. Waiting for green sync signal...")
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Error reading camera frame.")
+            print("End of video or camera read error.")
             break
 
-        # Center region to detect color
+        # Detect color in center region
         h, w, _ = frame.shape
         cx, cy = w // 2, h // 2
-        size = 120
+        size = 100
         roi = frame[cy-size:cy+size, cx-size:cx+size]
         color = read_color(roi)
 
-        # Visual feedback
+        # Draw detection region and label
         cv2.rectangle(frame, (cx-size, cy-size), (cx+size, cy+size), (0, 255, 0), 2)
-        cv2.putText(frame, f"Detected: {color}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        cv2.putText(frame, f"Detected: {color}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.imshow("Receiver", frame)
 
-        # --- Decode logic ---
-        if decoding:
-            if color == "green" and not start_sync:
-                print("[SYNC] Starting message detection...")
-                start_sync = True
-                bits = ""
-                message = ""
-                time.sleep(binary_duration)
-                continue
+        # --- Logic flow ---
+        if not preparing and color == "green":
+            # Green detected: prepare to start soon
+            preparing = True
+            print("[SYNC] Green detected — preparing for decoding...")
+            bits = ""
+            message = ""
 
-            if not start_sync:
-                # ignore colors before sync
-                last_color = color
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
-                continue
+        elif preparing and color != "green" and not decoding:
+            # Transition from green → something else = start decoding
+            decoding = True
+            preparing = False
+            print("[SYNC] Transition from green detected — decoding started!")
 
+        elif decoding:
+            # Decode bits and characters
             if color in ["white", "black"] and color != last_color:
                 bit = "1" if color == "white" else "0"
                 bits += bit
@@ -98,14 +99,13 @@ def receive_message():
                 time.sleep(delimiter_duration)
 
         last_color = color
+
+        # Exit if user presses Q
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):
-            decoding = True
-            print("Decoding started...")
-        elif key == ord('q'):
+        if key == ord('q'):
             break
 
-    print("Final message:", message)
+    print("\nFinal message:", message)
     cap.release()
     cv2.destroyAllWindows()
 
