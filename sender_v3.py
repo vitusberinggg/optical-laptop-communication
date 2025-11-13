@@ -12,7 +12,8 @@ from utilities.render_frame import render_frame
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     reference_image_duration,
-    frame_duration)
+    frame_duration,
+    end_frame_color)
 
 # ---- Definitions ----
 
@@ -61,7 +62,7 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    end_frame  = create_color_frame((0, 0, 255))
+    end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
