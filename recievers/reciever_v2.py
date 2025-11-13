@@ -1,6 +1,9 @@
 # --- Imports ---
 import cv2
 import numpy as np
+from utilities.detect_end_frame import detect_end_frame
+from utilities.bits_to_message import bits_to_message
+from utilities.global_definitions import (frame_duration, end_frame_color)
 
 # --- Helper: detect dominant color ---
 def read_color(frame):
