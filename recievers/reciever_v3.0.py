@@ -43,12 +43,10 @@ def read_cell_color(cell):
         return "black"
     hsv = cv2.cvtColor(cell, cv2.COLOR_BGR2HSV)
     rmask = cv2.inRange(hsv, (0,80,50), (10,255,255)) | cv2.inRange(hsv, (160,80,50), (179,255,255))
-    gmask = cv2.inRange(hsv, (40,80,50), (85,255,255))
     wmask = cv2.inRange(hsv, (0,0,200), (180,40,255))
     bmask = cv2.inRange(hsv, (0,0,0), (180,255,60))
     counts = {
         "red": int(cv2.countNonZero(rmask)),
-        "green": int(cv2.countNonZero(gmask)),
         "white": int(cv2.countNonZero(wmask)),
         "black": int(cv2.countNonZero(bmask))
     }
@@ -151,11 +149,10 @@ def receive_message():
         center_cell = avg_frame[cy1:cy2, cx1:cx2]
         center_color = read_cell_color(center_cell)
 
-        if center_color == "green":
-            accumulated_bits = ""
-            print("[sync] cleared")
-            time.sleep(0.05)
-            continue
+        # Start reading as soon as reference is found
+        if ref_bbox is not None and not reading_started:
+            reading_started = True
+            print("[sync] Reference detected — start reading message.")
 
         if center_color == "red":
             frame_bits = majority_bits_from_frames(window_frames, ROWS, COLUMNS)
@@ -176,3 +173,15 @@ def receive_message():
             print(decoded_message)
             print("=======================")
             accumulated_bits = ""
+            message = decoded_message
+            break
+
+        frame_bits = majority_bits_from_frames(window_frames, ROWS, COLUMNS)
+        accumulated_bits += frame_bits
+
+    cap.release()
+    cv2.destroyAllWindows()
+    print("Receiver finished. Final message:", message)
+
+if __name__ == "__main__":
+    receive_message()
