@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from global_definitions import end_frame_color, end_frame_detection_tolerance
+from utilities.global_definitions import end_frame_color, end_frame_detection_tolerance
 
 # --- Main function ---
 
