@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from utilities.global_definitions import reference_image_seed, sender_output_height, sender_output_width
+from global_definitions import reference_image_seed, sender_output_height, sender_output_width
 
 # --- Main function ---
 
