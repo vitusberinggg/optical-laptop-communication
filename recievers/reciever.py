@@ -105,49 +105,43 @@ def receive_message(bit_time=binary_duration, delim_time=delimiter_duration):
                 # 🔹 Initialize timer to current frame so first bit is counted immediately
                 last_tick = current_tick - bit_time  
         elif decoding:
-            # --- Handle delimiter first ---
-            if color == "red" and color != last_color:
-                while len(bits) >= 8:
-                    byte = bits[:8]
-                    bits = bits[8:]
-                    try:
-                        ch = chr(int(byte, 2))
-                    except:
-                        ch = '?'
-                    message += ch
-                    print(f"Received char: {ch}")
-                # 🔹 pad remaining bits if < 8
-                if 0 < len(bits) < 8:
-                    byte = bits.ljust(8, '0')
-                    try:
-                        ch = chr(int(byte, 2))
-                    except:
-                        ch = '?'
-                    message += ch
-                    print(f"Received char (padded): {ch}")
-                bits = ""
-                last_tick = current_tick  # 🔹 reset timer after delimiter
-                continue
-
-            # --- Regular bit reading ---
             if last_tick is None:
                 last_tick = current_tick
 
             elapsed = current_tick - last_tick
             if elapsed >= bit_time:
+                # Read bits
                 if color == "white":
                     bits += "1"
                     print("Bit: 1")
                 elif color == "black":
                     bits += "0"
                     print("Bit: 0")
-                # 🔹 update last_tick immediately after reading a bit
-                last_tick = current_tick
+                elif color == "red":
+                    # delimiter: process accumulated bits
+                    while len(bits) >= 8:
+                        byte = bits[:8]
+                        bits = bits[8:]
+                        try:
+                            ch = chr(int(byte, 2))
+                        except:
+                            ch = '?'
+                        message += ch
+                        print(f"Received char: {ch}")
+                    if len(bits) > 0:
+                        print(f"Incomplete bits ({len(bits)}): {bits}")
+                    bits = ""
+                    last_tick = current_tick
+                    continue
 
-                last_color = color
-                key = cv2.waitKey(frame_delay_ms) & 0xFF  # 🔹 use video FPS to delay frames
-                if key == ord('q'):
-                    break
+                # advance last_tick by full bit windows
+                windows = int(elapsed // bit_time)
+                last_tick += windows * bit_time
+
+        last_color = color
+        key = cv2.waitKey(frame_delay_ms) & 0xFF  # 🔹 use video FPS to delay frames
+        if key == ord('q'):
+            break
 
     print("Final message:", message)
     cap.release()
