@@ -152,12 +152,12 @@ def show_message(message):
 
     print("Position receiver so webcam sees this display. Press q to quit.")
     idx = 0
-    while idx < len(frames):
+    while True:
         cv2.imshow(win, frames[idx])
         key = cv2.waitKey(int(1000 / fps)) & 0xFF
         idx += 1
-        #if idx >= len(frames):
-            #idx = 0
+        if idx >= len(frames):
+            idx = 0
         if key == ord("q"):
             break
 
