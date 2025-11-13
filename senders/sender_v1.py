@@ -57,6 +57,8 @@ def send_message(message):
             else:
                 update_screen_color("black")
 
+            update_screen_color("blue", binary_duration)
+
         update_screen_color("red", delimiter_duration)
 
 # --- GUI setup ---
