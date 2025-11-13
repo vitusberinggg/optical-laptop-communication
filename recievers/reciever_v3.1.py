@@ -18,8 +18,6 @@ from utilities.global_definitions import (
 
 # --- Definitions ---
 
-brightness_threshold = 100 # Brightness threshold for determining bit values
-
 camera_index = 0 # Index of the camera to be used
 
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
