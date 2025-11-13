@@ -3,26 +3,9 @@ import cv2
 import numpy as np
 from utilities.detect_end_frame import detect_end_frame
 from utilities.bits_to_message import bits_to_message
-from utilities.global_definitions import (frame_duration, end_frame_color)
-
-# --- Helper: detect dominant color ---
-def read_color(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | cv2.inRange(hsv, (160,100,100), (179,255,255))
-    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
-    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
-    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
-    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
-
-    counts = {
-        "red": int(cv2.countNonZero(red_mask)),
-        "white": int(cv2.countNonZero(white_mask)),
-        "black": int(cv2.countNonZero(black_mask)),
-        "green": int(cv2.countNonZero(green_mask)),
-        "blue": int(cv2.countNonZero(blue_mask)),
-    }
-    return max(counts, key=counts.get)
+from utilities.detect_start_frame import detect_start_frame
+from utilities.decode_bits_with_blue import decode_bits_with_blue
+from utilities.global_definitions import frame_duration
 
 # --- Detect sender screen using ArUco markers ---
 def detect_screen(frame):
@@ -47,10 +30,10 @@ def detect_screen(frame):
 
     width, height = 800, 600
     pts_dst = np.array([
-        [0,0],
-        [width,0],
-        [width,height],
-        [0,height]
+        [0, 0],
+        [width, 0],
+        [width, height],
+        [0, height]
     ], dtype=np.float32)
 
     M = cv2.getPerspectiveTransform(pts_src, pts_dst)
@@ -58,24 +41,40 @@ def detect_screen(frame):
     return warped
 
 # --- Extract center region for color detection ---
-def get_center_color(screen_frame):
+def get_center_color(screen_frame, roi_size=100):
     h, w = screen_frame.shape[:2]
-    size = 100
     cx, cy = w//2, h//2
-    roi = screen_frame[cy-size:cy+size, cx-size:cx+size]
-    return read_color(roi)
+    roi = screen_frame[cy-roi_size:cy+roi_size, cx-roi_size:cx+roi_size]
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    # masks
+    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | cv2.inRange(hsv, (160,100,100), (179,255,255))
+    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
+    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
+    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
+    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+
+    counts = {
+        "red": int(cv2.countNonZero(red_mask)),
+        "white": int(cv2.countNonZero(white_mask)),
+        "black": int(cv2.countNonZero(black_mask)),
+        "green": int(cv2.countNonZero(green_mask)),
+        "blue": int(cv2.countNonZero(blue_mask)),
+    }
+    return max(counts, key=counts.get)
 
 # --- Main receiver ---
-def receive_message():
-    cap = cv2.VideoCapture(0)  # webcam
-    bits = ""
-    message = ""
-    last_color = None
-    waiting_for_sync = True
-    decoding = False
-    bit_ready = False
+def receive_message(source=0, roi_size=100, verbose=True):
+    cap = cv2.VideoCapture(source)
+    if not cap.isOpened():
+        print("Error: Cannot open source.")
+        return ""
 
-    print("Receiver started — waiting for GREEN to sync...")
+    frames_to_decode = []
+    waiting_for_start = True
+    message = ""
+
+    print("Receiver started — waiting for START frame...")
 
     while True:
         ret, frame = cap.read()
@@ -91,60 +90,44 @@ def receive_message():
                 break
             continue
 
-        color = get_center_color(screen)
+        color = get_center_color(screen, roi_size)
 
         # Visualization
         cv2.imshow("Receiver", screen)
         cv2.putText(frame, f"Detected: {color}", (10,30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
 
-        # --- SYNC / DECODING ---
-        if waiting_for_sync:
-            if color == "green" and last_color != "green":
-                print("Green detected — syncing...")
-            elif color != "green" and last_color == "green":
-                print("Green ended — starting decoding!")
-                waiting_for_sync = False
-                decoding = True
-                bit_ready = True
+        # --- Start / End frame handling ---
+        if waiting_for_start:
+            if detect_start_frame(screen):
+                waiting_for_start = False
+                if verbose:
+                    print("Start frame detected — beginning decoding!")
+            continue
 
-        elif decoding:
-            if color == "blue":
-                bit_ready = True
-            elif color in ["white","black"] and bit_ready:
-                bits += "1" if color == "white" else "0"
-                print(f"Bit: {bits[-1]}")
-                bit_ready = False
-            elif color == "red" and last_color != "red":
-                while len(bits) >= 8:
-                    byte = bits[:8]
-                    bits = bits[8:]
-                    try:
-                        ch = chr(int(byte,2))
-                    except:
-                        ch = '?'
-                    message += ch
-                    print(f"Received char: {ch}")
-                if 0 < len(bits) < 8:
-                    byte = bits.ljust(8,'0')
-                    try:
-                        ch = chr(int(byte,2))
-                    except:
-                        ch = '?'
-                    message += ch
-                    print(f"Received char (padded): {ch}")
-                bits = ""
+        if detect_end_frame(screen):
+            if verbose:
+                print("End frame detected — stopping capture.")
+            break
 
-        last_color = color
+        # Collect frames for decoding
+        frames_to_decode.append(screen)
+
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
 
-    print("Final message:", message)
     cap.release()
     cv2.destroyAllWindows()
 
+    # --- Decode message ---
+    bits = decode_bits_with_blue(frames_to_decode, roi_size=roi_size, verbose=verbose)
+    message = bits_to_message(bits)
+    if verbose:
+        print("Final message:", message)
+    return message
+
 # --- Run ---
 if __name__ == "__main__":
-    receive_message()
-
+    decoded_msg = receive_message(source=0, verbose=True)
+    print("Decoded message:", decoded_msg)
