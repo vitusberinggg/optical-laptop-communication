@@ -4,7 +4,7 @@
 import numpy as np
 import cv2
 
-from global_definitions import sender_output_height, sender_output_width, number_of_columns, number_of_rows, bit_cell_height, bit_cell_width
+from utilities.global_definitions import sender_output_height, sender_output_width, number_of_columns, number_of_rows, bit_cell_height, bit_cell_width
 
 # --- Main function ---
 
