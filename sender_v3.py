@@ -13,7 +13,8 @@ from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     reference_image_duration,
     frame_duration,
-    end_frame_color)
+    end_frame_color
+)
 
 # ---- Definitions ----
 
