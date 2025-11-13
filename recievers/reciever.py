@@ -1,8 +1,8 @@
 # --- Imports ---
 from webCamSim import VideoThreadedCapture
+from color_utils import dominant_color
 
 import cv2
-import time
 import numpy as np
 
 # --- Definitions ---
@@ -14,25 +14,6 @@ cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recieve
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
-
-# --- Helper: detect dominant color ---
-def read_color(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | cv2.inRange(hsv, (160,100,100), (179,255,255))
-    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
-    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
-    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
-    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))  # padding
-
-    counts = {
-        "red": int(cv2.countNonZero(red_mask)),
-        "white": int(cv2.countNonZero(white_mask)),
-        "black": int(cv2.countNonZero(black_mask)),
-        "green": int(cv2.countNonZero(green_mask)),
-        "blue": int(cv2.countNonZero(blue_mask)),
-    }
-    return max(counts, key=counts.get)
 
 # --- Main function ---
 def receive_message():
@@ -51,13 +32,15 @@ def receive_message():
             print("Error: Failed to capture frame.")
             continue
 
+        # Area that is being processed (roi)
+
         frame = cv2.flip(frame, 1)
         h, w = frame.shape[:2]
         cx, cy = w//2, h//2
         size = 100
         roi = frame[max(0,cy-size):min(h,cy+size), max(0,cx-size):min(w,cx+size)]
 
-        color = read_color(roi)
+        color = dominant_color(roi)
 
         # Visualization
         cv2.rectangle(frame, (cx-size, cy-size), (cx+size, cy+size), (0,255,0), 2)
