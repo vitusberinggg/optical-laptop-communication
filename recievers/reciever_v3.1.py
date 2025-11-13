@@ -2,23 +2,15 @@
 # --- Imports ---
 
 import cv2
-import numpy as np
 import time
+import numpy as np
 
 from utilities.generate_reference_image import generate_reference_image
 from utilities.detect_end_frame import detect_end_frame
 from utilities.detect_reference_image import detect_reference_image
 from utilities.decode_bitgrid import decode_bitgrid
 from utilities.bits_to_message import bits_to_message
-from utilities.global_definitions import (
-    sender_output_height,
-    sender_output_width,
-    reference_image_duration,
-    frame_duration,
-    number_of_columns,
-    number_of_rows,
-    end_frame_color
-)
+from utilities.global_definitions import reference_image_duration, frame_duration
 
 # --- Definitions ---
 
@@ -39,71 +31,63 @@ def receive_message():
     
     """
 
-    videoCapture = cv2.VideoCapture(camera_index)
-    videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, sender_output_width)
-    videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, sender_output_height)
+    videoCapture = cv2.VideoCapture(camera_index) # Initialize video capture from the specified camera index
 
-    reference_image = generate_reference_image()
+    reference_image = generate_reference_image() # Generate the reference image
+    reference_image_height, reference_image_width = reference_image.shape # Get the dimensions of the reference image
+    reference_image_float32 = reference_image.astype(np.float32) # Converts the reference image to float32 format
 
-    print("[INFO] Waiting for the reference frame...")
+    ecc_warp_mode = cv2.MOTION_AFFINE # Sets the ECC warp mode to affine
+    ecc_warp_matrix = np.eye(2, 3, dtype = np.float32) # Initializes the ECC warp matrix as an identity matrix
+    ecc_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 5000, 1e-7) # Sets the ECC criteria for the alignment process
 
     reference_image_detected = False
     reference_start_time = None
+    ecc_computed = False
 
     bitstring = ""
     frame_counter = 0
     end_frame_detected = False
 
+    print("[INFO] Waiting for the reference frame...")
+
     while True:
 
-        ret, frame = videoCapture.read()
+        snapshots = []
 
-        if not ret:
-            print("[WARN] Failed to grab frame.")
-            continue
+        for _ in range(samples_per_frame): # For each sample:
 
-        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_display = frame.copy()
+            for _ in range(2):
+                videoCapture.grab() # Grab two frames to ensure the latest frame is captured (mini buffer flush)
 
-        if not reference_image_detected:
+            return_value, frame = videoCapture.read() # Capture a frame from the video feed
 
-            detected, correlation = detect_reference_image(frame_gray, reference_image)
+            if not return_value: # If the frame capture was unsuccessful:
+                continue # Skip to the next iteration
 
-            cv2.putText(frame_display, f"Ref Corr: {correlation:.3f}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 
 
-            if detected:
-                reference_image_detected = True
-                reference_start_time = time.time()
-                print("[INFO] Reference image detected — syncing started.")
+            snapshots.append(frame_grayscale.astype(np.float32))
 
-        else:
+            time.sleep(sample_space)
 
-            if time.time() - reference_start_time > reference_image_duration:
-                
-                if detect_end_frame(frame):
-                    print("[INFO] End frame detected. Stopping capture.")
-                    end_detected = True
-                    break
+        if not snapshots: # If there aren't any snapshots:
+            continue # Skip to the next iteration
 
-                bits = decode_bitgrid(frame_gray)
-                bitstring += bits
-                frame_counter += 1
-                print(f"[FRAME {frame_counter}] Bits: {bits}")
+        average_grayscaled_frame = np.mean(snapshots, axis=0).astype(np.float32)
 
-        cv2.imshow("RECEIVER", frame_display)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        if not reference_image_detected: # If no reference image has been detected:
+            if (average_grayscaled_frame.shape[1], average_grayscaled_frame.shape[0]) != (reference_image_width, reference_image_height): # If the captured frame isn't the same size as the reference image:
 
     videoCapture.release()
     cv2.destroyAllWindows()
 
     if end_frame_detected: # If the end frame is detected:
         message = bits_to_message(bitstring) # Decode the bitstrig
-        print("\n--- Received Message ---")
-        print(message)
+        print(message) # Print the decoded message
 
     else:
-        print("\n[INFO] No end frame detected — transmission may be incomplete.")
+        print("\n[INFO] No end frame detected, transmission may be incomplete.")
 
 # --- Execution ---
 

@@ -5,7 +5,6 @@ import numpy as np
 
 from global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold
 
-
 # --- Main function ---
 
 def decode_bitgrid(frame):

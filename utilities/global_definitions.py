@@ -28,3 +28,6 @@ frame_duration = 0.3  # Duration for each frame in seconds
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
 start_frame_detection_tolerance = 40 # Tolerance for start frame color detection
+
+samples_per_frame = 3
+sample_space = frame_duration / samples_per_frame
