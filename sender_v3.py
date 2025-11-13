@@ -76,31 +76,34 @@ def send_message(message):
         if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
             cv2.destroyAllWindows() # Close all OpenCV windows
             return # Exit the function
+        
+        time.sleep(0.001) # Small sleep to prevent high CPU usage
 
     try:
 
-        while True:
+        for frame in data_frames: # For each frame:
 
-            for frame in data_frames: # For each frame:
+            frame_start_time = time.time() # Records the start time for the current frame
 
-                frame_start_time = time.time() # Records the start time for the current frame
+            while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
-                while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
-
-                    cv2.imshow(window, frame) # Display the current frame in the window
-
-                    if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
-                        return # Exit the function
-
-            end_frame_start_time = time.time() # Records the start time for the end frame
-
-            while time.time() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
-                cv2.imshow(window, end_frame) # Display the end frame in the window
+                cv2.imshow(window, frame) # Display the current frame in the window
 
                 if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
                     return # Exit the function
+                
+                time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+        end_frame_start_time = time.time() # Records the start time for the end frame
+
+        while time.time() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
+
+            cv2.imshow(window, end_frame) # Display the end frame in the window
+
+            if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                return # Exit the function
             
-            break # Break the loop after displaying the end frame
+            time.sleep(0.001) # Small sleep to prevent high CPU usage
             
     except KeyboardInterrupt: # If a keyboard interrupt occurs (e.g., Ctrl+C):
         pass # Continue to the cleanup section
