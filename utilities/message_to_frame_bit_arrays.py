@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from utilities.global_definitions import number_of_columns, number_of_rows
+from global_definitions import number_of_columns, number_of_rows
 
 # --- Main function ---
 

@@ -3,11 +3,8 @@
 
 import numpy as np
 
-from utilities.global_definitions import (
-    number_of_rows, number_of_columns,
-    bit_cell_height, bit_cell_width,
-    cell_brightness_threshold
-)
+from global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold
+
 
 # --- Main function ---
 

@@ -25,3 +25,4 @@ frame_duration = 0.3  # Duration for each frame in seconds
 # --- Reciever input definitions ---
 
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
+end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
