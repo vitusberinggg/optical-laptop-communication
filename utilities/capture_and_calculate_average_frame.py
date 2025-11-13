@@ -4,7 +4,7 @@
 import time
 import numpy as np
 
-from global_definitions import samples_per_frame, sample_space
+from utilities.global_definitions import samples_per_frame, sample_space
 
 # --- Main function ---
 
