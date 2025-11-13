@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # --- Function to decode bitstream with blue separators ---
-def decode_bits_with_blue_separators(frames, roi_size=100, verbose=False):
+def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
     Decodes bits from a sequence of frames where each bit is a colored frame:
     - white: bit 1
