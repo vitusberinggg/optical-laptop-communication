@@ -3,7 +3,7 @@
 
 import cv2
 
-from global_definitions import reference_match_threshold
+from utilities.global_definitions import reference_match_threshold
 
 # --- Main function ---
 
