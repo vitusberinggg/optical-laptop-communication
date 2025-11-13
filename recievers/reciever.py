@@ -1,4 +1,6 @@
 # --- Imports ---
+from webCamSim import VideoThreadedCapture
+
 import cv2
 import time
 import numpy as np
@@ -8,20 +10,10 @@ delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
 
 # --- Setup capture ---
-cap = cv2.VideoCapture(r"C:\my_projects\optical-laptop-communication\recievers\liläng_part3.1.mp4")
+cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\liläng_part3.1.mp4")
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
-
-# 🔹 Get FPS and frame delay
-fps = cap.get(cv2.CAP_PROP_FPS)
-if fps == 0:
-    fps = 30
-frame_delay_ms = int(1000 / fps)
-
-# 🔹 Record start time and detect if video file
-start_time = time.time()
-is_video_file = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) > 0
 
 # --- Helper: detect dominant color ---
 def read_color(frame):
@@ -52,14 +44,10 @@ def receive_message():
     bit_ready = False  # set True when blue frame appears or first bit after green
 
     print("Receiver started — waiting for GREEN to sync...")
-    print(f"is_video_file = {is_video_file}, fps={fps}")
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            if is_video_file:
-                print("End of video file reached.")
-                break
             print("Error: Failed to capture frame.")
             continue
 
@@ -115,7 +103,7 @@ def receive_message():
                 bits = ""
 
         last_color = color
-        key = cv2.waitKey(frame_delay_ms) & 0xFF
+        key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
 
