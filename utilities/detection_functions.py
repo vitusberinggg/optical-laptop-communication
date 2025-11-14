@@ -85,11 +85,13 @@ def detect_ecc_reference_image(potential_sync_frame, ecc_reference_image):
 
     resized_frame = cv2.resize(potential_sync_frame, (ecc_reference_image.shape[1], ecc_reference_image.shape[0])) # Resize the potential sync frame to match the reference image size
 
-    correlation = cv2.matchTemplate(resized_frame, ecc_reference_image, cv2.TM_CCOEFF_NORMED) # Perform template matching to find the reference image in the potential sync frame
+    grayscale_resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+
+    correlation = cv2.matchTemplate(grayscale_resized_frame, ecc_reference_image, cv2.TM_CCOEFF_NORMED) # Perform template matching to find the reference image in the potential sync frame
 
     max_correlation = cv2.minMaxLoc(correlation)[1] # Get the maximum correlation value
 
-    return max_correlation > reference_match_threshold, max_correlation # Return whether the reference image is detected and the maximum correlation value
+    return max_correlation > reference_match_threshold # Return True if the correlation is larger than the threshold, False if not
 
 def detect_start_frame(frame):
 

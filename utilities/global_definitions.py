@@ -11,11 +11,13 @@ end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
 mask_frame_hsv_lower_limit = [40, 100, 100] # [Hue, Saturation, Value]
 mask_frame_hsv_upper_limit = [80, 255, 255] # [Hue, Saturation, Value]
 
-# --- Reference image definitions ---
+# --- ECC allignment definitions ---
 
 reference_image_seed = 42 # Seed for the random number generator to generate the reference image
 reference_image_duration = 1 # Duration for displaying the reference image in seconds
 reference_match_threshold = 0.7 # Threshold for reference image matching
+
+ecc_allignment_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 200, 1e-6)
 
 # --- Sender output definitions ---
 

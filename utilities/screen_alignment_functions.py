@@ -6,7 +6,8 @@ import numpy as np
 
 from global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    sender_output_height, sender_output_width
+    sender_output_height, sender_output_width,
+    ecc_allignment_criteria
 )
 
 # --- Functions ---
@@ -37,55 +38,34 @@ def create_mask(homography_matrix):
 
     return webcam_mask
 
-def compute_ecc_transform(reference_image_float, captured_frame_float, initial_warp_matrix, warp_mode, criteria):
+def compute_ecc_transform(reference_image, captured_image):
     
     """
+    Alligns the captured reference image to the reference image using ECC (Enhanced Correlation Coefficient).
 
+    Arguments:
+        "reference_image": The reference image.
+        "captured_image": The image to allign.
+
+    Returns:
+        "ecc_warp_matrix": The warp matrix.
+        
     """
-    
-    # Get the target size from the reference image.
-    target_height, target_width = reference_image_float.shape
 
-    # Resize the captured frame to match the reference image's size.
-    resized_captured_frame = cv2.resize(
-        captured_frame_float, 
-        (target_width, target_height), 
-        interpolation=cv2.INTER_LINEAR
-    )
-    
-    # --- This is the mask fix we discussed ---
-    # We assume the screen is brighter (e.g., > 80) than the background.
-    # This mask tells ECC to *only* look at the bright parts of the captured image.
-    # You MUST tune this threshold (80) for your lighting!
-    brightness_threshold = 80
-    _ignored, input_mask = cv2.threshold(
-        resized_captured_frame.astype(np.uint8),  # threshold needs uint8
-        brightness_threshold, 
-        255, 
-        cv2.THRESH_BINARY
-    )
-    # --- End of mask fix ---
+    ecc_warp_matrix = np.eye(2, 3, dtype = np.float32) # Initial warp matrix guess
 
     try:
-        # Run the ECC algorithm.
-        print("[INFO] Computing ECC warp... (this may take a moment)")
-        correlation_coefficient, warp_matrix = cv2.findTransformECC(
-            reference_image_float,   # The template (what we want)
-            resized_captured_frame,  # The input (what we see)
-            initial_warp_matrix,     # Our starting guess (identity matrix)
-            warp_mode,               # Type of motion (AFFINE)
-            criteria,                # When to stop
-            input_mask,              # **THE MASK**: Ignore background
-            5                        # Add Gaussian blur to help the algorithm
-        )
-        print(f"[INFO] ECC warp computed (correlation={correlation_coefficient:.6f}).")
-        
-        # Return success and the new matrix.
-        return True, warp_matrix
-        
-    except cv2.error as e:
-        # If ECC fails (e.g., images are too different), print a warning.
-        print(f"[WARN] findTransformECC failed: {e}. Will retry.")
-        
-        # Return failure and the original matrix.
-        return False, initial_warp_matrix
+        cc, ecc_warp_matrix = cv2.findTransformECC(
+            reference_image,
+            captured_image,
+            ecc_warp_matrix,
+            cv2.MOTION_AFFINE,
+            ecc_allignment_criteria
+        )        
+
+    except cv2.error:
+
+        print("[WARNING] ECC allignment failed.")
+        return None
+    
+    return ecc_warp_matrix
