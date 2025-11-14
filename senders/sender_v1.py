@@ -6,8 +6,8 @@ import tkinter as tk
 
 # --- Definitions ---
 
-binary_duration = 0.3
-delimiter_duration = 0.5
+binary_duration = 0.1
+delimiter_duration = 0.1
 
 # --- Helper functions ---
 
@@ -43,7 +43,7 @@ def send_message(message):
         None
     
     """
-    update_screen_color("green", binary_duration * 3)
+    update_screen_color("green", binary_duration * 9)
 
     for character in message: # For each character in the message:
 
