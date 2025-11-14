@@ -4,9 +4,16 @@
 import cv2
 import numpy as np
 
-from global_definitions import mask_frame_hsv_lower_limit, mask_frame_hsv_upper_limit, total_pixel_count, sender_screen_size_threshold
+from global_definitions import (
+    mask_frame_hsv_lower_limit, mask_frame_hsv_upper_limit,
+    total_pixel_count,
+    sender_screen_size_threshold,
+    sender_output_height, sender_output_width
+)
 
 # --- Functions ---
+
+def create_marker_frame():
 
 def create_mask(frame):
 
