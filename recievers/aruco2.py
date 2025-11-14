@@ -4,7 +4,7 @@ import numpy as np
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
-cap = cv2.VideoCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 134827.mp4")
+cap = cv2.VideoCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 150546.mp4")
 
 while True:
     ret, frame = cap.read()
