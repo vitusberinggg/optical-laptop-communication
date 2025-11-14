@@ -4,7 +4,7 @@ import sys
 import os
 from utilities.detection_functions import detect_aruco_marker_frame
 
-VIDEO_PATH = r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 134827.mp4"
+VIDEO_PATH = r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 150546.mp4"
 SAVE_DETECTED_FRAME_AS = "detected_frame.png"
 
 cap = cv2.VideoCapture(VIDEO_PATH)
