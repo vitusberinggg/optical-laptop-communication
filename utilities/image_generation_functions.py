@@ -4,9 +4,14 @@
 import numpy as np
 import cv2
 
-from utilities.global_definitions import sender_output_height, sender_output_width, number_of_columns, number_of_rows, bit_cell_height, bit_cell_width
+from utilities.global_definitions import (
+    sender_output_height, sender_output_width,
+    number_of_columns, number_of_rows, 
+    bit_cell_height, bit_cell_width,
+    reference_image_seed
+)
 
-# --- Main function ---
+# --- Functions ---
 
 def render_frame(bitgrid):
 
@@ -44,3 +49,36 @@ def render_frame(bitgrid):
             cv2.rectangle(image, (start_x_coordinate, start_y_coordinate), (end_x_coordinate - 1, end_y_coordinate - 1), color, thickness = -1) # Draw the rectangle on the image
 
     return image
+
+def generate_reference_image():
+
+    """
+    Generates a reference image by putting the image seed into a bit generator.
+
+    Arguments:
+        None
+
+    Returns:
+        "reference_image": The reference image.
+
+    """
+
+    bit_generator = np.random.RandomState(reference_image_seed)
+    reference_image = bit_generator.randint(0, 256, (sender_output_height, sender_output_width), dtype = np.uint8)
+
+    return reference_image
+
+def create_color_frame(color):
+
+    """
+    Creates a solid color frame.
+
+    Arguments:
+        "color" (tuple): A tuple representing the BGR color.
+
+    Returns:
+        "frame" (np.ndarray): A NumPy array representing the solid color frame pixels.
+
+    """
+
+    return np.full((sender_output_height, sender_output_width, 3), color, dtype = np.uint8)

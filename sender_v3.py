@@ -2,15 +2,12 @@
 # --- Imports ---
 
 import cv2 # Imports the OpenCV library for image processing
-import numpy as np # Imports the NumPy library for numerical operations
 import time
 
-from utilities.generate_reference_image import generate_reference_image
+from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame
 from utilities.message_to_frame_bit_arrays import message_to_frame_bit_arrays
-from utilities.render_frame import render_frame
 
 from utilities.global_definitions import (
-    sender_output_height, sender_output_width,
     reference_image_duration,
     frame_duration,
     end_frame_color
@@ -19,23 +16,6 @@ from utilities.global_definitions import (
 # ---- Definitions ----
 
 message = "HELLO, THIS IS A TEST MESSAGE!"
-
-# --- Helper functions ---
-
-def create_color_frame(color):
-
-    """
-    Creates a solid color frame.
-
-    Arguments:
-        "color" (tuple): A tuple representing the BGR color.
-
-    Returns:
-        "frame" (np.ndarray): A NumPy array representing the solid color frame pixels.
-
-    """
-
-    return np.full((sender_output_height, sender_output_width, 3), color, dtype = np.uint8)
 
 # --- Main function ---
 
