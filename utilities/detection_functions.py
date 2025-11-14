@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from utilities.global_definitions import (
+    sender_output_height, sender_output_width,
     reference_match_threshold,
     start_frame_color, start_frame_detection_tolerance,
     end_frame_color, end_frame_detection_tolerance,
@@ -16,12 +17,13 @@ from utilities.global_definitions import (
 def detect_aruco_marker_frame(frame):
 
     """
-    Tries to detect the ArUco marker frame shown on the sender screen.
+    Tries to detect the ArUco marker frame shown on the sender screen and map points from one plane to another.
 
     Arguments:
-        "frame"
+        "frame": Frame to check for markers.
 
     Returns:
+        "homography_matrix": A 3 x 3 transformation matrix.
 
     """
 
@@ -32,20 +34,40 @@ def detect_aruco_marker_frame(frame):
 
     if aruco_marker_ids is None or len(aruco_marker_ids) < 4:
         return None
+    
+    aruco_marker_ids = aruco_marker_ids.flatten()
 
 #   Sorting the markers by ID
 
     sorted_marker_ids = [None] * 4
 
-    for frame_corner, marker_id in zip(frame_corners, aruco_marker_ids.flatten()):
+    for frame_corner, marker_id in zip(frame_corners, aruco_marker_ids):
 
         if marker_id < 4:
             sorted_marker_ids[marker_id] = frame_corner[0]
     
-    if any(marker_id is None for marker_id in sorted_marker_ids):
+    if any(corner is None for corner in sorted_marker_ids):
         return None
     
-    return sorted_marker_ids
+#   Perspective mapping
+    
+    source = np.array([ # Marker coordinates from the camera frame
+        sorted_marker_ids[0],
+        sorted_marker_ids[1],
+        sorted_marker_ids[3],
+        sorted_marker_ids[2]],
+        dtype = np.float32)
+    
+    destination_layout = np.array([ # What the markers should form
+        [0, 0],
+        [sender_output_width, 0],
+        [sender_output_width, sender_output_height],
+        [0, sender_output_height]],
+        dtype = np.float32)
+    
+    homography_matrix = cv2.getPerspectiveTransform(source, destination_layout)
+
+    return homography_matrix
 
 def detect_reference_image(potential_sync_frame, reference_image):
 

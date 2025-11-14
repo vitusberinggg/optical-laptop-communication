@@ -15,33 +15,7 @@ from global_definitions import (
 
 def create_mask(frame):
 
-    """
-    Creates a binary mask by detecting a lime green screen in a frame.
 
-    Arguments:
-        "frame"
-
-    Returns:
-        "mask"
-
-    """
-
-    hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) # Converts the frame to HSV (Hue, Saturation, Value)
-
-    lower_green = np.array(mask_frame_hsv_lower_limit)
-    upper_green = np.array(mask_frame_hsv_upper_limit)
-
-    mask = cv2.inRange(hsv_frame, lower_green, upper_green) # Creates a mask by setting pixels within the green range to 255, and pixels outside to 0
-    
-    green_pixel_count = np.count_nonzero(mask) # Counts the amount of green pixels
-
-    if green_pixel_count > (total_pixel_count * sender_screen_size_threshold):
-        print(f"[INFO] Green screen covering {green_pixel_count // total_pixel_count} of the frame found.")
-        return mask
-    
-    else:
-        print("No green screen found.")
-        return None
 
 
 def compute_ecc_transform(reference_image_float, captured_frame_float, initial_warp_matrix, warp_mode, criteria):
