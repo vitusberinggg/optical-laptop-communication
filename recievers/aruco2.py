@@ -7,9 +7,7 @@ detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
 # Example: list of image file paths
 image_files = [
-    "frame1.png",
-    "frame2.png",
-    "frame3.png"
+    "C:\Users\eanpaln\OneDrive - Ericsson\Pictures\Screenshots\Screenshot (5).png"
 ]
 
 for file in image_files:
