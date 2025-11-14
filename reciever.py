@@ -13,7 +13,7 @@ binary_duration = 0.3     # unused, just for reference
 homography = None
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\gandalf.mp4")
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\gandalf2.0.mp4")
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
@@ -51,9 +51,6 @@ def receive_message():
 
         # ⭐ DEBUG: SHOW FULL FRAME SHAPE EACH LOOP
         print("Frame shape:", frame.shape)           # ⭐ added
-
-        # ⭐ TEMP DISABLE FLIP WHILE DEBUGGING CROPPING
-        # frame = cv2.flip(frame, 1)                 # ⭐ commented out
 
         # ⭐ REMOVE HOMOGRAPHY FOR NOW TO DEBUG DISPLAY
         roi = frame                                 # ⭐ simplified
