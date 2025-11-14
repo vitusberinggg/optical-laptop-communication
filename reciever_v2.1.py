@@ -100,4 +100,4 @@ def receive_message_debug(source=0, roi_size=150, verbose=True):
 
 if __name__ == "__main__":
     # Change source to your video file
-    receive_message_debug(source=r"C:\Users\eanpaln\Videos\Screen Recordings\Recording.mp4", roi_size=150, verbose=True)
+    receive_message_debug(source=r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 153114.mp4", roi_size=150, verbose=True)
