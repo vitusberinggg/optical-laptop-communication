@@ -45,43 +45,34 @@ def create_aruco_marker(marker_id):
     
     return marker_bgr
 
-def create_frame(center_color = (0, 0, 0)):
-
+def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128)):
     """
     Creates a frame with ArUco markers in the corners and a colored center square.
     
     Arguments:
-        "center_color": A BGR tuple for the center square color.
-        
-    Returns:
-        "frame": A numpy array representing the image.
-
+        center_color: BGR color for the center square.
+        margin_color: BGR color for the rest of the frame (background/margin).
     """
-
-    frame = np.zeros((screen_height, screen_width, 3), dtype = np.uint8) # Creates a blank frame with the specified dimensions
-
-    margin = 10
+    # Fill the frame with gray instead of black
+    frame = np.full((screen_height, screen_width, 3), margin_color, dtype=np.uint8)
 
     marker_coordinates = [
-        (margin, margin), # Top-left marker
-        (screen_width - margin - marker_size, margin), # Top-right marker
-        (screen_width - margin - marker_size, screen_height - margin - marker_size), # Bottom-right marker
-        (margin, screen_height - margin - marker_size), # Bottom-left marker
+        (10, 10),  # Top-left
+        (screen_width - 10 - marker_size, 10),  # Top-right
+        (screen_width - 10 - marker_size, screen_height - 10 - marker_size),  # Bottom-right
+        (10, screen_height - 10 - marker_size),  # Bottom-left
     ]
 
-    for coordinate_index, (x, y) in enumerate(marker_coordinates): # For each marker:
+    for idx, (x, y) in enumerate(marker_coordinates):
+        marker = create_aruco_marker(marker_ids[idx])
+        frame[y:y+marker_size, x:x+marker_size] = marker
 
-        marker = create_aruco_marker(marker_ids[coordinate_index]) # Create the marker image
-
-        frame[y:y + marker_size, x:x + marker_size] = marker # Place the marker in the frame
-
+    # Draw center square
     center_x_start = frame_padding
     center_x_end = screen_width - frame_padding
-    
     center_y_start = frame_padding
     center_y_end = screen_height - frame_padding
-
-    cv2.rectangle(frame, (center_x_start, center_y_start), (center_x_end, center_y_end), center_color, thickness = -1)
+    cv2.rectangle(frame, (center_x_start, center_y_start), (center_x_end, center_y_end), center_color, thickness=-1)
 
     return frame
 
