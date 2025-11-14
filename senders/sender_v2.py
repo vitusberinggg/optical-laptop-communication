@@ -10,7 +10,7 @@ import time
 screen_width = 2650
 screen_height = 1440
 
-marker_size = 80
+marker_size = 120
 frame_padding = 120
 
 bit_time = 0.35
