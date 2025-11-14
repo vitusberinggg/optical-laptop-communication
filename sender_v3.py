@@ -5,7 +5,7 @@ import cv2 # Imports the OpenCV library for image processing
 import time
 
 from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame
-from utilities.message_to_frame_bit_arrays import message_to_frame_bit_arrays
+from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
     reference_image_duration,

@@ -1,9 +1,7 @@
 import cv2
 import numpy as np
-from utilities.detect_end_frame import detect_end_frame
-from utilities.bits_to_message import bits_to_message
-from utilities.detect_start_frame import detect_start_frame
-from utilities.decode_bits_with_blue import decode_bits_with_blue
+from utilities.detection_functions import detect_start_frame, detect_end_frame
+from utilities.decoding_functions import bits_to_message, decode_bits_with_blue
 
 def detect_screen(frame):
     # (use whichever version you already have that supports both OpenCV versions)
