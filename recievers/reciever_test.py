@@ -1,6 +1,6 @@
 # --- Imports ---
 from webCamSim import VideoThreadedCapture
-from color_utils import dominant_color, tracker  # 🔹 updated: import tracker
+from utils_test import dominant_color, tracker  # 🔹 updated: import tracker
 
 import cv2
 import time
@@ -11,7 +11,7 @@ delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(0)
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\liläng_part3.1.mp4")
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
@@ -65,20 +65,22 @@ def receive_message():
                 print("Green ended — starting decoding!")
                 waiting_for_sync = False
                 decoding = True
-                bit_ready = True  # 🔹 capture first bit immediately after green
 
         elif decoding:
-            if color == "blue":
-                bit_ready = True
-                # DEBUG: end of bit, print collected colors
-                if current_bit_colors:
-                    print(f"Colors collected for last bit: {current_bit_colors}")
-                    current_bit_colors = []
-            elif color in ["white","black"] and bit_ready:
-                current_bit_colors.append(color)  # DEBUG: accumulate colors for current bit
-                bits += "1" if color == "white" else "0"
-                print(f"Bit: {bits[-1]}, Colors in this bit so far: {current_bit_colors}")
-                bit_ready = False
+            if color == "blue" and last_color != "blue":
+                # end of bit → compute average color
+                majority_color = tracker.end_bit()
+
+                if majority_color == "white":
+                    bits += "1"
+                elif majority_color == "black":
+                    bits += "0"
+
+                print(f"Bit: {bits[-1]} (averaged color = {majority_color})")
+
+            elif color in ["white", "black"]:
+                # part of bit → collect frame
+                tracker.add_frame(roi)
             elif color == "red" and last_color != "red":
                 # delimiter: process accumulated bits as character(s)
                 while len(bits) >= 8:
