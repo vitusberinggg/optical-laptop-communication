@@ -4,7 +4,7 @@ import numpy as np
 # --- Settings ---
 screen_width = 800
 screen_height = 600
-marker_size = 80
+marker_size = 120
 marker_ids = [0, 1, 2, 3]  # IDs for top-left, top-right, bottom-right, bottom-left
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
