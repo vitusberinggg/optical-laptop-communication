@@ -5,12 +5,18 @@ import numpy as np
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
-cap = cv2.VideoCapture(0)  # Change to video file if needed
+# Example: list of image file paths
+image_files = [
+    "frame1.png",
+    "frame2.png",
+    "frame3.png"
+]
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+for file in image_files:
+    frame = cv2.imread(file)
+    if frame is None:
+        print(f"Could not read {file}")
+        continue
 
     corners, ids, _ = detector.detectMarkers(frame)
 
@@ -34,8 +40,8 @@ while True:
         cv2.putText(display, "Markers not detected", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
 
     cv2.imshow("Receiver", display)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    key = cv2.waitKey(0)  # wait until a key is pressed
+    if key == ord('q'):
         break
 
-cap.release()
 cv2.destroyAllWindows()
