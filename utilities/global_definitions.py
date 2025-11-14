@@ -1,8 +1,12 @@
 
+# --- Imports ---
+
+import cv2
+
 # --- General definitions ---
 
-end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
 start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
+end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
 
 mask_frame_hsv_lower_limit = [40, 100, 100] # [Hue, Saturation, Value]
 mask_frame_hsv_upper_limit = [80, 255, 255] # [Hue, Saturation, Value]
@@ -40,3 +44,10 @@ start_frame_detection_tolerance = 40 # Tolerance for start frame color detection
 
 samples_per_frame = 3
 sample_space = frame_duration / samples_per_frame
+
+# --- ArUco marker definitions ---
+
+aruco_marker_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+aruco_marker_size = min(sender_output_width, sender_output_height) // 10
+aruco_marker_margin = aruco_marker_size // 2
+aruco_marker_ids = [0, 1, 2, 3]

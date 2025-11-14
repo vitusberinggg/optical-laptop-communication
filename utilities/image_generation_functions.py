@@ -8,7 +8,8 @@ from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
-    reference_image_seed
+    reference_image_seed,
+    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin, aruco_marker_ids
 )
 
 # --- Functions ---
@@ -82,3 +83,31 @@ def create_color_frame(color):
     """
 
     return np.full((sender_output_height, sender_output_width, 3), color, dtype = np.uint8)
+
+def create_marker_frame():
+
+    """
+    Creates a solid color frame with ArUco markers in each corner.
+
+    Arguments:
+        None
+
+    Returns:
+        "frame": The created frame.
+    """
+
+    frame = create_color_frame([0, 255, 0])
+
+    aruco_marker_positions = [
+        (aruco_marker_margin, aruco_marker_margin), # Top-left marker
+        (sender_output_width - aruco_marker_margin - aruco_marker_size, aruco_marker_margin), # Top-right marker
+        (aruco_marker_margin, sender_output_height - aruco_marker_margin - aruco_marker_size), # Bottom-left marker
+        (sender_output_width - aruco_marker_margin - aruco_marker_size, sender_output_height - aruco_marker_margin - aruco_marker_size) # Bottom-right marker
+    ]
+
+    for (x_coordinate, y_coordinate), aruco_marker_id in zip(aruco_marker_positions, aruco_marker_ids):
+        marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, aruco_marker_size)
+        marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
+        frame[y_coordinate:y_coordinate + aruco_marker_size, x_coordinate:x_coordinate + aruco_marker_size] = marker_bgr
+
+    return frame

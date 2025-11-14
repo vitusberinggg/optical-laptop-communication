@@ -13,8 +13,6 @@ from global_definitions import (
 
 # --- Functions ---
 
-def create_marker_frame():
-
 def create_mask(frame):
 
     """
