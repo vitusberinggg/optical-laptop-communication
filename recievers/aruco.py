@@ -1,6 +1,6 @@
 import cv2
 
-cap = cv2.VideoCapture("your_video.mp4")
+cap = cv2.VideoCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\Recordinggg.mp4")
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
