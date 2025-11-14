@@ -7,12 +7,10 @@ import numpy as np
 
 from utilities.image_generation_functions import generate_reference_image
 from utilities.screen_alignment_functions import create_mask, compute_ecc_transform
-from utilities.detection_functions import detect_end_frame, detect_ecc_reference_image, detect_aruco_marker_frame
-from utilities.decoding_functions import decode_bitgrid, bits_to_message
+from utilities.detection_functions import detect_ecc_reference_image, detect_aruco_marker_frame
 from utilities.global_definitions import (
     mask_frame_hsv_lower_limit, mask_frame_hsv_upper_limit,
     total_pixel_count, sender_screen_size_threshold,
-    sender_output_height, sender_output_width
 )
 
 # --- Definitions ---
@@ -86,6 +84,8 @@ def receive_message():
 
             print(f"[WARNING] No green screen bigger than the size threshold found.")
 
+            time.sleep(1)
+
             continue
     
 #   ECC reference image generation
@@ -93,8 +93,6 @@ def receive_message():
     ecc_reference_image = generate_reference_image() # Generates the reference image
 
     print("[INFO] Reference image generated. Waiting for reference frame...")
-
-    snapshots = []
 
     while True:
 

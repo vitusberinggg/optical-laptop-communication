@@ -4,7 +4,7 @@
 import cv2
 import numpy as np
 
-from global_definitions import (
+from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     ecc_allignment_criteria
@@ -49,7 +49,7 @@ def compute_ecc_transform(reference_image, captured_image):
 
     Returns:
         "ecc_warp_matrix": The warp matrix.
-        
+
     """
 
     ecc_warp_matrix = np.eye(2, 3, dtype = np.float32) # Initial warp matrix guess
