@@ -4,10 +4,11 @@
 import cv2 # Imports the OpenCV library for image processing
 import time
 
-from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame
+from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
+    aruco_marker_frame_duration,
     reference_image_duration,
     frame_duration,
     end_frame_color
@@ -35,6 +36,8 @@ def send_message(message):
     reference_image = generate_reference_image() # Generates the reference image
     reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
 
+    aruco_marker_frame = create_aruco_marker_frame()
+
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
     data_frames = []
@@ -49,9 +52,24 @@ def send_message(message):
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
     cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-    start_time = time.time() # Records the start time for the reference image display
+#   Aruco marker frame
 
-    while time.time() - start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
+    aruco_marker_frame_start_time = time.time()
+
+    while time.time() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
+        cv2.imshow(window, aruco_marker_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+            cv2.destroyAllWindows() # Close all OpenCV windows
+            return # Exit the function
+        
+        time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+#   ECC reference frame
+
+    reference_image_start_time = time.time() # Records the start time for the reference image display
+
+    while time.time() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
 
         cv2.imshow(window, reference_image_bgr) # Display the reference image
 
@@ -62,6 +80,8 @@ def send_message(message):
         time.sleep(0.001) # Small sleep to prevent high CPU usage
 
     try:
+
+#       Data transfer loop
 
         for frame in data_frames: # For each frame:
 
@@ -75,6 +95,8 @@ def send_message(message):
                     return # Exit the function
                 
                 time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+#       End frame
 
         end_frame_start_time = time.time() # Records the start time for the end frame
 

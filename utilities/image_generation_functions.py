@@ -84,7 +84,7 @@ def create_color_frame(color):
 
     return np.full((sender_output_height, sender_output_width, 3), color, dtype = np.uint8)
 
-def create_marker_frame():
+def create_aruco_marker_frame():
 
     """
     Creates a solid color frame with ArUco markers in each corner.
@@ -94,6 +94,7 @@ def create_marker_frame():
 
     Returns:
         "frame": The created frame.
+
     """
 
     frame = create_color_frame([0, 255, 0])
