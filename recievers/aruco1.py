@@ -11,7 +11,7 @@ aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 # --- Create markers ---
 def create_marker(id, size=marker_size):
     marker = np.zeros((size, size), dtype=np.uint8)
-    cv2.aruco.drawMarker(aruco_dict, id, size, marker, 1)
+    cv2.aruco.generateImageMarker(aruco_dict, id, size, marker, 1)  # new function
     return cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
 
 markers = [create_marker(i) for i in marker_ids]
