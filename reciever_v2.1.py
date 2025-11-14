@@ -5,19 +5,27 @@ from utilities.decoding_functions import decode_bits_with_blue, bits_to_message
 
 def detect_screen(frame):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-    params = cv2.aruco.DetectorParameters_create()
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    corners, ids, _ = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=params)
+    # Check if new ArUco API exists
+    if hasattr(cv2.aruco, "ArucoDetector"):
+        params = cv2.aruco.DetectorParameters()
+        detector = cv2.aruco.ArucoDetector(aruco_dict, params)
+        corners, ids, _ = detector.detectMarkers(frame)
+    else:
+        # fallback for older OpenCV
+        params = cv2.aruco.DetectorParameters_create()
+        corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=params)
 
     # Draw detected markers if any
     display = frame.copy()
     if corners is not None and ids is not None:
         cv2.aruco.drawDetectedMarkers(display, corners, ids)
     else:
-        cv2.putText(display, "No markers detected", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+        cv2.putText(display, "No markers detected", (50,50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
 
     return display, corners, ids
+
 
 def receive_message_debug(source=0, roi_size=150, verbose=True):
     cap = cv2.VideoCapture(source)
