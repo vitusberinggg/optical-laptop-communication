@@ -1,6 +1,7 @@
 # --- Imports ---
 from recievers.webCamSim import VideoThreadedCapture
 from recievers.color_utils import dominant_color, tracker  # 🔹 updated: import tracker
+from utilities import detection_functions
 
 import cv2
 import time
@@ -9,12 +10,19 @@ import numpy as np
 # --- Definitions ---
 delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
+homography = None
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(0)
+cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\gandalf.mp4")
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
+
+#cv2.namedWindow("Receiver", cv2.WND_PROP_FULLSCREEN)
+#cv2.setWindowProperty("Receiver", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
+cv2.namedWindow("Receiver", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Receiver", 1920, 1200)
 
 while True:
     ret, frame = cap.read()
@@ -24,6 +32,8 @@ while True:
 
 # --- Main function ---
 def receive_message():
+    global homography
+
     bits = ""
     message = ""
     last_color = None
@@ -39,28 +49,63 @@ def receive_message():
             print("Error: Failed to capture frame.")
             continue
 
+        # ⭐ DEBUG: SHOW FULL FRAME SHAPE EACH LOOP
+        print("Frame shape:", frame.shape)           # ⭐ added
+
+        # ⭐ TEMP DISABLE FLIP WHILE DEBUGGING CROPPING
+        # frame = cv2.flip(frame, 1)                 # ⭐ commented out
+
+        # ⭐ REMOVE HOMOGRAPHY FOR NOW TO DEBUG DISPLAY
+        roi = frame                                 # ⭐ simplified
+
         # Area that is being processed (roi)
         frame = cv2.flip(frame, 1)
-        h, w = frame.shape[:2]
-        cx, cy = w//2, h//2
-        size = 100   
-        roi = frame[max(0,cy-size):min(h,cy+size), max(0,cx-size):min(w,cx+size)]
+        """
+        if homography is not None:
+            warped = cv2.warpPerspective(
+                frame,
+                homography,
+                (sender_output_width, sender_output_height)
+            )
+            roi = warped   # <-- use warped screen as the ROI
+        else:
+            roi = frame    # fallback while still syncing
+        """
+        roi = frame  # for testing without homography
 
         color = dominant_color(roi)
 
         # --- DEBUG: show ROI info and color ---
         #print(f"ROI shape: {roi.shape}, Dominant color: {color}")
 
-        # Visualization
-        cv2.rectangle(frame, (cx-size, cy-size), (cx+size, cy+size), (0,255,0), 2)
-        cv2.putText(frame, f"Detected: {color}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2)
-        cv2.imshow("Receiver", frame)
+        # --- Visualization ---
+        frame_with_roi = frame.copy()
+        if homography is not None:
+            # Sender screen corners in warped space
+            h, w = sender_output_height, sender_output_width
+            corners = np.array([
+                [0, 0],         # top-left
+                [w, 0],         # top-right
+                [w, h],         # bottom-right
+                [0, h]          # bottom-left
+            ], dtype=np.float32).reshape(-1, 1, 2)
+
+            # Map corners back to original frame
+            projected_corners = cv2.perspectiveTransform(corners, np.linalg.inv(homography))
+
+            # Draw polygon on original frame
+            cv2.polylines(frame_with_roi, [np.int32(projected_corners)], True, (203, 192, 255), 3)  # pink polygon
+
+        # Show the original frame with polygon
+        #cv2.imshow("Original Frame with Computer ROI", frame_with_roi)
+
+        cv2.imshow("Receiver", frame_with_roi)
 
         # --- SYNC ---
         if waiting_for_sync:
             if color == "green" and last_color != "green":
                 print("Green detected — syncing...")
-                
+                homography = detection_functions.detect_aruco_marker_frame(frame)
                 tracker.reset()
             elif color != "green" and last_color == "green":
                 print("Green ended — starting decoding!")
