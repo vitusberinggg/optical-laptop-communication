@@ -16,8 +16,11 @@ def create_marker(id, size=marker_size):
 
 markers = [create_marker(i) for i in marker_ids]
 
-# --- Create blank screen and place markers ---
-frame = np.zeros((screen_height, screen_width, 3), dtype=np.uint8)
+# --- Create blank screen with gray background ---
+background_color = (128, 128, 128)  # Gray, in BGR format
+frame = np.full((screen_height, screen_width, 3), background_color, dtype=np.uint8)
+
+# --- Place markers in the corners ---
 positions = [
     (0, 0),  # top-left
     (screen_width - marker_size, 0),  # top-right
