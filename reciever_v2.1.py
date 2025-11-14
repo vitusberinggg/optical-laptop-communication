@@ -139,5 +139,5 @@ if __name__ == "__main__":
     # decoded = receive_message(source=0, verbose=True)
 
     # or video file:
-    decoded = receive_message(source=r"C:\path\to\your_video.mp4", verbose=True)
+    decoded = receive_message(source=r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 085923.mp4", verbose=True)
     print("Decoded:", decoded)
