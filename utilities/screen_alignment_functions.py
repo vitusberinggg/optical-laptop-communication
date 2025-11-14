@@ -5,18 +5,37 @@ import cv2
 import numpy as np
 
 from global_definitions import (
-    mask_frame_hsv_lower_limit, mask_frame_hsv_upper_limit,
-    total_pixel_count,
-    sender_screen_size_threshold,
+    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width
 )
 
 # --- Functions ---
 
-def create_mask(frame):
+def create_mask(homography_matrix):
 
+    """
+    Creates a binary mask using a homography matrix.
 
+    Arguments:
+        "homography_matrix"
 
+    Returns:
+        "mask"
+
+    """
+
+    sender_mask = np.full((sender_output_height, sender_output_width), 255, np.uint8)
+
+    inverse_homography_matrix = np.linalg.inv(homography_matrix)
+
+    webcam_mask = cv2.warpPerspective(
+        sender_mask,
+        inverse_homography_matrix,
+        (laptop_webcam_pixel_width, laptop_webcam_pixel_height),
+        flags = cv2.INTER_NEAREST
+    )
+
+    return webcam_mask
 
 def compute_ecc_transform(reference_image_float, captured_frame_float, initial_warp_matrix, warp_mode, criteria):
     
