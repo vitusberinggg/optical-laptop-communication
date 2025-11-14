@@ -7,10 +7,45 @@ import numpy as np
 from utilities.global_definitions import (
     reference_match_threshold,
     start_frame_color, start_frame_detection_tolerance,
-    end_frame_color, end_frame_detection_tolerance
+    end_frame_color, end_frame_detection_tolerance,
+    aruco_marker_dictionary
 )
 
 # --- Functions ---
+
+def detect_aruco_marker_frame(frame):
+
+    """
+    Tries to detect the ArUco marker frame shown on the sender screen.
+
+    Arguments:
+        "frame"
+
+    Returns:
+
+    """
+
+    aruco_marker_detector_parameters = cv2.aruco.DetectorParameters()
+    aruco_marker_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_marker_detector_parameters)
+
+    frame_corners, aruco_marker_ids, _ = aruco_marker_detector.detectMarkers(frame)
+
+    if aruco_marker_ids is None or len(aruco_marker_ids) < 4:
+        return None
+
+#   Sorting the markers by ID
+
+    sorted_marker_ids = [None] * 4
+
+    for frame_corner, marker_id in zip(frame_corners, aruco_marker_ids.flatten()):
+
+        if marker_id < 4:
+            sorted_marker_ids[marker_id] = frame_corner[0]
+    
+    if any(marker_id is None for marker_id in sorted_marker_ids):
+        return None
+    
+    return sorted_marker_ids
 
 def detect_reference_image(potential_sync_frame, reference_image):
 

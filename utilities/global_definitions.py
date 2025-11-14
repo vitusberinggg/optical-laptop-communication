@@ -14,7 +14,7 @@ mask_frame_hsv_upper_limit = [80, 255, 255] # [Hue, Saturation, Value]
 # --- Reference image definitions ---
 
 reference_image_seed = 42 # Seed for the random number generator to generate the reference image
-reference_image_duration = 2 # Duration for displaying the reference image in seconds
+reference_image_duration = 1 # Duration for displaying the reference image in seconds
 reference_match_threshold = 0.7 # Threshold for reference image matching
 
 # --- Sender output definitions ---
