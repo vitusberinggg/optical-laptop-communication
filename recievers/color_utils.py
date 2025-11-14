@@ -1,38 +1,80 @@
+# color_utils.py
 import cv2
 import numpy as np
+from collections import Counter
 
-# --- Define HSV ranges for colors ---
-COLOR_RANGES = {
-    "red": [((0, 100, 100), (10, 255, 255)),
-            ((160, 100, 100), (179, 255, 255))],
-    "white": [((0, 0, 200), (180, 30, 255))],
-    "black": [((0, 0, 0), (180, 255, 50))],
-    "green": [((40, 50, 50), (80, 255, 255))],
-    "blue": [((100, 150, 0), (140, 255, 255))],
-}
+class BitColorTracker:
+    def __init__(self):
+        self.current_bit_frames = []  # store all ROIs for the current bit
+        self.bit_colors = []          # store final dominant colors for each bit
 
-def dominant_color(frame):
-    """
-    Returns the color with the most pixels in the frame.
+    def add_frame(self, roi):
+        """Add a new ROI frame for the current bit."""
+        self.current_bit_frames.append(roi)
 
-    Arguments:
-        frame: BGR image (numpy array)
-    
-    Returns:
-        color_name: str
-    """
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    counts = {}
+    def end_bit(self):
+        """Compute the dominant color for the bit and reset frame buffer."""
+        if not self.current_bit_frames:
+            return None
 
-    for color_name, ranges in COLOR_RANGES.items():
-        mask_total = None
-        for lower, upper in ranges:
-            mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
-            if mask_total is None:
-                mask_total = mask
-            else:
-                mask_total = cv2.bitwise_or(mask_total, mask)
-        counts[color_name] = cv2.countNonZero(mask_total)
-    
-    # Return the color with the highest count
+        # Convert each frame to HSV and get the dominant color per frame
+        frame_colors = []
+        for frame in self.current_bit_frames:
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+            # RED — unchanged (red works well already)
+            red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
+                    cv2.inRange(hsv, (160,120,120), (179,255,255))
+
+            # WHITE — tighten saturation to avoid confusion with light blue
+            white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
+
+            # BLACK — much stricter brightness limit (prevents dark blue being classified as black)
+            black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
+
+            # GREEN — narrowed to avoid overlap with blue
+            green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
+
+            # BLUE — shifted upward to avoid dark/black confusion
+            blue_mask  = cv2.inRange(hsv, (95,120,70), (130,255,255))
+
+            counts = {
+                "red": int(cv2.countNonZero(red_mask)),
+                "white": int(cv2.countNonZero(white_mask)),
+                "black": int(cv2.countNonZero(black_mask)),
+                "green": int(cv2.countNonZero(green_mask)),
+                "blue": int(cv2.countNonZero(blue_mask)),
+            }
+            dominant = max(counts, key=counts.get)
+            frame_colors.append(dominant)
+
+        # Majority vote for this bit
+        majority_color = Counter(frame_colors).most_common(1)[0][0]
+        self.bit_colors.append(majority_color)
+        self.current_bit_frames = []
+        return majority_color
+
+    def reset(self):
+        self.current_bit_frames = []
+        self.bit_colors = []
+
+# For backward compatibility (optional)
+tracker = BitColorTracker()
+def dominant_color(roi):
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \
+               cv2.inRange(hsv,(160,100,100),(179,255,255))
+    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
+    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
+    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
+    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+
+    counts = {
+        "red": int(cv2.countNonZero(red_mask)),
+        "white": int(cv2.countNonZero(white_mask)),
+        "black": int(cv2.countNonZero(black_mask)),
+        "green": int(cv2.countNonZero(green_mask)),
+        "blue": int(cv2.countNonZero(blue_mask)),
+    }
     return max(counts, key=counts.get)
