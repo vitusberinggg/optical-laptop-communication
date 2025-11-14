@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
-from utilities.detect_start_frame import detect_start_frame
-from utilities.detect_end_frame import detect_end_frame
-from utilities.decode_bits_with_blue import decode_bits_with_blue
-from utilities.bits_to_message import bits_to_message
+from utilities.detection_functions import detect_start_frame
+from utilities.detection_functions import detect_end_frame
+from utilities.decoding_functions import decode_bits_with_blue
+from utilities.decoding_functions import bits_to_message
 
 def detect_screen(frame):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -113,4 +113,4 @@ def receive_message_debug(source=0, roi_size=150, verbose=True):
     return message
 
 if __name__ == "__main__":
-    receive_message_debug(source=0, roi_size=150, verbose=True)
+    receive_message_debug(source=r"C:\Users\eanpaln\Videos\Screen Recordings\Recordinggg.mp4", roi_size=150, verbose=True)
