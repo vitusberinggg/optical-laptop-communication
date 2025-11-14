@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # --- Parameters ---
-video_path = r"C:\Users\eanpaln\Videos\Screen Recordings\Rec.mp4"  # Change to your video path
+video_path = r"C:\Users\eanpaln\Videos\Screen Recordings\Screen Recording 2025-11-14 134827.mp4"  # Change to your video path
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
