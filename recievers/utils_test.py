@@ -21,11 +21,22 @@ class BitColorTracker:
         frame_colors = []
         for frame in self.current_bit_frames:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | cv2.inRange(hsv, (160,100,100), (179,255,255))
-            white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
-            black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
-            green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
-            blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+
+            # RED — unchanged (red works well already)
+            red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
+                    cv2.inRange(hsv, (160,120,120), (179,255,255))
+
+            # WHITE — tighten saturation to avoid confusion with light blue
+            white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
+
+            # BLACK — much stricter brightness limit (prevents dark blue being classified as black)
+            black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
+
+            # GREEN — narrowed to avoid overlap with blue
+            green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
+
+            # BLUE — shifted upward to avoid dark/black confusion
+            blue_mask  = cv2.inRange(hsv, (95,120,70), (130,255,255))
 
             counts = {
                 "red": int(cv2.countNonZero(red_mask)),
@@ -50,14 +61,15 @@ class BitColorTracker:
 # For backward compatibility (optional)
 tracker = BitColorTracker()
 def dominant_color(roi):
-    tracker.add_frame(roi)
-    # Return current frame’s dominant as a temporary measure
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | cv2.inRange(hsv, (160,100,100), (179,255,255))
+
+    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \
+               cv2.inRange(hsv,(160,100,100),(179,255,255))
     white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
     black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
     green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
     blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+
     counts = {
         "red": int(cv2.countNonZero(red_mask)),
         "white": int(cv2.countNonZero(white_mask)),

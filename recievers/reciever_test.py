@@ -11,7 +11,7 @@ delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\liläng_part3.1.mp4")
+cap = VideoThreadedCapture(0)
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
@@ -29,7 +29,6 @@ def receive_message():
     last_color = None
     waiting_for_sync = True
     decoding = False
-    bit_ready = False  # set True when blue frame appears or first bit after green
     current_bit_colors = []  # DEBUG: store colors per bit
 
     print("Receiver started — waiting for GREEN to sync...")
@@ -61,8 +60,10 @@ def receive_message():
         if waiting_for_sync:
             if color == "green" and last_color != "green":
                 print("Green detected — syncing...")
+                tracker.reset()
             elif color != "green" and last_color == "green":
                 print("Green ended — starting decoding!")
+                tracker.reset()
                 waiting_for_sync = False
                 decoding = True
 
@@ -75,12 +76,15 @@ def receive_message():
                     bits += "1"
                 elif majority_color == "black":
                     bits += "0"
-
+                
+                #print(f"color list: {current_bit_colors}") # DEBUGGING
+                #current_bit_colors = [] # DEBUGGING
                 print(f"Bit: {bits[-1]} (averaged color = {majority_color})")
 
             elif color in ["white", "black"]:
                 # part of bit → collect frame
                 tracker.add_frame(roi)
+                #current_bit_colors.append(color)
             elif color == "red" and last_color != "red":
                 # delimiter: process accumulated bits as character(s)
                 while len(bits) >= 8:
