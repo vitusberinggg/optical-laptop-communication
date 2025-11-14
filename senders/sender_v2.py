@@ -45,17 +45,19 @@ def create_aruco_marker(marker_id):
     
     return marker_bgr
 
-def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128)):
+def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128), margin=50):
     """
-    Creates a frame with ArUco markers in the corners and a colored center square.
+    Creates a frame with ArUco markers in the corners and a smaller colored center square.
     
     Arguments:
         center_color: BGR color for the center square.
         margin_color: BGR color for the rest of the frame (background/margin).
+        margin: Distance from the edges to keep markers clear.
     """
     # Fill the frame with gray instead of black
     frame = np.full((screen_height, screen_width, 3), margin_color, dtype=np.uint8)
 
+    # Coordinates for ArUco markers
     marker_coordinates = [
         (10, 10),  # Top-left
         (screen_width - 10 - marker_size, 10),  # Top-right
@@ -63,15 +65,16 @@ def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128)):
         (10, screen_height - 10 - marker_size),  # Bottom-left
     ]
 
+    # Place ArUco markers
     for idx, (x, y) in enumerate(marker_coordinates):
         marker = create_aruco_marker(marker_ids[idx])
         frame[y:y+marker_size, x:x+marker_size] = marker
 
-    # Draw center square
-    center_x_start = frame_padding
-    center_x_end = screen_width - frame_padding
-    center_y_start = frame_padding
-    center_y_end = screen_height - frame_padding
+    # Smaller center square
+    center_x_start = margin + marker_size
+    center_x_end = screen_width - margin - marker_size
+    center_y_start = margin + marker_size
+    center_y_end = screen_height - margin - marker_size
     cv2.rectangle(frame, (center_x_start, center_y_start), (center_x_end, center_y_end), center_color, thickness=-1)
 
     return frame
