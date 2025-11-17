@@ -1,6 +1,6 @@
 # --- Imports ---
 from recievers.webCamSim import VideoThreadedCapture
-from recievers.color_utils import dominant_color, tracker  # 🔹 updated: import tracker
+from utilities.color_functions import dominant_color, tracker  # 🔹 updated: import tracker
 from utilities import detection_functions, screen_alignment_functions
 
 import cv2
