@@ -12,8 +12,12 @@ from utilities.global_definitions import (
 
 # --- Functions ---
 
-def roi_alignment(frame):
+def roi_alignment(frame, inset_px = 0):
 
+    h, w = frame.shape[:2]
+    w_px = 0
+    h_px = 0
+    roi_coords = None
     display, corners, ids = detect_screen(frame)
     if corners is not None and ids is not None and len(ids) > 0:
         ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
@@ -21,6 +25,12 @@ def roi_alignment(frame):
 
         required_ids = [0, 1, 2, 3]
         if all(i in id_to_corners for i in required_ids):
+
+            # Size of markers
+            pts = id_to_corners[0]
+            w_px = np.linalg.norm(pts[1] - pts[0])  # width in pixels
+            h_px = np.linalg.norm(pts[2] - pts[1])  # height in pixels
+
             # Collect all corners from the four markers
             all_corners = np.vstack([id_to_corners[i] for i in required_ids])
             x0, y0 = np.min(all_corners, axis=0) + inset_px
@@ -33,7 +43,7 @@ def roi_alignment(frame):
             if x1 - x0 > 5 and y1 - y0 > 5:
                 roi_coords = (x0, x1, y0, y1)
                 print("ROI set around outer corners of markers.")
-    return roi_coords
+    return roi_coords, w_px, h_px
 
 def detect_screen(frame):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)

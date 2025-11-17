@@ -18,11 +18,11 @@ binary_duration = 0.3     # unused, just for reference
 homography = None
 
 # Match sender's screen size (from sender script)
-sender_output_width = 2650
-sender_output_height = 1440
+sender_output_width = 1920
+sender_output_height = 1200
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\gandalf2.0.mp4")
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\gandalf2.0.mp4")
 # For live webcam test instead of video, use:
 # cap = VideoThreadedCapture(0)
 
@@ -31,8 +31,11 @@ if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
 
-cv2.namedWindow("Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Receiver", 1920, 1200)
+cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Webcam Receiver", 1920, 1200)
+
+cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("ROI", 1920, 1200)
 
 # Grab one initial frame so cap is "warmed up"
 while True:
@@ -65,6 +68,7 @@ def receive_message():
     waiting_for_sync = True
     decoding = False
     current_bit_colors = []
+    roi_coords = None
 
     print("Receiver started — waiting for GREEN to sync...")
 
@@ -80,67 +84,17 @@ def receive_message():
         # ---------- ArUco detection on the frame ----------
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        # If markers are low-contrast on screen, try thresholding instead:
-        # th = cv2.adaptiveThreshold(
-        #     gray, 255,
-        #     cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        #     cv2.THRESH_BINARY,
-        #     11, 2
-        # )
-        # corners, ids, rejected = aruco_detector.detectMarkers(th)
-
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
 
         rejected_count = 0 if rejected is None else len(rejected)
         print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
 
-        # --------------------------------------------------
 
-        # Use warped ROI if homography is known, otherwise full frame
 
-        if homography is not None:
-            warped = cv2.warpPerspective(
-                frame,
-                homography,
-                (sender_output_width, sender_output_height)
-            )
-
-            mask = screen_alignment_functions.roi_alignment(frame)
-            mask_resized = cv2.resize(mask, (frame.shape[1], frame.shape[0]))
-
-            # --- VISUALIZE MASK ---
-            mask_color = cv2.cvtColor(mask_resized, cv2.COLOR_GRAY2BGR)
-            overlay = cv2.addWeighted(frame, 0.7, mask_color, 0.3, 0)
-            cv2.imshow("Masked Overlay", overlay)
-
-            roi = warped   # <-- use warped screen as the ROI
-
-        else:
-            roi = frame    # fallback while still syncing
-
-        color = dominant_color(roi)
-
-        # --- Visualization ---
+        # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
 
         display = frame.copy()
 
-        # Draw the pink polygon (homography ROI) if we have H
-        if homography is not None:
-            h, w = sender_output_height, sender_output_width
-            corners_norm = np.array([
-                [0, 0],         # top-left
-                [w, 0],         # top-right
-                [w, h],         # bottom-right
-                [0, h]          # bottom-left
-            ], dtype=np.float32).reshape(-1, 1, 2)
-
-            projected_corners = cv2.perspectiveTransform(corners_norm, np.linalg.inv(homography))
-            cv2.polylines(display, [np.int32(projected_corners)], True, (203, 192, 255), 3)
-
-            cv2.polylines(display, [np.int32(projected_corners)], True, (0, 0, 255), 2)
-
-        # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
         if ids is not None and len(ids) > 0:
 
             cv2.aruco.drawDetectedMarkers(display, corners, ids)
@@ -161,16 +115,23 @@ def receive_message():
                         1.0,
                         (0, 0, 255),
                         2)
-        # -------------------------------------------
 
-        roi_coords = screen_alignment_functions.roi_alignment(frame)
+        roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
 
         if roi_coords is not None:
             x0, x1, y0, y1 = roi_coords
-            cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
-        # --- Extract ROI safely ---
+            x0 = int(x0 + marker_w)
+            y0 = int(y0 + marker_h)
+            x1 = int(x1 - marker_w)
+            y1 = int(y1 - marker_h)
+
+            if x0 < x1 and y0 < y1:
+                cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+
         roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+
+        color = dominant_color(roi)
 
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
@@ -196,6 +157,8 @@ def receive_message():
                 waiting_for_sync = False
                 decoding = True
 
+        # --- Decode ---
+
         elif decoding:
 
             if color == "blue" and last_color != "blue":
@@ -210,14 +173,9 @@ def receive_message():
                     bits += "0"
 
             elif color in ["white", "black"]:
-
-                if homography is not None:
-                    masked_roi = cv2.bitwise_and(frame, frame, mask=mask)
-                    warped_roi = cv2.warpPerspective(masked_roi, homography, (sender_output_width, sender_output_height))
-                    tracker.add_frame(warped_roi)
-
-                else:
-                    tracker.add_frame(frame)
+                
+                # add_frame → add frame to array
+                tracker.add_frame(roi)
 
             elif color == "red" and last_color != "red":
 
