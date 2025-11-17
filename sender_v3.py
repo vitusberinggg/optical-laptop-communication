@@ -36,7 +36,7 @@ def send_message(message):
     reference_image = generate_reference_image() # Generates the reference image
     reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
 
-    aruco_marker_frame = create_aruco_marker_frame()
+    aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
@@ -50,7 +50,7 @@ def send_message(message):
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
-#    cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
+#   cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
 #   Aruco marker frame
 
@@ -65,6 +65,8 @@ def send_message(message):
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
 
+    """
+
 #   ECC reference frame
 
     reference_image_start_time = time.time() # Records the start time for the reference image display
@@ -78,6 +80,8 @@ def send_message(message):
             return # Exit the function
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+    """
 
     try:
 
