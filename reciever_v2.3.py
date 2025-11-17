@@ -17,9 +17,9 @@ def detect_screen(frame):
     display = frame.copy()
     if corners is not None and ids is not None and len(ids) > 0:
         cv2.aruco.drawDetectedMarkers(display, corners, ids)
-    return display, corners, ids  # removed "No markers detected" text
+    return display, corners, ids
 
-def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=True):
+def receive_message_webcam(webcam_index=0, inset_px=0, verbose=True):
     cap = cv2.VideoCapture(webcam_index)
     if not cap.isOpened():
         print("Error: Could not open webcam", webcam_index)
@@ -31,7 +31,7 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
 
     frames = []
     waiting_for_start = True
-    roi_coords = None  # Will store ROI once markers are detected
+    roi_coords = None  # Store ROI after detecting markers
 
     print("Webcam receiver started. Press 'q' to quit.")
 
@@ -42,41 +42,45 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
             break
 
         display = frame.copy()
+        h, w = frame.shape[:2]
 
-        # Only detect markers until ROI is found
+        # Detect markers until ROI is set
         if roi_coords is None:
             display, corners, ids = detect_screen(frame)
-            h, w = frame.shape[:2]
 
             if corners is not None and ids is not None and len(ids) > 0:
+                # Flatten IDs
                 ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
-                id_to_center = {int(m_id): corners[idx][0].mean(axis=0) for idx, m_id in enumerate(ids_flat)}
+
+                # Map ID to corner coordinates
+                id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
 
                 required_ids = [0, 1, 2, 3]
-                if all(i in id_to_center for i in required_ids):
-                    centers = np.array([id_to_center[i] for i in required_ids])
-                    xs = centers[:, 0]; ys = centers[:, 1]
-                    bx0, bx1 = int(np.min(xs)), int(np.max(xs))
-                    by0, by1 = int(np.min(ys)), int(np.max(ys))
+                if all(i in id_to_corners for i in required_ids):
+                    # Collect all corner points of the required markers
+                    all_corners = np.vstack([id_to_corners[i] for i in required_ids])
+                    x_min, y_min = np.min(all_corners, axis=0)
+                    x_max, y_max = np.max(all_corners, axis=0)
 
-                    x0, x1 = max(0, bx0 + inset_px), min(w, bx1 - inset_px)
-                    y0, y1 = max(0, by0 + inset_px), min(h, by1 - inset_px)
+                    # Apply optional inset
+                    x0, x1 = max(0, int(x_min) + inset_px), min(w, int(x_max) - inset_px)
+                    y0, y1 = max(0, int(y_min) + inset_px), min(h, int(y_max) - inset_px)
 
                     if x1 - x0 > 5 and y1 - y0 > 5:
-                        roi_coords = (x0, x1, y0, y1)
+                        roi_coords = (x0, x1, y0, y1)  # Store ROI
 
-        # Fallback ROI if markers never detected
+        # Fallback ROI in center if markers never detected
         if roi_coords is None:
-            h, w = frame.shape[:2]
             cx, cy = w // 2, h // 2
+            roi_size = 150
             x0, x1 = max(0, cx - roi_size), min(w, cx + roi_size)
             y0, y1 = max(0, cy - roi_size), min(h, cy + roi_size)
+            roi_coords = (x0, x1, y0, y1)
         else:
             x0, x1, y0, y1 = roi_coords
 
-        # Draw ROI rectangle only after markers found
-        if roi_coords is not None:
-            cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+        # Draw ROI rectangle
+        cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
         # Extract ROI
         roi = frame[y0:y1, x0:x1]
@@ -114,11 +118,11 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
     cap.release()
     cv2.destroyAllWindows()
 
-    bits = decode_bits_with_blue(frames, roi_size=roi_size, verbose=verbose)
+    bits = decode_bits_with_blue(frames, roi_size=roi_coords[1]-roi_coords[0], verbose=verbose)
     message = bits_to_message(bits)
     if verbose:
         print("Final message:", message)
     return message
 
 if __name__ == "__main__":
-    receive_message_webcam(webcam_index=0, roi_size=150, inset_px=40, verbose=True)
+    receive_message_webcam(webcam_index=0, inset_px=0, verbose=True)
