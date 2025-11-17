@@ -12,7 +12,44 @@ from utilities.global_definitions import (
 
 # --- Functions ---
 
+def roi_alignment(frame):
 
+    display, corners, ids = detect_screen(frame)
+    if corners is not None and ids is not None and len(ids) > 0:
+        ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
+        id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
+
+        required_ids = [0, 1, 2, 3]
+        if all(i in id_to_corners for i in required_ids):
+            # Collect all corners from the four markers
+            all_corners = np.vstack([id_to_corners[i] for i in required_ids])
+            x0, y0 = np.min(all_corners, axis=0) + inset_px
+            x1, y1 = np.max(all_corners, axis=0) - inset_px
+
+            # Clip to frame
+            x0, x1 = max(0, int(x0)), min(w, int(x1))
+            y0, y1 = max(0, int(y0)), min(h, int(y1))
+
+            if x1 - x0 > 5 and y1 - y0 > 5:
+                roi_coords = (x0, x1, y0, y1)
+                print("ROI set around outer corners of markers.")
+    return roi_coords
+
+def detect_screen(frame):
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+
+    if hasattr(cv2.aruco, "ArucoDetector"):
+        params = cv2.aruco.DetectorParameters()
+        detector = cv2.aruco.ArucoDetector(aruco_dict, params)
+        corners, ids, _ = detector.detectMarkers(frame)
+    else:
+        params = cv2.aruco.DetectorParameters_create()
+        corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=params)
+
+    display = frame.copy()
+    if corners is not None and ids is not None and len(ids) > 0:
+        cv2.aruco.drawDetectedMarkers(display, corners, ids)
+    return display, corners, ids
 
 def create_mask(homography_matrix):
 
