@@ -119,7 +119,7 @@ def message_to_frames(message, bit_time = 0.35, fps = 15):
             frames += [f] * samples_per_bit
         
         f = create_frame(center_color = (0, 0, 255))
-            frames += [f] * samples_per_bit
+        frames += [f] * samples_per_bit
 
     return frames
 
