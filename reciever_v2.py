@@ -1,8 +1,4 @@
 # --- Imports ---
-from recievers.webCamSim import VideoThreadedCapture
-from recievers.color_utils import dominant_color, tracker  # 🔹 updated: import tracker
-from utilities import detection_functions, screen_alignment_functions
-
 import cv2
 import time
 import numpy as np
@@ -110,7 +106,7 @@ def receive_message():
                 (sender_output_width, sender_output_height)
             )
 
-            mask = screen_alignment_functions.create_mask(homography)
+            mask = screen_alignment_functions.roi_alignment(frame)
             mask_resized = cv2.resize(mask, (frame.shape[1], frame.shape[0]))
 
             # --- VISUALIZE MASK ---
@@ -127,7 +123,7 @@ def receive_message():
 
         # --- Visualization ---
 
-        frame_with_roi = frame.copy()
+        display = frame.copy()
 
         # Draw the pink polygon (homography ROI) if we have H
         if homography is not None:
@@ -140,16 +136,16 @@ def receive_message():
             ], dtype=np.float32).reshape(-1, 1, 2)
 
             projected_corners = cv2.perspectiveTransform(corners_norm, np.linalg.inv(homography))
-            cv2.polylines(frame_with_roi, [np.int32(projected_corners)], True, (203, 192, 255), 3)
+            cv2.polylines(display, [np.int32(projected_corners)], True, (203, 192, 255), 3)
 
-            cv2.polylines(frame_with_roi, [np.int32(projected_corners)], True, (0, 0, 255), 2)
+            cv2.polylines(display, [np.int32(projected_corners)], True, (0, 0, 255), 2)
 
         # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
         if ids is not None and len(ids) > 0:
 
-            cv2.aruco.drawDetectedMarkers(frame_with_roi, corners, ids)
+            cv2.aruco.drawDetectedMarkers(display, corners, ids)
 
-            cv2.putText(frame_with_roi,
+            cv2.putText(display,
                         f"{len(ids)} ArUco marker(s) detected",
                         (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX,
@@ -158,7 +154,7 @@ def receive_message():
                         2)
             
         else:
-            cv2.putText(frame_with_roi,
+            cv2.putText(display,
                         "No ArUco markers detected",
                         (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX,
@@ -167,7 +163,17 @@ def receive_message():
                         2)
         # -------------------------------------------
 
-        cv2.imshow("Receiver", frame_with_roi)
+        roi_coords = screen_alignment_functions.roi_alignment(frame)
+
+        if roi_coords is not None:
+            x0, x1, y0, y1 = roi_coords
+            cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+
+        # --- Extract ROI safely ---
+        roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+
+        cv2.imshow("Webcam Receiver", display)
+        cv2.imshow("ROI", roi)
 
         # --- SYNC ---
 
