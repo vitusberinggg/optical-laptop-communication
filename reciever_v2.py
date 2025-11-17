@@ -1,34 +1,34 @@
+
 # --- Imports ---
-from recievers.webCamSim import VideoThreadedCapture
-from utilities.color_functions import dominant_color, tracker  # 🔹 updated: import tracker
-from utilities import detection_functions, screen_alignment_functions
 
 import cv2
 import time
 import numpy as np
 
+from recievers.webCamSim import VideoThreadedCapture
+from utilities.color_functions import dominant_color, tracker
+from utilities.global_definitions import (
+    sender_output_height, sender_output_width,
+    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
+    aruco_marker_dictionary,
+)
+from utilities import detection_functions, screen_alignment_functions
+
 # --- Definitions ---
-delimiter_duration = 0.5  # red duration
-binary_duration = 0.3     # unused, just for reference
+
 homography = None
 
-# Match sender's screen size (from sender script)
-sender_output_width = 2650
-sender_output_height = 1440
+# --- Video capture setup ---
 
-# --- Setup capture ---
 cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\gandalf2.0.mp4")
-# For live webcam test instead of video, use:
-# cap = VideoThreadedCapture(0)
 
 if not cap.isOpened():
     print("Error: Could not open camera/video.")
     exit()
 
 cv2.namedWindow("Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Receiver", 1920, 1200)
+cv2.resizeWindow("Receiver", sender_output_width, sender_output_height)
 
-# Grab one initial frame so cap is "warmed up"
 while True:
     ret, frame = cap.read()
     if ret:
@@ -36,10 +36,9 @@ while True:
     time.sleep(0.01)
 
 # --- ArUco setup (match sender) ---
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-aruco_params = cv2.aruco.DetectorParameters()
-aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 
+aruco_params = cv2.aruco.DetectorParameters()
+aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_params)
 
 # --- Main function ---
 def receive_message():
@@ -65,15 +64,6 @@ def receive_message():
 
         # ---------- ArUco detection on the frame ----------
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        # If markers are low-contrast on screen, try thresholding instead:
-        # th = cv2.adaptiveThreshold(
-        #     gray, 255,
-        #     cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        #     cv2.THRESH_BINARY,
-        #     11, 2
-        # )
-        # corners, ids, rejected = aruco_detector.detectMarkers(th)
 
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
 

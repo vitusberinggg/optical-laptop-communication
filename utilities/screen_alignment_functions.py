@@ -12,8 +12,6 @@ from utilities.global_definitions import (
 
 # --- Functions ---
 
-
-
 def create_mask(homography_matrix):
 
     """
