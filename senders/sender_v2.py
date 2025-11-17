@@ -101,9 +101,6 @@ def message_to_frames(message, bit_time = 0.35, fps = 15):
     f = create_frame(center_color = (0, 255, 0))
     frames += [f] * samples_per_bit * 3 
 
-    f = create_frame(center_color = (255, 0, 0))
-    frames += [f] * samples_per_bit
-
     for character in message:
         bits = format(ord(character), "08b")
 
@@ -115,10 +112,10 @@ def message_to_frames(message, bit_time = 0.35, fps = 15):
             else:
                 color = (0, 0, 0)
 
-            f = create_frame(center_color = color)
+            f = create_frame(center_color = (255, 0, 0))
             frames += [f] * samples_per_bit
 
-            f = create_frame(center_color = (255, 0, 0))
+            f = create_frame(center_color = color)
             frames += [f] * samples_per_bit
         
         f = create_frame(center_color = (0, 0, 255))
