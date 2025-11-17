@@ -17,11 +17,7 @@ def detect_screen(frame):
     display = frame.copy()
     if corners is not None and ids is not None and len(ids) > 0:
         cv2.aruco.drawDetectedMarkers(display, corners, ids)
-    else:
-        cv2.putText(display, "No markers detected", (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-    return display, corners, ids
-
+    return display, corners, ids  # removed "No markers detected" text
 
 def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=True):
     cap = cv2.VideoCapture(webcam_index)
@@ -35,9 +31,7 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
 
     frames = []
     waiting_for_start = True
-
-    # --- Store ROI coordinates once detected ---
-    roi_coords = None  # x0, x1, y0, y1
+    roi_coords = None  # Will store ROI once markers are detected
 
     print("Webcam receiver started. Press 'q' to quit.")
 
@@ -49,25 +43,19 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
 
         display = frame.copy()
 
-        # --- Only detect markers if ROI not set ---
+        # Only detect markers until ROI is found
         if roi_coords is None:
             display, corners, ids = detect_screen(frame)
             h, w = frame.shape[:2]
-            roi_valid = False
 
             if corners is not None and ids is not None and len(ids) > 0:
                 ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
-                id_to_center = {}
-                for idx, m_id in enumerate(ids_flat):
-                    c = corners[idx][0]
-                    center = c.mean(axis=0)
-                    id_to_center[int(m_id)] = center
+                id_to_center = {int(m_id): corners[idx][0].mean(axis=0) for idx, m_id in enumerate(ids_flat)}
 
                 required_ids = [0, 1, 2, 3]
                 if all(i in id_to_center for i in required_ids):
                     centers = np.array([id_to_center[i] for i in required_ids])
-                    xs = centers[:, 0]
-                    ys = centers[:, 1]
+                    xs = centers[:, 0]; ys = centers[:, 1]
                     bx0, bx1 = int(np.min(xs)), int(np.max(xs))
                     by0, by1 = int(np.min(ys)), int(np.max(ys))
 
@@ -75,22 +63,20 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
                     y0, y1 = max(0, by0 + inset_px), min(h, by1 - inset_px)
 
                     if x1 - x0 > 5 and y1 - y0 > 5:
-                        roi_coords = (x0, x1, y0, y1)  # store ROI
-        else:
-            # ROI already set, skip marker detection
-            x0, x1, y0, y1 = roi_coords
+                        roi_coords = (x0, x1, y0, y1)
 
-        # --- Fallback ROI if still not detected ---
+        # Fallback ROI if markers never detected
         if roi_coords is None:
             h, w = frame.shape[:2]
             cx, cy = w // 2, h // 2
             x0, x1 = max(0, cx - roi_size), min(w, cx + roi_size)
             y0, y1 = max(0, cy - roi_size), min(h, cy + roi_size)
-            roi_coords = (x0, x1, y0, y1)
+        else:
+            x0, x1, y0, y1 = roi_coords
 
-        # Draw ROI rectangle (yellow)
-        x0, x1, y0, y1 = roi_coords
-        cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+        # Draw ROI rectangle only after markers found
+        if roi_coords is not None:
+            cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
         # Extract ROI
         roi = frame[y0:y1, x0:x1]
@@ -105,6 +91,7 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
         status = "Waiting for START" if waiting_for_start else "Decoding..."
         cv2.putText(display, status, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
+        # Show frames
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
 
@@ -132,7 +119,6 @@ def receive_message_webcam(webcam_index=0, roi_size=150, inset_px=30, verbose=Tr
     if verbose:
         print("Final message:", message)
     return message
-
 
 if __name__ == "__main__":
     receive_message_webcam(webcam_index=0, roi_size=150, inset_px=40, verbose=True)
