@@ -20,7 +20,7 @@ def detect_screen(frame):
     return display, corners, ids
 
 
-def receive_message_webcam(webcam_index=0, inset_px=30, verbose=True):
+def receive_message_webcam(webcam_index=0, inset_px=0, verbose=True):
     cap = cv2.VideoCapture(webcam_index)
     if not cap.isOpened():
         print("Error: Could not open webcam", webcam_index)
@@ -113,4 +113,4 @@ def receive_message_webcam(webcam_index=0, inset_px=30, verbose=True):
 
 
 if __name__ == "__main__":
-    receive_message_webcam(webcam_index=0, inset_px=40, verbose=True)
+    receive_message_webcam(webcam_index=0, inset_px=0, verbose=True)
