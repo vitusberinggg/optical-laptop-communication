@@ -52,7 +52,7 @@ sample_space = frame_duration / samples_per_frame
 aruco_marker_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
 aruco_marker_size = min(sender_output_width, sender_output_height) // 3
-aruco_marker_margin = 0
-aruco_marker_ids = [0, 1, 2, 3]
+aruco_marker_margin = 15
+aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 3
