@@ -93,10 +93,12 @@ def decode_bits_with_blue(frames, roi_size=100, verbose=False):
         white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
         black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
         blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+        green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
         counts = {
             "white": int(cv2.countNonZero(white_mask)),
             "black": int(cv2.countNonZero(black_mask)),
             "blue": int(cv2.countNonZero(blue_mask)),
+            "green": int(cv2.countNonZero(green_mask)),
         }
         return max(counts, key=counts.get)
 
@@ -110,7 +112,7 @@ def decode_bits_with_blue(frames, roi_size=100, verbose=False):
         roi = frame[max(0,cy-roi_size):min(h,cy+roi_size), max(0,cx-roi_size):min(w,cx+roi_size)]
         color = read_color(roi)
 
-        if color == "blue":
+        if color in ["blue", "green"]:
             bit_ready = True
             if verbose:
                 print("Blue separator detected — next bit ready.")

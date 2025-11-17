@@ -49,15 +49,9 @@ def receive_message():
             print("Error: Failed to capture frame.")
             continue
 
-        # ⭐ DEBUG: SHOW FULL FRAME SHAPE EACH LOOP
-        print("Frame shape:", frame.shape)           # ⭐ added
-
-        # ⭐ REMOVE HOMOGRAPHY FOR NOW TO DEBUG DISPLAY
-        roi = frame                                 # ⭐ simplified
-
         # Area that is being processed (roi)
         frame = cv2.flip(frame, 1)
-        """
+        
         if homography is not None:
             warped = cv2.warpPerspective(
                 frame,
@@ -67,8 +61,6 @@ def receive_message():
             roi = warped   # <-- use warped screen as the ROI
         else:
             roi = frame    # fallback while still syncing
-        """
-        roi = frame  # for testing without homography
 
         color = dominant_color(roi)
 

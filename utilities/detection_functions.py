@@ -15,59 +15,53 @@ from utilities.global_definitions import (
 # --- Functions ---
 
 def detect_aruco_marker_frame(frame):
-
     """
-    Tries to detect the ArUco marker frame shown on the sender screen and map points from one plane to another.
-
-    Arguments:
-        "frame": Frame to check for markers.
-
-    Returns:
-        "homography_matrix": A 3 x 3 transformation matrix.
-
+    Detects ArUco markers in the frame and returns a homography matrix
+    from detected sender corners to a normalized layout.
+    Ensures IDs are in sender's corner order: 0=TL, 1=TR, 2=BR, 3=BL.
     """
 
-    aruco_marker_detector_parameters = cv2.aruco.DetectorParameters()
-    aruco_marker_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_marker_detector_parameters)
+    # Convert to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    frame_corners, aruco_marker_ids, _ = aruco_marker_detector.detectMarkers(frame)
+    # Setup ArUco detector (matches sender dictionary)
+    aruco_params = cv2.aruco.DetectorParameters()
+    detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_params)
 
-    if aruco_marker_ids is None or len(aruco_marker_ids) < 4:
+    # Detect markers
+    corners, ids, _ = detector.detectMarkers(gray)
+
+    if ids is None or len(ids) < 4:
+        # Not enough markers detected
         return None
-    
-    aruco_marker_ids = aruco_marker_ids.flatten()
 
-#   Sorting the markers by ID
+    # Map marker IDs to their corners
+    id_to_corner = {id[0]: corner[0] for id, corner in zip(ids, corners)}
 
-    sorted_marker_ids = [None] * 4
-
-    for frame_corner, marker_id in zip(frame_corners, aruco_marker_ids):
-
-        if marker_id < 4:
-            sorted_marker_ids[marker_id] = frame_corner[0][0]
-    
-    if any(corner is None for corner in sorted_marker_ids):
+    try:
+        # Order corners according to sender: 0=TL, 1=TR, 2=BR, 3=BL
+        source = np.array([
+            id_to_corner[0][0],  # top-left corner of marker 0
+            id_to_corner[1][1],  # top-right corner of marker 1
+            id_to_corner[2][2],  # bottom-right corner of marker 2
+            id_to_corner[3][3],  # bottom-left corner of marker 3
+        ], dtype=np.float32)
+    except KeyError:
+        # Some marker missing, can't compute homography
         return None
-    
-#   Perspective mapping
-    
-    source = np.array([ # Marker coordinates from the camera frame
-        sorted_marker_ids[0],
-        sorted_marker_ids[1],
-        sorted_marker_ids[3],
-        sorted_marker_ids[2]],
-        dtype = np.float32)
-    
-    destination_layout = np.array([ # What the markers should form
+
+    # Destination layout in the receiver frame
+    destination_layout = np.array([
         [0, 0],
         [sender_output_width, 0],
         [sender_output_width, sender_output_height],
-        [0, sender_output_height]],
-        dtype = np.float32)
-    
-    homography_matrix = cv2.getPerspectiveTransform(source, destination_layout)
+        [0, sender_output_height]
+    ], dtype=np.float32)
 
+    # Compute homography
+    homography_matrix = cv2.getPerspectiveTransform(source, destination_layout)
     return homography_matrix
+
 
 def detect_ecc_reference_image(potential_sync_frame, ecc_reference_image):
 
@@ -86,8 +80,6 @@ def detect_ecc_reference_image(potential_sync_frame, ecc_reference_image):
     resized_frame = cv2.resize(potential_sync_frame, (ecc_reference_image.shape[1], ecc_reference_image.shape[0])) # Resize the potential sync frame to match the reference image size
 
     grayscale_resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
-
-    ecc_reference_image = ecc_reference_image.astype(np.float32)
 
     correlation = cv2.matchTemplate(grayscale_resized_frame, ecc_reference_image, cv2.TM_CCOEFF_NORMED) # Perform template matching to find the reference image in the potential sync frame
 
