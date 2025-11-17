@@ -45,7 +45,7 @@ def create_aruco_marker(marker_id):
     
     return marker_bgr
 
-def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128), margin=50):
+def create_frame(center_color=(0, 0, 0), margin_color=(128, 128, 128), margin=10):
     """
     Creates a frame with ArUco markers in the corners and a smaller colored center square.
     
