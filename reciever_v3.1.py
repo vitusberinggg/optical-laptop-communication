@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from utilities.image_generation_functions import generate_reference_image
-from utilities.screen_alignment_functions import create_mask, compute_ecc_transform
+from utilities.screen_alignment_functions import create_mask, compute_ecc_transform, create_mask_2
 from utilities.detection_functions import detect_ecc_reference_image, detect_aruco_marker_frame
 from utilities.global_definitions import (
     mask_frame_hsv_lower_limit, mask_frame_hsv_upper_limit,
@@ -33,6 +33,9 @@ def receive_message():
     
     """
 
+    window_name = "Camera Feed"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
     print("[INFO] Waiting for ArUco marker frame...")
 
     while True:
@@ -43,7 +46,16 @@ def receive_message():
             print("[WARNING] Can't read the camera.")
             continue # Skip this iteration
 
+        cv2.imshow(window_name, frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("[INFO] User quit.")
+            cv2.destroyAllWindows()
+            return
+
 #       Green screen detection
+
+        """
 
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) # Converts the frame to HSV (Hue, Saturation, Value)
 
@@ -60,39 +72,49 @@ def receive_message():
 
             print("[INFO] Creating mask based on lime-green frame area.")
 
+        """         
+
     #       ArUco marker detection
 
-            homography_matrix = detect_aruco_marker_frame(mask_green)
+        homography_matrix = detect_aruco_marker_frame(frame)
 
-            if homography_matrix is not None:
+        if homography_matrix is not None:
 
-                print("[INFO] ArUco markers detected in lime-green frame area. Perspective transform locked.")
+            print("[INFO] ArUco markers detected in lime-green frame area. Perspective transform locked.")
 
-                aruco_marker_mask = create_mask(homography_matrix)
+            aruco_marker_mask = create_mask_2(homography_matrix)
 
-                print("[INFO] Mask created based on ArUco markers.")
+            print("[INFO] Mask created based on ArUco markers.")
 
-                break
+            break
 
-            elif homography_matrix is None:
+        elif homography_matrix is None:
 
-                print("[WARNING] No ArUco markers detected.")
-
-                continue
-
-        else:
-
-            print(f"[WARNING] No green screen bigger than the size threshold found.")
-
-            time.sleep(1)
+            print("[WARNING] No ArUco markers detected.")
 
             continue
-    
+
+    """
+
+    else:
+
+        print(f"[WARNING] No green screen bigger than the size threshold found.")
+
+        time.sleep(1)
+
+        continue
+
+    """        
+
 #   ECC reference image generation
+
+    """
 
     ecc_reference_image = generate_reference_image() # Generates the reference image
 
     print("[INFO] Reference image generated. Waiting for reference frame...")
+
+    """
 
     while True:
 
@@ -100,8 +122,21 @@ def receive_message():
         
         if not read_was_successful: # If the read wasn't successful:
             continue # Skip this iteration
+        
+        aruco_marker_mask = cv2.resize(aruco_marker_mask, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
 
         frame = cv2.bitwise_and(frame, frame, mask = aruco_marker_mask) # Applies the ArUco marker mask to the captured frame
+
+        cv2.imshow(window_name, frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+                print("[INFO] User quit.")
+                cv2.destroyAllWindows()
+                return
+
+        print("Mask non-zero pixels:", np.count_nonzero(aruco_marker_mask))
+
+        """
 
         reference_images_match = detect_ecc_reference_image(frame, ecc_reference_image) # Checks if the frame matches good enough with the reference image
 
@@ -122,8 +157,10 @@ def receive_message():
         else:
             print("[WARNING] Sender screen doesn't match reference image.")
             continue
+        
+        """
 
-    print("[INFO] Ready to recieve data.")
+        print("[INFO] Ready to recieve data.")
 
 # --- Execution ---
 

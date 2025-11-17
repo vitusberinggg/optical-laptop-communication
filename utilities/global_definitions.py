@@ -55,4 +55,4 @@ aruco_marker_size = min(sender_output_width, sender_output_height) // 10
 aruco_marker_margin = aruco_marker_size // 2
 aruco_marker_ids = [0, 1, 2, 3]
 
-aruco_marker_frame_duration = 1
+aruco_marker_frame_duration = 3

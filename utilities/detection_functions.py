@@ -44,7 +44,7 @@ def detect_aruco_marker_frame(frame):
     for frame_corner, marker_id in zip(frame_corners, aruco_marker_ids):
 
         if marker_id < 4:
-            sorted_marker_ids[marker_id] = frame_corner[0]
+            sorted_marker_ids[marker_id] = frame_corner[0][0]
     
     if any(corner is None for corner in sorted_marker_ids):
         return None
@@ -86,6 +86,8 @@ def detect_ecc_reference_image(potential_sync_frame, ecc_reference_image):
     resized_frame = cv2.resize(potential_sync_frame, (ecc_reference_image.shape[1], ecc_reference_image.shape[0])) # Resize the potential sync frame to match the reference image size
 
     grayscale_resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+
+    ecc_reference_image = ecc_reference_image.astype(np.float32)
 
     correlation = cv2.matchTemplate(grayscale_resized_frame, ecc_reference_image, cv2.TM_CCOEFF_NORMED) # Perform template matching to find the reference image in the potential sync frame
 
