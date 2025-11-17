@@ -110,7 +110,7 @@ def decode_bits_with_blue(frames, roi_size=100, verbose=False):
         roi = frame[max(0,cy-roi_size):min(h,cy+roi_size), max(0,cx-roi_size):min(w,cx+roi_size)]
         color = read_color(roi)
 
-        if color == "blue":
+        if color in ["blue", "green"]:
             bit_ready = True
             if verbose:
                 print("Blue separator detected — next bit ready.")
