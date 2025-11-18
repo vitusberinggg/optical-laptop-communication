@@ -9,7 +9,7 @@ from utilities.global_definitions import number_of_rows, number_of_columns, bit_
 
 # --- Functions ---
 
-def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
+def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False, end_frame=False):
 
     """
     Decodes a bitgrid from the given frame by analyzing the brightness of each cell.
@@ -27,14 +27,18 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
     bit_cell_height = h/number_of_rows
     bit_cell_width = w/number_of_columns
 
-    bits = [[]]
+    bits = [[[]]]
+    bytes = [[]]
 
     for row in range(number_of_rows): # For each row in the bitgrid:
 
         for column in range(number_of_columns): # For each column in the bitgrid:
-
+            
                 # Expand rows if necessary
-            while len(bits) < number_of_rows:
+            while len(bits) < frame_bit:
+                bits.append([])
+                # Expand rows if necessary
+            while len(bits) < row:
                 bits.append([])
 
             y_start = row * bit_cell_height
@@ -44,38 +48,46 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
 
             cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
 
-            if recall:
+            if end_frame: # If it's the end of the frame:
                 value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
 
-                bits[number_of_rows].append(value)  # Append the finalized bit value to the bits list
+                bits[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
             else:
                 color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
 
-    #return "".join(bits) # Return the decoded bitgrid as a string by joining the list of bits
     if recall:
-        return somethings
+        
+        
 
+        message = bits_to_message(bytes)
+    
+    return message
 
-def bits_to_message(bit_matrix):
+def bits_to_message(bits):
+
     """
-    Converts a 2D list of bits (each inner list is a byte) into a readable message.
-
+    Converts a string of bits into a readable message.
+    
     Arguments:
-        bit_matrix (list of list of int): Each inner list should contain 8 bits (0s or 1s).
-
+        "bits" (str): A string representing the bits to be converted.
+        
     Returns:
-        str: The decoded message as a string.
+        str: A string representing the decoded message.
+        
     """
+
     characters = []
 
-    for byte_bits in bit_matrix:
-        if len(byte_bits) != 8:
-            continue  # skip invalid bytes
-        byte_str = "".join(str(b) for b in byte_bits)
-        characters.append(chr(int(byte_str, 2)))
+    for bit_index in range(0, len(bits), 8): # For each byte (8 bits) in the bit string:
 
-    return "".join(characters)
+        byte = bits[bit_index:bit_index + 8] # Extract the byte using slicing
 
+        if len(byte) < 8: # If the length of the byte is less than 8 bits:
+            continue # Skip it
+
+        characters.append(chr(int(byte, 2))) # Convert the byte to a character and append it to the list
+
+    return "".join(characters) # Return the decoded message by joining the list of characters into a string
 
 def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
