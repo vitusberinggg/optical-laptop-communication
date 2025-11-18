@@ -1,6 +1,7 @@
 
 # --- Imports ---
-
+from collections import Counter
+import color_functions
 import numpy as np
 import cv2
 
@@ -8,7 +9,7 @@ from utilities.global_definitions import number_of_rows, number_of_columns, bit_
 
 # --- Functions ---
 
-def decode_bitgrid(frame):
+def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
 
     """
     Decodes a bitgrid from the given frame by analyzing the brightness of each cell.
@@ -20,6 +21,11 @@ def decode_bitgrid(frame):
         str: A string representing the decoded bitgrid.
 
     """
+
+    h, w = frame.shape[:2]
+
+    bit_cell_height = h/number_of_rows
+    bit_cell_width = w/number_of_columns
 
     bits = []
 
@@ -33,6 +39,8 @@ def decode_bitgrid(frame):
             x_end = x_start + bit_cell_width
 
             cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
+
+            color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
 
             average_cell_brightness = np.mean(cell) # Calculate the average brightness of the cell using NumPy mean function
 

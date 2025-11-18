@@ -5,21 +5,28 @@ from collections import Counter
 
 class BitColorTracker:
     def __init__(self):
-        self.current_bit_frames = []  # store all ROIs for the current bit
-        self.bit_colors = []          # store final dominant colors for each bit
+        self.current_bit_roi = [[[]]]  # stores all the ROIs
 
-    def add_frame(self, roi):
+    def add_frame(self, roi, row=0, col=0):
         """Add a new ROI frame for the current bit."""
-        self.current_bit_frames.append(roi)
+        # Expand rows if necessary
+        while len(self.current_bit_roi) <= row:
+            self.current_bit_roi.append([])
 
-    def end_bit(self):
+        # Expand columns for this row if necessary
+        while len(self.current_bit_roi[row]) <= col:
+            self.current_bit_roi[row].append([])
+
+        self.current_bit_roi[row][col].append(roi)
+
+    def end_bit(self, row=0, col=0):
         """Compute the dominant color for the bit and reset frame buffer."""
-        if not self.current_bit_frames:
+        if not self.current_bit_roi:
             return None
 
         # Convert each frame to HSV and get the dominant color per frame
         frame_colors = []
-        for frame in self.current_bit_frames:
+        for frame in self.current_bit_roi[row][col]:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
             # RED — unchanged (red works well already)
@@ -50,15 +57,13 @@ class BitColorTracker:
 
         # Majority vote for this bit
         majority_color = Counter(frame_colors).most_common(1)[0][0]
-        self.bit_colors.append(majority_color)
-        self.current_bit_frames = []
+        self.current_bit_roi = [[[]]]
         return majority_color
 
     def reset(self):
-        self.current_bit_frames = []
-        self.bit_colors = []
+        self.current_bit_roi = [[[]]]
 
-# For backward compatibility (optional)
+# For backward compatibility
 tracker = BitColorTracker()
 def dominant_color(roi):
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
