@@ -9,7 +9,7 @@ from utilities.global_definitions import number_of_rows, number_of_columns, bit_
 
 # --- Functions ---
 
-def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, frame_bit=1, recall=False, end_frame=False):
+def decode_bitgrid(frame, frame_bit=1, recall=False, end_frame=False):
 
     """
     Decodes a bitgrid from the given frame by analyzing the brightness of each cell.
