@@ -193,7 +193,7 @@ def receive_message():
 
             elif color == "red" and last_color != "red":
 
-                decoding_functions.decode_bitgrid(None, frame_bit=1, recall=True, end_frame=False)    
+                decoding_functions.decode_bitgrid(roi, frame_bit, recall, end_frame)    
 
         last_color = color
         key = cv2.waitKey(1) & 0xFF
