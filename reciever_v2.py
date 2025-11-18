@@ -21,9 +21,9 @@ sender_output_width = 1920
 sender_output_height = 1200
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\gandalf2.0.mp4")
+#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\gandalf2.0.mp4")
 # For live webcam test instead of video, use:
-# cap = VideoThreadedCapture(0)
+cap = VideoThreadedCapture(0)
 
 if not cap.isOpened():
 
@@ -83,8 +83,8 @@ def receive_message():
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
 
-        rejected_count = 0 if rejected is None else len(rejected)
-        print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
+        #rejected_count = 0 if rejected is None else len(rejected)
+        #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
 
 
 
@@ -112,8 +112,9 @@ def receive_message():
                         1.0,
                         (0, 0, 255),
                         2)
-
-        roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+        
+        if roi_coords is None:
+            roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
 
         if roi_coords is not None:
             x0, x1, y0, y1 = roi_coords
@@ -155,6 +156,9 @@ def receive_message():
                 # end of bit → compute average color
                 majority_color = tracker.end_bit()
 
+                #print(f"color list: {current_bit_colors}")  # DEBUGGING
+                #current_bit_colors = []  # DEBUGGING
+
                 if majority_color == "white":
                     bits += "1"
 
@@ -165,6 +169,7 @@ def receive_message():
                 
                 # add_frame → add frame to array
                 tracker.add_frame(roi)
+                #current_bit_colors.append(color)
 
             elif color == "red" and last_color != "red":
 

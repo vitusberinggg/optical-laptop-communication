@@ -27,11 +27,15 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
     bit_cell_height = h/number_of_rows
     bit_cell_width = w/number_of_columns
 
-    bits = []
+    bits = [[]]
 
     for row in range(number_of_rows): # For each row in the bitgrid:
 
         for column in range(number_of_columns): # For each column in the bitgrid:
+
+                # Expand rows if necessary
+            while len(bits) < number_of_rows:
+                bits.append([])
 
             y_start = row * bit_cell_height
             y_end = y_start + bit_cell_height
@@ -40,19 +44,16 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
 
             cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
 
-            color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
+            if recall:
+                value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
 
-            average_cell_brightness = np.mean(cell) # Calculate the average brightness of the cell using NumPy mean function
+                bits[number_of_rows].append(value)  # Append the finalized bit value to the bits list
+            else:
+                color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
 
-            if average_cell_brightness > cell_brightness_threshold: # If the average cell brightness is above the threshold:
-                bit = 1
-
-            else: # Else (if the average cell brightness is below or equal to the threshold):
-                bit = 0
-
-            bits.append(str(bit)) # Append the bit to the list of bits
-
-    return "".join(bits) # Return the decoded bitgrid as a string by joining the list of bits
+    #return "".join(bits) # Return the decoded bitgrid as a string by joining the list of bits
+    if recall:
+        return somethings
 
 def bits_to_message(bits):
 
