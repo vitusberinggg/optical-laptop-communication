@@ -27,19 +27,20 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, frame_bit=1, re
     bit_cell_height = h/number_of_rows
     bit_cell_width = w/number_of_columns
 
-    bits = [[[]]]
+    bites = [[[]]]
     bytes = [[]]
+    byte = []
 
     for row in range(number_of_rows): # For each row in the bitgrid:
 
         for column in range(number_of_columns): # For each column in the bitgrid:
             
                 # Expand rows if necessary
-            while len(bits) < frame_bit:
-                bits.append([])
+            while len(bites) < frame_bit:
+                bites.append([])
                 # Expand rows if necessary
-            while len(bits) < row:
-                bits.append([])
+            while len(bites) < row:
+                bites.append([])
 
             y_start = row * bit_cell_height
             y_end = y_start + bit_cell_height
@@ -51,13 +52,24 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, frame_bit=1, re
             if end_frame: # If it's the end of the frame:
                 value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
 
-                bits[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
+                bites[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
             else:
                 color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
 
     if recall:
         
-        
+
+        for f in range (frame_bit):
+            for row in range (number_of_rows):
+                for column in range (number_of_columns):
+
+                    byte.append(bites[f][number_of_rows][number_of_columns])
+
+                    if byte[:8]:
+                        bytes.append(byte)
+                        byte = []
+                    elif len(byte) >= 8:
+                        byte = []
 
         message = bits_to_message(bytes)
     
