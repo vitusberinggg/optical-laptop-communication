@@ -76,6 +76,7 @@ def receive_message():
     decoding = False
     current_bit_colors = []
     roi_coords = None
+    frame_bit = 0
 
     number_of_rows = 8
     number_of_columns = 8
@@ -172,23 +173,17 @@ def receive_message():
         elif decoding:
 
             recall = False
+            end_frame = False
 
             if color == "blue" and last_color != "blue":
-
-                # end of bit → compute average color
-                majority_color = tracker.end_bit()
-
-                if majority_color == "white":
-                    bits += "1"
-
-                elif majority_color == "black":
-                    bits += "0"
+                
+                frame_bit += 1
 
             elif color in ["white", "black"]:
                 
                 # add_frame → add frame to array
 
-                decoding_functions.decode_bitgrid(roi, number_of_rows, number_of_columns, recall)
+                decoding_functions.decode_bitgrid(roi, frame_bit, recall, end_frame)
                 
 
             elif color == "red" and last_color != "red":
