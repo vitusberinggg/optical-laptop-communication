@@ -193,12 +193,7 @@ def receive_message():
 
             elif color == "red" and last_color != "red":
 
-                if bits:
-                    # Convert the bit string into a 2D list (list of bytes)
-                    bit_matrix = [list(map(int, bits[i:i+8])) for i in range(0, len(bits), 8)]
-                    message = decoding_functions.bits_to_message(bit_matrix)
-                    print("Received message:", message)
-                    bits = ""
+                decoding_functions.decode_bitgrid(None, frame_bit=1, recall=True, end_frame=False)    
 
         last_color = color
         key = cv2.waitKey(1) & 0xFF
