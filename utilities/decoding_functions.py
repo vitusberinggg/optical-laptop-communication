@@ -55,31 +55,27 @@ def decode_bitgrid(frame, number_of_rows=1, number_of_columns=1, recall=False):
     if recall:
         return somethings
 
-def bits_to_message(bits):
 
+def bits_to_message(bit_matrix):
     """
-    Converts a string of bits into a readable message.
-    
+    Converts a 2D list of bits (each inner list is a byte) into a readable message.
+
     Arguments:
-        "bits" (str): A string representing the bits to be converted.
-        
-    Returns:
-        str: A string representing the decoded message.
-        
-    """
+        bit_matrix (list of list of int): Each inner list should contain 8 bits (0s or 1s).
 
+    Returns:
+        str: The decoded message as a string.
+    """
     characters = []
 
-    for bit_index in range(0, len(bits), 8): # For each byte (8 bits) in the bit string:
+    for byte_bits in bit_matrix:
+        if len(byte_bits) != 8:
+            continue  # skip invalid bytes
+        byte_str = "".join(str(b) for b in byte_bits)
+        characters.append(chr(int(byte_str, 2)))
 
-        byte = bits[bit_index:bit_index + 8] # Extract the byte using slicing
+    return "".join(characters)
 
-        if len(byte) < 8: # If the length of the byte is less than 8 bits:
-            continue # Skip it
-
-        characters.append(chr(int(byte, 2))) # Convert the byte to a character and append it to the list
-
-    return "".join(characters) # Return the decoded message by joining the list of characters into a string
 
 def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
