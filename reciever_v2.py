@@ -15,7 +15,6 @@ from utilities.global_definitions import (
 # --- Definitions ---
 delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
-homography = None
 
 # Match sender's screen size (from sender script)
 sender_output_width = 1920
@@ -59,8 +58,6 @@ def receive_message():
     """
     
     """
-
-    global homography
 
     bits = ""
     message = ""
@@ -142,18 +139,10 @@ def receive_message():
 
             if color == "green" and last_color != "green":
                 print("Green detected — syncing...")
-                homography = detection_functions.detect_aruco_marker_frame(frame)
-
-                if homography is None:
-                    print("[ARUCO] No homography found! Using full frame as ROI.")
-
-                else:
-                    print("[ARUCO] Homography OK. Will use warped ROI.")
                 tracker.reset()
 
             elif color != "green" and last_color == "green":
                 print("Green ended — starting decoding!")
-                tracker.reset()
                 waiting_for_sync = False
                 decoding = True
 
