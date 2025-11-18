@@ -5,10 +5,31 @@ from collections import Counter
 
 class BitColorTracker:
     def __init__(self):
+        """
+        Initializes a BitColorTracker instance.
+
+        Arguments:
+            None
+
+        Returns:
+            None
+            
+        """
         self.current_bit_roi = [[[]]]  # stores all the ROIs
 
     def add_frame(self, roi, row=0, col=0):
-        """Add a new ROI frame for the current bit."""
+        """
+        Adds a new frame ROI for a specific bit position.
+
+        Arguments: 
+            roi: The region of interest (ROI) frame to add.
+            row: The row index for the bit grid (default is 0).
+            col: The column index for the bit grid (default is 0).
+        
+        Returns:
+            None
+        
+        """
         # Expand rows if necessary
         while len(self.current_bit_roi) <= row:
             self.current_bit_roi.append([])
@@ -20,7 +41,17 @@ class BitColorTracker:
         self.current_bit_roi[row][col].append(roi)
 
     def end_bit(self, row=0, col=0):
-        """Compute the dominant color for the bit and reset frame buffer."""
+        """
+        Computes the dominant color for the collected frames and resets the buffer.
+
+        Arguments:
+            row: The row index for the bit grid (default is 0).
+            col: The column index for the bit grid (default is 0).
+
+        Returns:
+            The dominant color for the bit as a string (e.g., "red", "white", etc.).
+        
+        """
         if not self.current_bit_roi:
             return None
 
@@ -61,11 +92,31 @@ class BitColorTracker:
         return majority_color
 
     def reset(self):
+        """
+        Resets the tracker, clearing all collected frames.
+
+        Arguments:
+            None
+
+        Returns:
+            None
+        
+        """
         self.current_bit_roi = [[[]]]
 
 # For backward compatibility
 tracker = BitColorTracker()
 def dominant_color(roi):
+    """
+    Computes the dominant color in the given ROI using HSV color space.
+
+    Arguments:
+        roi: The region of interest (ROI) frame to analyze.
+
+    Returns:
+        The dominant color as a string (e.g., "red", "white", etc.).
+    
+    """
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
     red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \

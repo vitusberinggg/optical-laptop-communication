@@ -57,6 +57,13 @@ aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 def receive_message():
 
     """
+    Receives a message from the sender screen via webcam/video.
+    
+    Arguments:
+        None
+
+    Returns:
+        None
     
     """
 
