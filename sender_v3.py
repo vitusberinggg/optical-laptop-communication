@@ -11,7 +11,7 @@ from utilities.global_definitions import (
     aruco_marker_frame_duration,
     reference_image_duration,
     frame_duration,
-    end_frame_color
+    sync_frame_color, end_frame_color
 )
 
 # ---- Definitions ----
@@ -46,6 +46,7 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
+    sync_frame = create_color_frame(sync_frame_color)
     end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
@@ -94,6 +95,17 @@ def send_message(message):
             while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
                 cv2.imshow(window, frame) # Display the current frame in the window
+
+                if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                    return # Exit the function
+                
+                time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+            sync_frame_start_time = time.time()
+
+            while time.time() - sync_frame_start_time < frame_duration:
+
+                cv2.imshow(window, sync_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
                     return # Exit the function
