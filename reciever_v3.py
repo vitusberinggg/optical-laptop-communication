@@ -193,31 +193,12 @@ def receive_message():
 
             elif color == "red" and last_color != "red":
 
-                while len(bits) >= 8:
-                    byte = bits[:8]
-                    bits = bits[8:]
-
-                    try:
-                        ch = chr(int(byte, 2))
-
-                    except:
-                        ch = '?'
-
-                    message += ch
-                    print(f"Received char: {ch}")
-
-                if 0 < len(bits) < 8:
-                    byte = bits.ljust(8, '0')
-
-                    try:
-                        ch = chr(int(byte, 2))
-
-                    except:
-                        ch = '?'
-
-                    message += ch
-                    print(f"Received char (padded): {ch}")
-                bits = ""
+                if bits:
+                    # Convert the bit string into a 2D list (list of bytes)
+                    bit_matrix = [list(map(int, bits[i:i+8])) for i in range(0, len(bits), 8)]
+                    message = decoding_functions.bits_to_message(bit_matrix)
+                    print("Received message:", message)
+                    bits = ""
 
         last_color = color
         key = cv2.waitKey(1) & 0xFF
