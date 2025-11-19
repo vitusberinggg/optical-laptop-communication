@@ -167,6 +167,7 @@ def receive_message():
             if color == "blue" and last_color != "blue":
                 
                 end_frame = True
+                add_frame = True
                 frame_bit += 1
 
             elif color in ["white", "black"]:

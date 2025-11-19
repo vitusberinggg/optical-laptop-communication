@@ -2,78 +2,32 @@
 import cv2
 import numpy as np
 from collections import Counter
+from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
 
 class BitColorTracker:
     def __init__(self):
-        """
-        Initializes a BitColorTracker instance.
+        # frame buffer for each bit (2D array)
+        self.rows = rows
+        self.cols = cols
+        self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
 
-        Arguments:
-            None
-
-        Returns:
-            None
-            
-        """
-        self.current_bit_roi = [[[]]]  # stores all the ROIs
-
-    def add_frame(self, roi, row=0, col=0):
-        """
-        Adds a new frame ROI for a specific bit position.
-
-        Arguments: 
-            roi: The region of interest (ROI) frame to add.
-            row: The row index for the bit grid (default is 0).
-            col: The column index for the bit grid (default is 0).
-        
-        Returns:
-            None
-        
-        """
-        # Expand rows if necessary
-        while len(self.current_bit_roi) <= row:
-            self.current_bit_roi.append([])
-
-        # Expand columns for this row if necessary
-        while len(self.current_bit_roi[row]) <= col:
-            self.current_bit_roi[row].append([])
-
+    def add_frame(self, roi, row, col):
         self.current_bit_roi[row][col].append(roi)
 
-    def end_bit(self, row=0, col=0):
-        """
-        Computes the dominant color for the collected frames and resets the buffer.
-
-        Arguments:
-            row: The row index for the bit grid (default is 0).
-            col: The column index for the bit grid (default is 0).
-
-        Returns:
-            The dominant color for the bit as a string (e.g., "red", "white", etc.).
-        
-        """
-        if not self.current_bit_roi:
+    def end_bit(self, row, col):
+        frames = self.current_bit_roi[row][col]
+        if len(frames) == 0:
             return None
 
-        # Convert each frame to HSV and get the dominant color per frame
         frame_colors = []
-        for frame in self.current_bit_roi[row][col]:
+        for frame in frames:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-            # RED — unchanged (red works well already)
             red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
-                    cv2.inRange(hsv, (160,120,120), (179,255,255))
-
-            # WHITE — tighten saturation to avoid confusion with light blue
+                       cv2.inRange(hsv, (160,120,120), (179,255,255))
             white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
-
-            # BLACK — much stricter brightness limit (prevents dark blue being classified as black)
             black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
-
-            # GREEN — narrowed to avoid overlap with blue
             green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
-
-            # BLUE — shifted upward to avoid dark/black confusion
             blue_mask  = cv2.inRange(hsv, (95,120,70), (130,255,255))
 
             counts = {
@@ -83,26 +37,19 @@ class BitColorTracker:
                 "green": int(cv2.countNonZero(green_mask)),
                 "blue": int(cv2.countNonZero(blue_mask)),
             }
-            dominant = max(counts, key=counts.get)
-            frame_colors.append(dominant)
 
-        # Majority vote for this bit
-        majority_color = Counter(frame_colors).most_common(1)[0][0]
-        self.current_bit_roi = [[[]]]
-        return majority_color
+            frame_colors.append(max(counts, key=counts.get))
+
+        majority = Counter(frame_colors).most_common(1)[0][0]
+
+        # reset ONLY this one bit
+        self.current_bit_roi[row][col] = []
+
+        # return integer bit
+        return "1" if majority == "white" else "0"
 
     def reset(self):
-        """
-        Resets the tracker, clearing all collected frames.
-
-        Arguments:
-            None
-
-        Returns:
-            None
-        
-        """
-        self.current_bit_roi = [[[]]]
+        self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
 # For backward compatibility
 tracker = BitColorTracker()

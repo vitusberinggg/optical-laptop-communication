@@ -9,81 +9,86 @@ from utilities.global_definitions import number_of_rows, number_of_columns, bit_
 
 # --- Functions ---
 
-def decode_bitgrid(frame, frame_bit=1, add_frame=False, recall=False, end_frame=False):
+# --- Variables for decode_bitgrid ---
 
-    """
-    Decodes a bitgrid from the given frame by analyzing the brightness of each cell.
+bits = [[[]]] # 3D list: bits[frame][row][column]
 
-    Arguments:
-        "frame" (np.ndarray): A NumPy array representing the frame pixels.
-
-    Returns:
-        str: A string representing the decoded bitgrid.
-
-    """
+def decode_bitgrid(frame, frame_bit=0, add_frame=False, recall=False, end_frame=False):
+    global bits
 
     h, w = frame.shape[:2]
+    bit_cell_height = h / number_of_rows
+    bit_cell_width  = w / number_of_columns
 
-    bit_cell_height = h/number_of_rows
-    bit_cell_width = w/number_of_columns
-
-    bits = [[[]]]
-    bytes = [[]]
-    byte = []
-
-    message = None
-
+    # --- ADD FRAME ---
     if add_frame:
 
-        for row in range(number_of_rows): # For each row in the bitgrid:
+        # ensure list for this frame
+        while len(bits) <= frame_bit:
+            bits.append([])
 
-            for column in range(number_of_columns): # For each column in the bitgrid:
-                
-                # ensure enough frames
-                while len(bits) <= frame_bit:
-                    bits.append([])
+        for row in range(number_of_rows):
 
-                # ensure enough rows
-                while len(bits[frame_bit]) <= row:
-                    bits[frame_bit].append([])
+            # ensure row list exists
+            while len(bits[frame_bit]) <= row:
+                bits[frame_bit].append([])
 
-                # ensure enough columns
+            for column in range(number_of_columns):
+
+                # ensure column exists
                 while len(bits[frame_bit][row]) <= column:
                     bits[frame_bit][row].append(None)
 
-                y_start = int(row * bit_cell_height)
-                y_end = int(y_start + bit_cell_height)
-                x_start = int(column * bit_cell_width)
-                x_end = int(x_start + bit_cell_width)
+                # extract ROI
+                y0 = int(row * bit_cell_height)
+                y1 = int(y0 + bit_cell_height)
+                x0 = int(column * bit_cell_width)
+                x1 = int(x0 + bit_cell_width)
+                cell = frame[y0:y1, x0:x1]
 
-                cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
+                if end_frame:
+                    bit = color_functions.tracker.end_bit(row, column)
 
-                if end_frame: # If it's the end of the frame:
-                    value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
+                    # Ensure safe bit (string "0" / "1")
+                    if bit not in ["0", "1"]:
+                        bit = "0"
 
-                    bits[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
+                    bits[frame_bit][row][column] = bit
+
                 else:
-                    color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
+                    color_functions.tracker.add_frame(cell, row, column)
 
+        return None
+
+    # --- RECALL AND DECODE ---
     if recall:
 
-        for f in range (frame_bit):  # For each frame bits
+        collected_bytes = []
+        current_byte = []
 
-            for row in range (number_of_rows): # For each row in the bitgrid
+        for f in range(frame_bit):      # each finalized frame
+            for row in range(number_of_rows):
+                for column in range(number_of_columns):
 
-                for column in range (number_of_columns): # For each column in the bitgrid:
+                    value = bits[f][row][column]
 
-                    byte.append(bits[f][number_of_rows][number_of_columns])
+                    # safety: convert None → "0"
+                    if value is None:
+                        value = "0"
 
-                    if byte[:8]:
-                        bytes.append(byte)
-                        byte = []
-                    elif len(byte) >= 8:
-                        byte = []
+                    current_byte.append(value)
 
-        message = bits_to_message(bytes)
-    
-    return message
+                    if len(current_byte) == 8:
+                        collected_bytes.append(current_byte)
+                        current_byte = []
+
+        print(f"Decoded {len(collected_bytes)} bytes from {frame_bit} frames.")
+        for i, byte_bits in enumerate(collected_bytes):
+            byte_str = "".join(str(b) for b in byte_bits)
+            print(f"Byte {i}: {byte_str} (char: '{chr(int(byte_str,2))}')")
+        return bits_to_message(collected_bytes)
+
+    return None
 
 def bits_to_message(bit_matrix):
     """
