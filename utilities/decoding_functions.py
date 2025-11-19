@@ -1,7 +1,7 @@
 
 # --- Imports ---
 from collections import Counter
-import color_functions
+from utilities import color_functions
 import numpy as np
 import cv2
 
@@ -9,7 +9,7 @@ from utilities.global_definitions import number_of_rows, number_of_columns, bit_
 
 # --- Functions ---
 
-def decode_bitgrid(frame, frame_bit=1, recall=False, end_frame=False):
+def decode_bitgrid(frame, frame_bit=1, add_frame=False, recall=False, end_frame=False):
 
     """
     Decodes a bitgrid from the given frame by analyzing the brightness of each cell.
@@ -31,37 +31,47 @@ def decode_bitgrid(frame, frame_bit=1, recall=False, end_frame=False):
     bytes = [[]]
     byte = []
 
-    for row in range(number_of_rows): # For each row in the bitgrid:
+    message = None
 
-        for column in range(number_of_columns): # For each column in the bitgrid:
-            
-                # Expand rows if necessary
-            while len(bits) < frame_bit:
-                bits.append([])
-                # Expand rows if necessary
-            while len(bits) < row:
-                bits.append([])
+    if add_frame:
 
-            y_start = row * bit_cell_height
-            y_end = y_start + bit_cell_height
-            x_start = column * bit_cell_width
-            x_end = x_start + bit_cell_width
+        for row in range(number_of_rows): # For each row in the bitgrid:
 
-            cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
+            for column in range(number_of_columns): # For each column in the bitgrid:
+                
+                # ensure enough frames
+                while len(bits) <= frame_bit:
+                    bits.append([])
 
-            if end_frame: # If it's the end of the frame:
-                value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
+                # ensure enough rows
+                while len(bits[frame_bit]) <= row:
+                    bits[frame_bit].append([])
 
-                bits[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
-            else:
-                color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
+                # ensure enough columns
+                while len(bits[frame_bit][row]) <= column:
+                    bits[frame_bit][row].append(None)
+
+                y_start = int(row * bit_cell_height)
+                y_end = int(y_start + bit_cell_height)
+                x_start = int(column * bit_cell_width)
+                x_end = int(x_start + bit_cell_width)
+
+                cell = frame[y_start:y_end, x_start:x_end] # Extract the cell from the frame
+
+                if end_frame: # If it's the end of the frame:
+                    value = color_functions.tracker.end_bit(row, column)  # Finalize the previous bit in the color tracker
+
+                    bits[frame_bit][row].append(value)  # Append the finalized bit value to the bits list
+                else:
+                    color_functions.tracker.add_frame(cell, row, column)  # Add the cell to the color tracker
 
     if recall:
-        
 
-        for f in range (frame_bit):
-            for row in range (number_of_rows):
-                for column in range (number_of_columns):
+        for f in range (frame_bit):  # For each frame bits
+
+            for row in range (number_of_rows): # For each row in the bitgrid
+
+                for column in range (number_of_columns): # For each column in the bitgrid:
 
                     byte.append(bits[f][number_of_rows][number_of_columns])
 

@@ -9,20 +9,19 @@ from utilities import detection_functions, screen_alignment_functions, decoding_
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary,
+    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
 )
 
 # --- Definitions ---
 delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
-homography = None
 
 # Match sender's screen size (from sender script)
 sender_output_width = 1920
 sender_output_height = 1200
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore.mp4")
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore_part2.0.mp4")
 # For live webcam test instead of video, use:
 # cap = VideoThreadedCapture(0)
 
@@ -35,7 +34,7 @@ cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
 cv2.resizeWindow("Webcam Receiver", 1920, 1200)
 
 cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("ROI", 1920, 1200)
+cv2.resizeWindow("ROI", 192, 120)
 
 # Grab one initial frame so cap is "warmed up"
 while True:
@@ -67,8 +66,6 @@ def receive_message():
     
     """
 
-    global homography
-
     bits = ""
     message = ""
     last_color = None
@@ -78,8 +75,6 @@ def receive_message():
     roi_coords = None
     frame_bit = 0
 
-    number_of_rows = 8
-    number_of_columns = 8
 
     print("Receiver started — waiting for GREEN to sync...")
 
@@ -97,8 +92,8 @@ def receive_message():
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
 
-        rejected_count = 0 if rejected is None else len(rejected)
-        print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
+        #rejected_count = 0 if rejected is None else len(rejected)
+        #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
 
 
 
@@ -127,21 +122,21 @@ def receive_message():
                         (0, 0, 255),
                         2)
 
-        roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+        if roi_coords is None:
+            roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
 
         if roi_coords is not None:
             x0, x1, y0, y1 = roi_coords
 
-            x0 = int(x0 + marker_w)
-            y0 = int(y0 + marker_h)
-            x1 = int(x1 - marker_w)
-            y1 = int(y1 - marker_h)
+            x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
+            y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
+            x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
+            y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
         roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-
         color = dominant_color(roi)
 
         cv2.imshow("Webcam Receiver", display)
@@ -153,13 +148,6 @@ def receive_message():
 
             if color == "green" and last_color != "green":
                 print("Green detected — syncing...")
-                homography = detection_functions.detect_aruco_marker_frame(frame)
-
-                if homography is None:
-                    print("[ARUCO] No homography found! Using full frame as ROI.")
-
-                else:
-                    print("[ARUCO] Homography OK. Will use warped ROI.")
                 tracker.reset()
 
             elif color != "green" and last_color == "green":
@@ -174,21 +162,27 @@ def receive_message():
 
             recall = False
             end_frame = False
+            add_frame = False
 
             if color == "blue" and last_color != "blue":
                 
+                end_frame = True
                 frame_bit += 1
 
             elif color in ["white", "black"]:
                 
                 # add_frame → add frame to array
 
-                decoding_functions.decode_bitgrid(roi, frame_bit, recall, end_frame)
-                
+                add_frame = True
 
             elif color == "red" and last_color != "red":
 
-                decoding_functions.decode_bitgrid(roi, frame_bit, recall, end_frame)    
+                recall = True    
+
+            if recall:
+                message = decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+            else:
+                decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
 
         last_color = color
         key = cv2.waitKey(1) & 0xFF
