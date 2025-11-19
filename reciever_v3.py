@@ -168,7 +168,7 @@ def receive_message():
                 
                 end_frame = True
                 add_frame = True
-                frame_bit += 1
+
 
             elif color in ["white", "black"]:
                 
@@ -184,6 +184,9 @@ def receive_message():
                 message = decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
             else:
                 decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+
+            if end_frame:
+                frame_bit += 1
 
         last_color = color
         key = cv2.waitKey(1) & 0xFF
