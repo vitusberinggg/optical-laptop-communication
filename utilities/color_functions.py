@@ -113,3 +113,71 @@ def dominant_color(roi):
     }
 
     return max(counts, key=counts.get)
+
+def color_offset_calculation(color_reference_frame):
+
+    expected_hsv = {
+    "red": np.array([0, 255, 255]),
+    "green": np.array([60, 255, 255]),
+    "blue": np.array([120, 255, 255])
+    }
+
+    original_hsv_ranges = {
+        "red1":  ([0, 100, 100], [10, 255, 255]),
+        "red2":  ([160, 100, 100], [179, 255, 255]),
+        "white": ([0, 0, 200], [180, 30, 255]),
+        "black": ([0, 0, 0], [180, 255, 50]),
+        "green": ([40, 50, 50], [80, 255, 255]),
+        "blue":  ([100, 150, 0], [140, 255, 255])
+    }
+
+    def hue_diff(expected_h, observed_h):
+        diff = (expected_h - observed_h + 90) % 180 - 90
+        return diff
+        
+    calibrate_hsv = cv2.cvtColor(color_reference_frame, cv2.COLOR_BGR2HSV)
+    
+    stripe_width = color_reference_frame.shape[1] // 3
+    observed_hsv = {}
+    
+    for i, color_name in enumerate(["red", "green", "blue"]):
+        x_start = i * stripe_width
+        x_end = (i + 1) * stripe_width
+        roi = calibrate_hsv[:, x_start:x_end]
+        observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
+    
+    h_offsets = {}
+    s_offsets = {}
+    v_offsets = {}
+    
+    for color in ["red","green","blue"]:
+        exp = expected_hsv[color].astype(float)
+        obs = observed_hsv[color].astype(float)
+        h_diffs.append(_hue_diff(float(exp[0]), float(obs[0])))  
+        s_diffs.append(float(exp[1]) - float(obs[1]))
+        v_diffs.append(float(exp[2]) - float(obs[2]))
+    
+    avg_h_offset = np.mean([h_offsets[c] for c in h_offsets])
+    avg_s_offset = np.mean([s_offsets[c] for c in s_offsets])
+    avg_v_offset = np.mean([v_offsets[c] for c in v_offsets])
+    
+    corrected_ranges = {}
+    for color, (lower, upper) in original_hsv_ranges.items():
+        lower_corrected = np.clip(np.array(lower) + np.array([avg_h_offset, avg_s_offset, avg_v_offset]), [0,0,0], [179,255,255])
+        upper_corrected = np.clip(np.array(upper) + np.array([avg_h_offset, avg_s_offset, avg_v_offset]), [0,0,0], [179,255,255])
+        corrected_ranges[color] = (lower_corrected.astype(int), upper_corrected.astype(int))
+    return corrected_ranges
+
+def dominant_color_with_offsets(roi, corrected_ranges):
+
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    masks = {
+        color: cv2.inRange(hsv, lower, upper)
+        for color, (lower, upper) in corrected_ranges.items()
+    }
+    counts = {color: int(cv2.countNonZero(mask)) for color, mask in masks.items()}
+
+    return max(counts, key=counts.get)
+
+    
