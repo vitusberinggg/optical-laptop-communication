@@ -8,6 +8,8 @@ import cv2
 start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
 end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
 sync_frame_color = (255, 0, 0)
+black = (0, 0, 0)
+white = (255, 255, 255)
 
 mask_frame_hsv_lower_limit = [40, 100, 100] # [Hue, Saturation, Value]
 mask_frame_hsv_upper_limit = [80, 255, 255] # [Hue, Saturation, Value]
@@ -35,7 +37,7 @@ bit_cell_height = sender_output_height // number_of_rows # Height of each bit ce
 
 frame_duration = 0.3  # Duration for each frame in seconds
 
-preamble_colors = [Black, White, Black, White]
+preamble_colors = [black, white, black, white]
 
 # --- Reciever input definitions ---
 
