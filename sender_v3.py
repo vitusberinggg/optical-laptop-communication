@@ -63,9 +63,9 @@ def send_message(message):
 
 #   Aruco marker frame
 
-    aruco_marker_frame_start_time = time.time()
+    aruco_marker_frame_start_time = time.monotonic()
 
-    while time.time() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
+    while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
         cv2.imshow(window, aruco_marker_frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
@@ -76,9 +76,9 @@ def send_message(message):
 
     for preamble_frame in preamble_frames:
         
-        frame_start_time = time.time() # Records the start time for the current frame
+        preamble_frame_start_time = time.monotonic() # Records the start time for the current frame
 
-        while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+        while time.monotonic() - preamble_frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
             cv2.imshow(window, preamble_frame) # Display the current frame in the window
 
@@ -91,9 +91,9 @@ def send_message(message):
 
 #   ECC reference frame
 
-    reference_image_start_time = time.time() # Records the start time for the reference image display
+    reference_image_start_time = time.monotonic() # Records the start time for the reference image display
 
-    while time.time() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
+    while time.monotonic() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
 
         cv2.imshow(window, reference_image_bgr) # Display the reference image
 
@@ -111,9 +111,9 @@ def send_message(message):
 
         for frame in data_frames: # For each frame:
 
-            frame_start_time = time.time() # Records the start time for the current frame
+            frame_start_time = time.monotonic() # Records the start time for the current frame
 
-            while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+            while time.monotonic() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
                 cv2.imshow(window, frame) # Display the current frame in the window
 
@@ -122,9 +122,9 @@ def send_message(message):
                 
                 time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-            sync_frame_start_time = time.time()
+            sync_frame_start_time = time.monotonic()
 
-            while time.time() - sync_frame_start_time < frame_duration:
+            while time.monotonic() - sync_frame_start_time < frame_duration:
 
                 cv2.imshow(window, sync_frame)
 
@@ -135,9 +135,9 @@ def send_message(message):
 
 #       End frame
 
-        end_frame_start_time = time.time() # Records the start time for the end frame
+        end_frame_start_time = time.monotonic() # Records the start time for the end frame
 
-        while time.time() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
+        while time.monotonic() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
 
             cv2.imshow(window, end_frame) # Display the end frame in the window
 
