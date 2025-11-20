@@ -1,62 +1,86 @@
-# --- virtual_camera.py ---
-
+# --- virtual_camera_ultra.py ---
 import cv2
 import threading
 import time
 
 class VideoThreadedCapture:
     """
-    Threaded video capture to simulate a webcam from a video file.
+    Ultra-optimized threaded video capture using a double-buffer model.
+    - Writer thread updates a frame buffer
+    - Reader retrieves instantly with NO locking delays
     """
 
-    def __init__(self, video_path, loop=False):
+    def __init__(self, video_path, loop=False, real_time=True):
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
-        
+
+        self.real_time = real_time   # If True: drop old frames
         self.loop = loop
-        self.latest_frame = None
+
+        # Double buffer
+        self.buffer_a = None
+        self.buffer_b = None
+        self.read_buffer = 0         # Which buffer the reader reads
+        self.write_buffer = 1        # Which buffer writer writes
         self.ret = False
+
+        # Tiny lock used only for swapping buffers
+        self.swap_lock = threading.Lock()
+
         self.stopped = False
-        self.lock = threading.Lock()
 
-        # Get FPS info
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        if self.fps == 0:
-            self.fps = 30
-        self.frame_delay = 1.0 / self.fps
+        # Timing
+        fps = self.cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 1:
+            fps = 30
+        self.frame_delay = 1.0 / fps
 
-        # Start the thread
+        # Start thread
         self.thread = threading.Thread(target=self.update, daemon=True)
         self.thread.start()
 
     def update(self):
-        """
-        Continuously read frames in a separate thread.
-        """
-        while not self.stopped:
-            ret, frame = self.cap.read()
+        next_frame_time = time.time()
 
+        while not self.stopped:
+            now = time.time()
+            delay = next_frame_time - now
+            if delay > 0:
+                time.sleep(delay)
+
+            ret, frame = self.cap.read()
             if not ret:
                 if self.loop:
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     continue
-                else:
-                    self.stopped = True
-                    break
+                break
 
-            with self.lock:
-                self.latest_frame = frame.copy()
-                self.ret = ret
+            # Write into the inactive buffer
+            if self.write_buffer == 0:
+                self.buffer_a = frame
+            else:
+                self.buffer_b = frame
 
-            time.sleep(self.frame_delay)  # simulate real-time capture
+            # Swap the buffers
+            with self.swap_lock:
+                self.read_buffer, self.write_buffer = self.write_buffer, self.read_buffer
+
+            self.ret = True
+            next_frame_time += self.frame_delay
+
+        self.stopped = True
 
     def read(self):
-        """
-        Returns the latest frame.
-        """
-        with self.lock:
-            return self.ret, self.latest_frame.copy() if self.latest_frame is not None else None
+        """Instant frame access, zero-wait."""
+        if not self.ret:
+            return False, None
+
+        # No lock needed to READ; only swap writes lock
+        if self.read_buffer == 0:
+            return True, self.buffer_a
+        else:
+            return True, self.buffer_b
 
     def isOpened(self):
         return not self.stopped

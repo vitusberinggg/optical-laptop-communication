@@ -16,68 +16,100 @@ class BitColorTracker:
 
     def end_bit(self, row, col):
         frames = self.current_bit_roi[row][col]
-        if len(frames) == 0:
+        if not frames:
             return None
 
-        frame_colors = []
-        for frame in frames:
+        # Predefine HSV thresholds for all colors
+        # (kept identical to your logic, but vectorized)
+        def classify_frame(frame):
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            H = hsv[:, :, 0]
+            S = hsv[:, :, 1]
+            V = hsv[:, :, 2]
 
-            red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
-                       cv2.inRange(hsv, (160,120,120), (180,255,255))
-            white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
-            black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
-            green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
-            blue_mask  = cv2.inRange(hsv, (95,120,70), (130,255,255))
+            # Color masks (vectorized)
+            red_mask = (((H <= 10) | (H >= 160)) &
+                        (S >= 120) & (V >= 120))
 
-            counts = {
-                "red": int(cv2.countNonZero(red_mask)),
-                "white": int(cv2.countNonZero(white_mask)),
-                "black": int(cv2.countNonZero(black_mask)),
-                "green": int(cv2.countNonZero(green_mask)),
-                "blue": int(cv2.countNonZero(blue_mask)),
-            }
+            white_mask = (V >= 220) & (S <= 25)
+            black_mask = (V <= 35)
+            green_mask = (45 <= H) & (H <= 75) & (S >= 80) & (V >= 80)
+            blue_mask  = (95 <= H) & (H <= 130) & (S >= 120) & (V >= 70)
 
-            frame_colors.append(max(counts, key=counts.get))
+            # Stack masks: shape (5, height, width)
+            mask_stack = np.stack([
+                red_mask,
+                white_mask,
+                black_mask,
+                green_mask,
+                blue_mask,
+            ], axis=0)
 
-        majority = Counter(frame_colors).most_common(1)[0][0]
+            # Count all at once: vectorized
+            counts = mask_stack.reshape(5, -1).sum(axis=1)
 
-        # reset ONLY this one bit
+            return np.argmax(counts)  # returns int 0–4
+
+        # Vectorized across all frames
+        frame_colors = np.fromiter(
+            (classify_frame(f) for f in frames),
+            dtype=np.int8
+        )
+
+        # Majority vote on integers
+        majority_color = int(np.bincount(frame_colors).argmax())
+
+        # Reset bit buffer
         self.current_bit_roi[row][col] = []
 
-        # return integer bit
-        return "1" if majority == "white" else "0"
+        # Only white = "1", everything else = "0" (your original rule)
+        return "1" if majority_color == 1 else "0"
 
     def reset(self):
         self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
 # For backward compatibility
 tracker = BitColorTracker()
+
 def dominant_color(roi):
     """
-    Computes the dominant color in the given ROI using HSV color space.
-
-    Arguments:
-        roi: The region of interest (ROI) frame to analyze.
-
-    Returns:
-        The dominant color as a string (e.g., "red", "white", etc.).
-    
+    Fast dominant color detection optimized for Python 3.13 + OpenCV + NumPy.
     """
+    if roi is None or roi.size == 0:
+        return "black"
+
+    # Convert to HSV once
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    h = hsv[:, :, 0]
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
 
-    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \
-               cv2.inRange(hsv,(160,100,100),(179,255,255))
-    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
-    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
-    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
-    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+    # Boolean masks (vectorized)
+    red_mask = (
+        ((h <= 10) | (h >= 160)) &
+        (s >= 100) & (v >= 100)
+    )
 
+    green_mask = (
+        (h >= 40) & (h <= 80) &
+        (s >= 50) & (v >= 50)
+    )
+
+    blue_mask = (
+        (h >= 100) & (h <= 140) &
+        (s >= 120)
+    )
+
+    white_mask = (v >= 200) & (s <= 30)
+    black_mask = (v <= 40)
+
+    # Count pixels (fast C implementation)
     counts = {
-        "red": int(cv2.countNonZero(red_mask)),
-        "white": int(cv2.countNonZero(white_mask)),
-        "black": int(cv2.countNonZero(black_mask)),
-        "green": int(cv2.countNonZero(green_mask)),
-        "blue": int(cv2.countNonZero(blue_mask)),
+        "red": int(red_mask.sum()),
+        "green": int(green_mask.sum()),
+        "blue": int(blue_mask.sum()),
+        "white": int(white_mask.sum()),
+        "black": int(black_mask.sum()),
     }
+
     return max(counts, key=counts.get)

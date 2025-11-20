@@ -1,4 +1,6 @@
 # --- Imports ---
+import cProfile
+
 import cv2
 import time
 import numpy as np
@@ -68,6 +70,7 @@ def receive_message():
 
     bits = ""
     message = ""
+    arucos_found = False
 
     last_color = None
 
@@ -104,8 +107,12 @@ def receive_message():
 
         # ---------- ArUco detection on the frame ----------
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, rejected = aruco_detector.detectMarkers(gray)
+        if arucos_found is False:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            corners, ids, rejected = aruco_detector.detectMarkers(gray)
+
+            if ids is not None and len(ids) > 0 and roi_coords is None:
+                roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
 
         #rejected_count = 0 if rejected is None else len(rejected)
         #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
@@ -127,6 +134,8 @@ def receive_message():
                         1.0,
                         (0, 255, 0),
                         2)
+            arucos_found = True
+            ids = None
             
         else:
             cv2.putText(display,
@@ -137,16 +146,14 @@ def receive_message():
                         (0, 0, 255),
                         2)
 
-        if roi_coords is None:
-            roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
-
-        if roi_coords is not None:
+        if roi_coords is not None and not hasattr(receive_message, "roi_padded"):
+            
             x0, x1, y0, y1 = roi_coords
-
             x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
             y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
             x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
             y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+            receive_message.roi_padded = (x0, x1, y0, y1)
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
@@ -229,4 +236,4 @@ def receive_message():
     cv2.destroyAllWindows()
 
 # --- Run ---
-receive_message()
+cProfile.run("receive_message()")
