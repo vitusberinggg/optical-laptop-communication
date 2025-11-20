@@ -110,6 +110,76 @@ def bits_to_message(bit_matrix):
 
     return "".join(characters)
 
+import time
+
+import time
+
+def sync_receiver(roi, detect_color_fn, transitions_needed=6, verbose=True, state={}):
+    """
+    Syncs timing by detecting black/white transitions.
+
+    This version is designed for cases where YOU provide each ROI frame
+    manually
+
+    Args:
+        roi (np.ndarray): The ROI frame for this moment.
+        detect_color_fn: Function that returns "black" or "white".
+        transitions_needed (int): How many transitions we need to detect.
+        verbose (bool): Print debug info.
+        state (dict): Internal persistent state across calls.
+
+    Returns:
+        float | None:
+            - Returns frame_interval (float) when enough transitions are detected.
+            - Returns None otherwise.
+    """
+
+    # --- INITIALIZE STATE ---
+    if "last_color" not in state:
+        state["last_color"] = None
+        state["transition_times"] = []
+        if verbose:
+            print("[SYNC] Waiting for first stable color...")
+
+    # --- Detect color ---
+    color = detect_color_fn(roi)
+
+    # First color → just store it
+    if state["last_color"] is None:
+        state["last_color"] = color
+        if verbose:
+            print(f"[SYNC] Initial color = {color}")
+        return None
+
+    # --- Detect transition ---
+    if color != state["last_color"]:
+        timestamp = time.time()
+        state["transition_times"].append(timestamp)
+
+        if verbose:
+            t = len(state["transition_times"])
+            print(f"[SYNC] Transition {t}: {state['last_color']} → {color}")
+
+        state["last_color"] = color
+
+        # --- Enough transitions? Compute interval ---
+        if len(state["transition_times"]) >= transitions_needed:
+            times = state["transition_times"]
+            diffs = [
+                times[i+1] - times[i]
+                for i in range(len(times)-1)
+            ]
+            frame_interval = sum(diffs) / len(diffs)
+
+            if verbose:
+                print(f"[SYNC] Estimated frame interval: {frame_interval:.4f} seconds")
+
+            return frame_interval
+
+    return None
+
+
+
 def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
     Decodes bits from a sequence of frames where each bit is a colored frame:
