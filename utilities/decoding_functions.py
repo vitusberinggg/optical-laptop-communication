@@ -174,9 +174,9 @@ def sync_receiver(roi, verbose=True, state={}):
             if verbose:
                 print(f"[SYNC] Estimated frame interval: {frame_interval:.4f} seconds")
 
-            return frame_interval
+            return frame_interval, False
 
-    return None
+    return 0, True
 
 
 

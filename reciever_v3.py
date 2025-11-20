@@ -68,8 +68,13 @@ def receive_message():
 
     bits = ""
     message = ""
+
     last_color = None
+
     waiting_for_sync = True
+    syncing = False
+    interval = 0
+
     decoding = False
     current_bit_colors = []
     roi_coords = None
@@ -142,19 +147,28 @@ def receive_message():
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
 
-        # --- SYNC ---
+        # --- Waiting for green ---
 
         if waiting_for_sync:
 
             if color == "green" and last_color != "green":
-                print("Green detected — syncing...")
+                print("Green detected — waiting for sync...")
                 tracker.reset()
 
             elif color != "green" and last_color == "green":
-                print("Green ended — starting decoding!")
+                print("Green ended — starting sync!")
                 tracker.reset()
                 waiting_for_sync = False
+                syncing = True
                 decoding = True
+
+        # --- Sync ---
+
+        elif syncing:
+
+            interval, syncing = decoding_functions.sync_receiver(roi, True)
+
+            
 
         # --- Decode ---
 
@@ -200,6 +214,7 @@ def receive_message():
         print(f"Remaining bits not yet converted: {bits}")
 
     print("Final message:", message)
+    print(f"Interval: {interval}s")
     cap.release()
     cv2.destroyAllWindows()
 
