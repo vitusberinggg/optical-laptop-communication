@@ -153,13 +153,23 @@ def receive_message():
             y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
             x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
             y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+
+            dX = (x1 - x0)/2
+            dY = (y1 - y0)/2
+
+            sx0 = int(x0 - dX)
+            sy0 = int(y0 - dY)
+            sx1 = int(x1 + dX)
+            sy1 = int(y1 + dY)
             receive_message.roi_padded = (x0, x1, y0, y1)
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
         roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-        color = dominant_color(roi)
+        small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+
+        color = dominant_color(small_roi)
 
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
@@ -183,7 +193,7 @@ def receive_message():
 
         elif syncing:
 
-            interval, syncing = decoding_functions.sync_receiver(roi, True)
+            interval, syncing = decoding_functions.sync_receiver(small_roi, True)
 
             
 
