@@ -21,7 +21,7 @@ sender_output_width = 1920
 sender_output_height = 1200
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore_part2.0.mp4")
+cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\screen_recording.mp4")
 # For live webcam test instead of video, use:
 # cap = VideoThreadedCapture(0)
 
