@@ -57,3 +57,7 @@ aruco_marker_margin = 15
 aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 1
+
+# --- Sync definitions ---
+
+amount_of_transitions = 6

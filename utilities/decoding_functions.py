@@ -5,7 +5,7 @@ from utilities import color_functions
 import numpy as np
 import cv2
 
-from utilities.global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold
+from utilities.global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold, amount_of_transitions
 
 # --- Functions ---
 
@@ -114,7 +114,7 @@ import time
 
 import time
 
-def sync_receiver(roi, detect_color_fn, transitions_needed=6, verbose=True, state={}):
+def sync_receiver(roi, verbose=True, state={}):
     """
     Syncs timing by detecting black/white transitions.
 
@@ -142,7 +142,7 @@ def sync_receiver(roi, detect_color_fn, transitions_needed=6, verbose=True, stat
             print("[SYNC] Waiting for first stable color...")
 
     # --- Detect color ---
-    color = detect_color_fn(roi)
+    color = color_functions.dominant_color(roi)
 
     # First color → just store it
     if state["last_color"] is None:
@@ -163,7 +163,7 @@ def sync_receiver(roi, detect_color_fn, transitions_needed=6, verbose=True, stat
         state["last_color"] = color
 
         # --- Enough transitions? Compute interval ---
-        if len(state["transition_times"]) >= transitions_needed:
+        if len(state["transition_times"]) >= amount_of_transitions:
             times = state["transition_times"]
             diffs = [
                 times[i+1] - times[i]
