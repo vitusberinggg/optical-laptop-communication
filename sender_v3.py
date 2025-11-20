@@ -42,9 +42,9 @@ def send_message(message):
 
     preamble_frames = []
 
-    for color in preamble_colors:
-        color_frame = create_color_frame(color)
-        preamble_frames.append(color_frame)
+    for color in preamble_colors: #For each color in the preamble colors array
+        color_frame = create_color_frame(color) #Creates a frame in the color
+        preamble_frames.append(color_frame) #Adds the color frame to the preamble frame list
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
