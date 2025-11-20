@@ -112,3 +112,29 @@ def create_aruco_marker_frame():
         frame[y_coordinate:y_coordinate + aruco_marker_size, x_coordinate:x_coordinate + aruco_marker_size] = marker_bgr
 
     return frame
+
+def create_color_reference_frame():
+    
+    """
+    Creates a reference frame with all key colors for the receiver to calibrate.
+
+    Arguments: 
+        None
+    
+    Returns:
+        ref_frame (np.ndarray): The reference frame (BGR).
+    """
+    # Create blank frame
+    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
+
+    # Divide frame into equal vertical stripes for each color
+    colors = [sync_frame_color, start_frame_color, end_frame_color]
+    num_colors = len(colors)
+    stripe_width = sender_output_width // num_colors
+
+    for i, color in enumerate(colors):
+        x_start = i * stripe_width
+        x_end = (i + 1) * stripe_width if i != num_colors - 1 else sender_output_width
+        ref_frame[:, x_start:x_end] = color
+
+    return color_reference_frame
