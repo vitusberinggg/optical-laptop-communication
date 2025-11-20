@@ -35,7 +35,7 @@ bit_cell_height = sender_output_height // number_of_rows # Height of each bit ce
 
 frame_duration = 0.3  # Duration for each frame in seconds
 
-preamble_frames = [Black, White, Black, White]
+preamble_colors = [Black, White, Black, White]
 
 # --- Reciever input definitions ---
 
