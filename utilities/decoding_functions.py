@@ -1,24 +1,41 @@
 
 # --- Imports ---
+
 from collections import Counter
-from utilities import color_functions
 import numpy as np
 import cv2
 
-from utilities.global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold, amount_of_transitions
+from utilities import color_functions
+from utilities.global_definitions import number_of_rows, number_of_columns, amount_of_transitions
+
+# --- Definitions ---
+
+bits = [[[]]] # 3D list to hold the bits "decode_bitgrid" returns (bits[frame][row][column])
 
 # --- Functions ---
 
-# --- Variables for decode_bitgrid ---
+def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
 
-bits = [[[]]] # 3D list: bits[frame][row][column]
+    """
+    Decodes a grid of bits.
 
-def decode_bitgrid(frame, frame_bit=0, add_frame=False, recall=False, end_frame=False):
+    Arguments:
+        "frame"
+        "frame_bit"
+        "add_frame"
+        "recall"
+        "end_frame"
+
+    Returns:
+        None
+
+    """
+
     global bits
 
-    h, w = frame.shape[:2]
-    bit_cell_height = h / number_of_rows
-    bit_cell_width  = w / number_of_columns
+    frame_height, frame_width = frame.shape[:2]
+    bit_cell_height = frame_height / number_of_rows
+    bit_cell_width  = frame_width / number_of_columns
 
     # --- ADD FRAME ---
     if add_frame:
