@@ -24,7 +24,7 @@ class BitColorTracker:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
             red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
-                       cv2.inRange(hsv, (160,120,120), (179,255,255))
+                       cv2.inRange(hsv, (160,120,120), (180,255,255))
             white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
             black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
             green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
