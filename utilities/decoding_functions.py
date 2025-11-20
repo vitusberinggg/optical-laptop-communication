@@ -149,7 +149,7 @@ def sync_receiver(roi, verbose=True, state={}):
         state["last_color"] = color
         if verbose:
             print(f"[SYNC] Initial color = {color}")
-        return None
+        return 0, True
 
     # --- Detect transition ---
     if color != state["last_color"]:

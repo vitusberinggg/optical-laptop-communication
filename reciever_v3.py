@@ -21,9 +21,9 @@ sender_output_width = 1920
 sender_output_height = 1200
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\screen_recording.mp4")
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4")
 # For live webcam test instead of video, use:
-# cap = VideoThreadedCapture(0)
+#cap = VideoThreadedCapture(0)
 
 if not cap.isOpened():
 
@@ -80,6 +80,9 @@ def receive_message():
     roi_coords = None
     frame_bit = 0
 
+    prev_time = time.time()
+    frame_count = 0
+
 
     print("Receiver started — waiting for GREEN to sync...")
 
@@ -91,6 +94,13 @@ def receive_message():
 
             print("Error: Failed to capture frame.")
             continue
+
+        frame_count += 1
+        current_time = time.time()
+        if current_time - prev_time >= 1.0:
+            print(f"Loops per second: {frame_count}")
+            frame_count = 0
+            prev_time = current_time
 
         # ---------- ArUco detection on the frame ----------
 
