@@ -11,7 +11,9 @@ from utilities.global_definitions import (
     aruco_marker_frame_duration,
     reference_image_duration,
     frame_duration,
-    sync_frame_color, end_frame_color
+    sync_frame_color, 
+    end_frame_color,
+    preamble_colors
 )
 
 # ---- Definitions ----
@@ -37,6 +39,12 @@ def send_message(message):
     reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
+
+    preamble_frames = []
+
+    for color in preamble_colors:
+        color_frame = create_color_frame(color)
+        preamble_frames.append(color_frame)
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
@@ -65,6 +73,19 @@ def send_message(message):
             return # Exit the function
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+    for preamble_frame in preamble_frames:
+        
+        frame_start_time = time.time() # Records the start time for the current frame
+
+        while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+
+            cv2.imshow(window, preamble_frame) # Display the current frame in the window
+
+            if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                    return # Exit the function
+                
+            time.sleep(0.001) # Small sleep to prevent high CPU usage
 
     """
 
