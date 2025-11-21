@@ -84,7 +84,7 @@ def send_message(message):
 
     while time.monotonic() - color_reference_frame_start_time < frame_duration:
 
-        cv2.imshow(window, color_reference_frame)
+        cv2.imshow(window, sync_frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             return
