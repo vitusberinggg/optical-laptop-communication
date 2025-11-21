@@ -4,7 +4,7 @@
 import cv2 # Imports the OpenCV library
 import time
 
-from utilities.image_generation_functions import render_frame, create_color_frame, create_aruco_marker_frame
+from utilities.image_generation_functions import render_frame, create_color_frame, create_aruco_marker_frame, create_color_reference_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
@@ -35,6 +35,8 @@ def send_message(message):
     """
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
+
+    color_reference_frame = create_color_reference_frame() 
 
     preamble_frames = []
 
