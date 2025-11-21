@@ -63,20 +63,29 @@ def send_message(message):
 
 #   Aruco marker frame
 
-    # --- ArUco marker frames (right first, then left) ---
-    aruco_frames = [
-        create_aruco_marker_frame(position="right"),
-        create_aruco_marker_frame(position="left")
-    ]
+    aruco_marker_frame_start_time = time.monotonic()
 
-    for aruco_frame in aruco_frames:
-        start_time = time.monotonic()
-        while time.monotonic() - start_time < aruco_marker_frame_duration:
-            cv2.imshow(window, aruco_frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                cv2.destroyAllWindows()
-                return
-            time.sleep(0.001)
+    while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
+        cv2.imshow(window, aruco_marker_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+            cv2.destroyAllWindows() # Close all OpenCV windows
+            return # Exit the function
+        
+        time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+    for preamble_frame in preamble_frames:
+        
+        preamble_frame_start_time = time.monotonic() # Records the start time for the current frame
+
+        while time.monotonic() - preamble_frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+
+            cv2.imshow(window, preamble_frame) # Display the current frame in the window
+
+            if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                    return # Exit the function
+                
+            time.sleep(0.001) # Small sleep to prevent high CPU usage
 
 
     """

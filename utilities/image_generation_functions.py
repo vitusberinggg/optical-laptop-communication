@@ -84,55 +84,35 @@ def create_color_frame(color):
 
     return np.full((sender_output_height, sender_output_width, 3), color, dtype = np.uint8)
 
-def create_aruco_marker_frame(position="right"):
+def create_aruco_marker_frame():
+
     """
-    Creates a frame with a single vertical ArUco marker, using global marker size and margin.
+    Creates a solid color frame with ArUco markers in each corner.
 
-    The marker:
-      - is a square of side length aruco_marker_size
-      - is centered vertically with 15px margin top and bottom
-      - is 15px from the left or right edge depending on `position`
+    Arguments:
+        None
+
+    Returns:
+        "frame": The created frame.
+
     """
-    frame = create_color_frame([0, 255, 0])  # Green background
 
-    marker_size = aruco_marker_size         # side length of the square marker
-    margin = aruco_marker_margin
+    frame = create_color_frame([0, 255, 0])
 
-    # Sanity check: make sure it fits vertically
-    if marker_size + 2 * margin > sender_output_height:
-        raise ValueError(
-            f"Marker (size={marker_size}) + margins (2*{margin}) "
-            f"doesn't fit in height={sender_output_height}"
-        )
+    aruco_marker_positions = [
+        (aruco_marker_margin, aruco_marker_margin), # Top-left marker
+        (sender_output_width - aruco_marker_margin - aruco_marker_size, aruco_marker_margin), # Top-right marker
+        (aruco_marker_margin, sender_output_height - aruco_marker_margin - aruco_marker_size), # Bottom-left marker
+        (sender_output_width - aruco_marker_margin - aruco_marker_size, sender_output_height - aruco_marker_margin - aruco_marker_size) # Bottom-right marker
+    ]
 
-    # Vertical placement: margin at top and bottom
-    y_coordinate = margin  # top of the marker
-    # bottom will be y_coordinate + marker_size = sender_output_height - margin
-
-    # Horizontal position using margin
-    if position == "right":
-        x_coordinate = sender_output_width - margin - marker_size
-    elif position == "left":
-        x_coordinate = margin
-    else:
-        raise ValueError("position must be 'left' or 'right'")
-
-    # Use first marker ID (or change later if you like)
-    aruco_marker_id = aruco_marker_ids[0]
-
-    # Generate marker (square)
-    marker = cv2.aruco.generateImageMarker(
-        aruco_marker_dictionary,
-        aruco_marker_id,
-        marker_size
-    )
-    marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
-
-    # Paste marker onto frame
-    frame[y_coordinate:y_coordinate + marker_size,
-          x_coordinate:x_coordinate + marker_size] = marker_bgr
+    for (x_coordinate, y_coordinate), aruco_marker_id in zip(aruco_marker_positions, aruco_marker_ids):
+        marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, aruco_marker_size)
+        marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
+        frame[y_coordinate:y_coordinate + aruco_marker_size, x_coordinate:x_coordinate + aruco_marker_size] = marker_bgr
 
     return frame
+
 
 
 def create_color_reference_frame():
