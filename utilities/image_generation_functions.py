@@ -143,6 +143,6 @@ def create_color_reference_frame():
         else: # Else (if it's the last one):
             x_end = sender_output_width
 
-        color_reference_frame[:, x_start:x_end] = color
+        color_reference_frame[:, x_start:x_end] = color # Fill the entire stripe with the current color
 
     return color_reference_frame
