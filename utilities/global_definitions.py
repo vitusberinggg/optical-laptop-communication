@@ -72,3 +72,9 @@ number_of_sync_frames = 6
 sync_colors = [black, white]
 
 sync_frame_duration = 0.2
+
+# --- Display text definitions ---
+
+display_text_font = cv2.FONT_HERSHEY_SIMPLEX
+display_text_size = 1.0
+display_text_thickness = 2

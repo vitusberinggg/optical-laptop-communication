@@ -13,7 +13,9 @@ from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin
+    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin,
+    display_text_font, display_text_size, display_text_thickness,
+    green_bgr, red_bgr
 )
 
 # --- Video capture setup ---
@@ -114,64 +116,66 @@ def receive_message():
             corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame)
 
             if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None:
-                roi_coordinates, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+                roi_coordinates, aruco_marker_side_length, _ = screen_alignment_functions.roi_alignment(frame)
 
-        # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
-
+#       Display drawings
+        
         display = frame.copy()
 
         if marker_ids is not None and len(marker_ids) > 0:
 
             cv2.aruco.drawDetectedMarkers(display, corners, marker_ids)
 
-            cv2.putText(display,
-                        f"{len(marker_ids)} ArUco marker(s) detected",
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 255, 0),
-                        2)
+            cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
+            
             arucos_found = True
             marker_ids = None
             
         else:
-            cv2.putText(display,
-                        "No ArUco markers detected",
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 0, 255),
-                        2)
+            cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-        if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"):
+        if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"): # If there are ROI coordinates and "recieve_message" doesn't have the attribute "roi_padded":
             
-            x0, x1, y0, y1 = roi_coordinates
-            x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
-            x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+            start_x, end_x, start_y, end_y = roi_coordinates
 
-            dX = (x1 - x0)/2
-            dY = (y1 - y0)/2
+#           ROI expansion
 
-            sx0 = int(x0 - dX)
-            sy0 = int(y0 - dY)
-            sx1 = int(x1 + dX)
-            sy1 = int(y1 + dY)
-            receive_message.roi_padded = (x0, x1, y0, y1)
+            roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin
 
-            if x0 < x1 and y0 < y1:
-                cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+            start_x = int(start_x - roi_padding_px)
+            end_x = int(end_x + roi_padding_px)
 
-        roi = frame[y0:y1, x0:x1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-        small_roi = frame[sy0:sy1, sx0:sx1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+            start_y = int(start_y - roi_padding_px)
+            end_y = int(end_y + roi_padding_px)
 
-        color = dominant_color(small_roi)
+#           Minimized ROI coordinates
+
+            roi_height = end_y - start_y
+            roi_width = end_x - start_x
+
+            minimized_start_x = int(start_x - (roi_width / 2))
+            minimized_start_y = int(start_y - (roi_height / 2))
+
+            minimized_end_x = int(end_x + (roi_width / 2))
+            minimized_end_y = int(end_y + (roi_height / 2))
+
+            receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+
+            if start_x < end_x and start_y < end_y:
+                cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
+        
+        if roi_coordinates is not None: # If there are ROI coordinates:
+            roi = frame[start_y:end_y, start_x:end_x]
+            minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x]
+        
+        else: # Else (if there aren't any):
+            roi = np.zeros((10, 10, 3), dtype = np.uint8)
+            minimized_roi = roi
+
+        color = dominant_color(minimized_roi)
 
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
-
-        # --- Waiting for green ---
 
         if waiting_for_sync:
 
@@ -190,7 +194,7 @@ def receive_message():
 
         elif syncing:
 
-            interval, syncing = decoding_functions.sync_receiver(small_roi, True)
+            interval, syncing = decoding_functions.sync_receiver(minimized_roi, True)
 
             
 
