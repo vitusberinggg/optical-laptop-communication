@@ -4,9 +4,11 @@
 import cv2 # Imports the OpenCV library
 import time
 
-from utilities.image_generation_functions import render_frame, create_color_frame, create_aruco_marker_frame, create_color_reference_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
-
+from utilities.image_generation_functions import (
+    render_frame, create_color_frame,
+    create_aruco_marker_frame, create_color_reference_frame
+)
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
     frame_duration,
@@ -63,9 +65,9 @@ def send_message(message):
 
     for aruco_frame in aruco_frames:
 
-        start_time = time.monotonic()
+        aruco_marker_frame_start_time = time.monotonic()
 
-        while time.monotonic() - start_time < aruco_marker_frame_duration:
+        while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
 
             cv2.imshow(window, aruco_frame)
 
@@ -99,17 +101,6 @@ def send_message(message):
             while time.monotonic() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
                 cv2.imshow(window, frame) # Display the current frame in the window
-
-                if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
-                    return # Exit the function
-                
-                time.sleep(0.001) # Small sleep to prevent high CPU usage
-
-            sync_frame_start_time = time.monotonic()
-
-            while time.monotonic() - sync_frame_start_time < frame_duration:
-
-                cv2.imshow(window, sync_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
                     return # Exit the function
