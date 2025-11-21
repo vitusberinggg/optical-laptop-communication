@@ -39,7 +39,7 @@ def send_message(message):
 
     sync_frames = []
 
-    for color in sync_colors: # For each color in the preamble colors array
+    for color in sync_colors: # For each color in the sync colors array
         color_frame = create_color_frame(color) # Creates a frame in the color
         sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 

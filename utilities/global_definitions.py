@@ -5,9 +5,10 @@ import cv2
 
 # --- General definitions ---
 
-start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
-end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
+red_bgr = (0, 0, 255)
+green_bgr = (0, 255, 0)
 blue_bgr = (255, 0, 0)
+
 black = (0, 0, 0)
 white = (255, 255, 255)
 

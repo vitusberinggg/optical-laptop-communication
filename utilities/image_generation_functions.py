@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 
 from utilities.global_definitions import (
+    red_bgr, green_bgr, blue_bgr,
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
@@ -113,8 +114,6 @@ def create_aruco_marker_frame():
 
     return frame
 
-
-
 def create_color_reference_frame():
     
     """
@@ -124,19 +123,26 @@ def create_color_reference_frame():
         None
     
     Returns:
-        ref_frame (np.ndarray): The reference frame (BGR).
+        color_reference_frame (np.ndarray): The reference frame (BGR).
+
     """
-    # Create blank frame
-    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
 
-    # Divide frame into equal vertical stripes for each color
-    colors = [blue_bgr, start_frame_color, end_frame_color]
-    num_colors = len(colors)
-    stripe_width = sender_output_width // num_colors
+    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8) # Creates a blank frame
 
-    for i, color in enumerate(colors):
-        x_start = i * stripe_width
-        x_end = (i + 1) * stripe_width if i != num_colors - 1 else sender_output_width
-        ref_frame[:, x_start:x_end] = color
+    colors = [blue_bgr, green_bgr, red_bgr]
+
+    stripe_width = sender_output_width // len(colors) # Divides the frame into equal vertical stripes for each color
+
+    for stripe_index, color in enumerate(colors):
+
+        x_start = stripe_index * stripe_width
+
+        if stripe_index != len(colors) - 1: # If the stripe index isn't the last one:
+            x_end = (stripe_index + 1) * stripe_width
+        
+        else: # Else (if it's the last one):
+            x_end = sender_output_width
+
+        color_reference_frame[:, x_start:x_end] = color
 
     return color_reference_frame
