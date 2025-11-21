@@ -4,11 +4,14 @@ import numpy as np
 from collections import Counter
 from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
 
+
 class BitColorTracker:
-    def __init__(self):
+    def __init__(self, LUT, color_names):
         # frame buffer for each bit (2D array)
         self.rows = rows
         self.cols = cols
+        self.LUT = LUT
+        self.color_names = color_names
         self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
 
     def add_frame(self, roi, row, col):
@@ -19,51 +22,21 @@ class BitColorTracker:
         if not frames:
             return None
 
-        # Predefine HSV thresholds for all colors
-        # (kept identical to your logic, but vectorized)
-        def classify_frame(frame):
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            H = hsv[:, :, 0]
-            S = hsv[:, :, 1]
-            V = hsv[:, :, 2]
+        # classify each frame via LUT
+        frame_classes = [
+            classify_frame_LUT(f, self.LUT)
+            for f in frames
+        ]
 
-            # Color masks (vectorized)
-            red_mask = (((H <= 10) | (H >= 160)) &
-                        (S >= 120) & (V >= 120))
+        # majority vote
+        frame_classes = np.array(frame_classes, dtype=np.int16)
+        majority_idx = int(np.bincount(frame_classes).argmax())
 
-            white_mask = (V >= 220) & (S <= 25)
-            black_mask = (V <= 35)
-            green_mask = (45 <= H) & (H <= 75) & (S >= 80) & (V >= 80)
-            blue_mask  = (95 <= H) & (H <= 130) & (S >= 120) & (V >= 70)
-
-            # Stack masks: shape (5, height, width)
-            mask_stack = np.stack([
-                red_mask,
-                white_mask,
-                black_mask,
-                green_mask,
-                blue_mask,
-            ], axis=0)
-
-            # Count all at once: vectorized
-            counts = mask_stack.reshape(5, -1).sum(axis=1)
-
-            return np.argmax(counts)  # returns int 0–4
-
-        # Vectorized across all frames
-        frame_colors = np.fromiter(
-            (classify_frame(f) for f in frames),
-            dtype=np.int8
-        )
-
-        # Majority vote on integers
-        majority_color = int(np.bincount(frame_colors).argmax())
-
-        # Reset bit buffer
+        # reset buffer
         self.current_bit_roi[row][col] = []
 
-        # Only white = "1", everything else = "0" (your original rule)
-        return "1" if majority_color == 1 else "0"
+        white_index = self.color_names.index("white")
+        return "1" if majority_idx == white_index else "0"
 
     def reset(self):
         self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
@@ -71,48 +44,85 @@ class BitColorTracker:
 # For backward compatibility
 tracker = BitColorTracker()
 
-def dominant_color(roi):
-    """
-    Fast dominant color detection optimized for Python 3.13 + OpenCV + NumPy.
-    """
-    if roi is None or roi.size == 0:
-        return "black"
 
-    # Convert to HSV once
+# --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
+
+def build_color_LUT(corrected_ranges):
+    """
+    Build a 180 x 256 x 256 LUT mapping HSV -> class index.
+    Class indices follow the order of corrected_ranges keys.
+    """
+    # Color index map
+    color_names = list(corrected_ranges.keys())   # ["red1", "red2", "white", ...]
+    num_colors = len(color_names)
+
+    # Create empty LUT (180×256×256)
+    LUT = np.zeros((180, 256, 256), dtype=np.uint8)
+
+    # Prepare full HSV cube (180×256×256)
+    H = np.arange(180)[:, None, None]
+    S = np.arange(256)[None, :, None]
+    V = np.arange(256)[None, None, :]
+
+    # Broadcast to 3D grid
+    H = H + np.zeros((1, 256, 256), dtype=np.uint16)
+    S = np.zeros((180, 1, 256), dtype=np.uint16) + S
+    V = np.zeros((180, 256, 1), dtype=np.uint16) + V
+
+    # Fill LUT by writing integer class indices
+    for idx, (color, (lower, upper)) in enumerate(corrected_ranges.items()):
+        lh, ls, lv = lower
+        uh, us, uv = upper
+
+        if lh <= uh:
+            # Normal range
+            mask = (
+                (H >= lh) & (H <= uh) &
+                (S >= ls) & (S <= us) &
+                (V >= lv) & (V <= uv)
+            )
+        else:
+            # Hue wraps around (e.g. red)
+            mask = (
+                ((H >= lh) | (H <= uh)) &
+                (S >= ls) & (S <= us) &
+                (V >= lv) & (V <= uv)
+            )
+
+        LUT[mask] = idx
+
+    return LUT, color_names
+
+
+# --- Classifies the majority of the colors with help of LUT ---
+
+def classify_frame_LUT(frame, LUT):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    H = hsv[:, :, 0]
+    S = hsv[:, :, 1]
+    V = hsv[:, :, 2]
+
+    # O(1) lookup for every pixel
+    classes = LUT[H, S, V]
+
+    # majority vote
+    values, counts = np.unique(classes, return_counts=True)
+    return int(values[counts.argmax()])
+
+
+
+def dominant_color_LUT(roi, LUT, names):
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    h = hsv[:, :, 0]
-    s = hsv[:, :, 1]
-    v = hsv[:, :, 2]
+    H = hsv[:, :, 0]
+    S = hsv[:, :, 1]
+    V = hsv[:, :, 2]
 
-    # Boolean masks (vectorized)
-    red_mask = (
-        ((h <= 10) | (h >= 160)) &
-        (s >= 100) & (v >= 100)
-    )
+    classes = LUT[H, S, V]
+    values, counts = np.unique(classes, return_counts=True)
 
-    green_mask = (
-        (h >= 40) & (h <= 80) &
-        (s >= 50) & (v >= 50)
-    )
-
-    blue_mask = (
-        (h >= 100) & (h <= 140) &
-        (s >= 120)
-    )
-
-    white_mask = (v >= 200) & (s <= 30)
-    black_mask = (v <= 40)
-
-    # Count pixels (fast C implementation)
-    counts = {
-        "red": int(red_mask.sum()),
-        "green": int(green_mask.sum()),
-        "blue": int(blue_mask.sum()),
-        "white": int(white_mask.sum()),
-        "black": int(black_mask.sum()),
-    }
-
-    return max(counts, key=counts.get)
+    best = int(values[counts.argmax()])
+    return names[best] 
 
 def color_offset_calculation(color_reference_frame):
 
