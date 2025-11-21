@@ -74,6 +74,13 @@ def send_message(message):
                 return
             time.sleep(0.001)
 
+    color_start_time = time.monotonic()
+    while time.monotonic() - color_start_time < frame_duration:
+        cv2.imshow(window, color_reference_frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            return
+        time.sleep(0.001)
+
     try:
 
 #       Data transfer loop
