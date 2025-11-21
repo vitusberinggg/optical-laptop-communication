@@ -12,7 +12,7 @@ from utilities.image_generation_functions import (
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
     frame_duration,
-    end_frame_color,
+    red_bgr,
     sync_colors,
     amount_of_transitions
 )
@@ -52,7 +52,7 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
+    end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
 
 #   OpenCV window
 
