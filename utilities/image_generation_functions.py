@@ -130,7 +130,7 @@ def create_color_reference_frame():
     color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
 
     # Divide frame into equal vertical stripes for each color
-    colors = [blue_sync_frame_color, start_frame_color, end_frame_color]
+    colors = [blue_bgr, start_frame_color, end_frame_color]
     num_colors = len(colors)
     stripe_width = sender_output_width // num_colors
 

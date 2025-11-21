@@ -7,7 +7,7 @@ import cv2
 
 start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
 end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
-blue_sync_frame_color = (255, 0, 0)
+blue_bgr = (255, 0, 0)
 black = (0, 0, 0)
 white = (255, 255, 255)
 

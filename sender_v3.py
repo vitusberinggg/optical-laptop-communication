@@ -11,7 +11,7 @@ from utilities.global_definitions import (
     aruco_marker_frame_duration,
     reference_image_duration,
     frame_duration,
-    blue_sync_frame_color, 
+    blue_bgr, 
     end_frame_color,
     preamble_colors
 )
@@ -54,7 +54,7 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    sync_frame = create_color_frame(blue_sync_frame_color)
+    sync_frame = create_color_frame(blue_bgr)
     end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
