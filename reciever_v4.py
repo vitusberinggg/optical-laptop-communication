@@ -119,7 +119,7 @@ def receive_message():
                 roi_coordinates, aruco_marker_width, aruco_marker_height = screen_alignment_functions.roi_alignment(frame)
 
 #       Display drawings
-
+        
         display = frame.copy()
 
         if marker_ids is not None and len(marker_ids) > 0:
@@ -134,7 +134,7 @@ def receive_message():
         else:
             cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-        if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"):
+        if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"): # If there are ROI coordinates and "recieve_message" doesn't have the attribute "roi_padded":
             
             x0, x1, y0, y1 = roi_coordinates
             x0 = int(x0 - (aruco_marker_width / aruco_marker_size) * aruco_marker_margin)
@@ -149,7 +149,7 @@ def receive_message():
             sy0 = int(y0 - dY)
             sx1 = int(x1 + dX)
             sy1 = int(y1 + dY)
-            
+
             receive_message.roi_padded = (x0, x1, y0, y1)
 
             if x0 < x1 and y0 < y1:
