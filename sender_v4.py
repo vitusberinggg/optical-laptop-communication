@@ -1,16 +1,14 @@
 
-
 # --- Imports ---
 
-import cv2 # Imports the OpenCV library for image processing
+import cv2 # Imports the OpenCV library
 import time
 
-from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame
+from utilities.image_generation_functions import render_frame, create_color_frame, create_aruco_marker_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
-    reference_image_duration,
     frame_duration,
     sync_frame_color, 
     end_frame_color,
@@ -35,9 +33,6 @@ def send_message(message):
         None
     
     """
-
-    reference_image = generate_reference_image() # Generates the reference image
-    reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
 
@@ -78,25 +73,6 @@ def send_message(message):
                 cv2.destroyAllWindows()
                 return
             time.sleep(0.001)
-
-
-    """
-
-#   ECC reference frame
-
-    reference_image_start_time = time.monotonic() # Records the start time for the reference image display
-
-    while time.monotonic() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
-
-        cv2.imshow(window, reference_image_bgr) # Display the reference image
-
-        if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
-            cv2.destroyAllWindows() # Close all OpenCV windows
-            return # Exit the function
-        
-        time.sleep(0.001) # Small sleep to prevent high CPU usage
-
-    """
 
     try:
 
