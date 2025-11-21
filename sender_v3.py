@@ -12,9 +12,9 @@ from utilities.global_definitions import (
     reference_image_duration,
     frame_duration,
     blue_bgr, 
-    end_frame_color,
+    red_bgr,
     sync_colors,
-    amount_of_transitions
+    number_of_sync_frames
 )
 
 # ---- Definitions ----
@@ -56,7 +56,7 @@ def send_message(message):
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     sync_frame = create_color_frame(blue_bgr)
-    end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
+    end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
@@ -75,7 +75,7 @@ def send_message(message):
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-    for i in range(amount_of_transitions/2):
+    for i in range(number_of_sync_frames//2):
         for sync_frame in sync_frames:
         
             sync_start_time = time.monotonic()
