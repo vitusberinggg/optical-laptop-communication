@@ -10,9 +10,8 @@ from utilities.encoding_functions import message_to_frame_bit_arrays
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
     frame_duration,
-    blue_bgr, 
     end_frame_color,
-    preamble_colors
+    sync_colors
 )
 
 # ---- Definitions ----
@@ -36,11 +35,11 @@ def send_message(message):
 
     color_reference_frame = create_color_reference_frame() 
 
-    preamble_frames = []
+    sync_frames = []
 
-    for color in preamble_colors: # For each color in the preamble colors array
+    for color in sync_colors: # For each color in the preamble colors array
         color_frame = create_color_frame(color) # Creates a frame in the color
-        preamble_frames.append(color_frame) # Adds the color frame to the preamble frame list
+        sync_frames.append(color_frame) # Adds the color frame to the preamble frame list
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
@@ -50,7 +49,6 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    sync_frame = create_color_frame(blue_bgr)
     end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
