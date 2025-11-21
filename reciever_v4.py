@@ -1,7 +1,7 @@
 
 # --- Imports ---
-import cProfile
 
+import cProfile
 import cv2
 import time
 import numpy as np
@@ -16,6 +16,7 @@ from utilities.global_definitions import (
 )
 
 # --- Definitions ---
+
 delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
 
@@ -24,6 +25,7 @@ sender_output_width = 1920
 sender_output_height = 1200
 
 # --- Setup capture ---
+
 cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4")
 # For live webcam test instead of video, use:
 #cap = VideoThreadedCapture(0)
