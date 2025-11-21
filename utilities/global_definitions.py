@@ -37,8 +37,6 @@ bit_cell_height = sender_output_height // number_of_rows # Height of each bit ce
 
 frame_duration = 0.3  # Duration for each frame in seconds
 
-sync_colors = [black, white, black, white, black, white]
-
 # --- Reciever input definitions ---
 
 laptop_webcam_pixel_height = 1440
@@ -65,3 +63,5 @@ aruco_marker_frame_duration = 1
 # --- Sync definitions ---
 
 amount_of_transitions = 6
+
+sync_colors = [black, white]
