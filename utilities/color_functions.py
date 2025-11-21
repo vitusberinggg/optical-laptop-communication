@@ -138,11 +138,13 @@ def color_offset_calculation(color_reference_frame):
     calibrate_hsv = cv2.cvtColor(color_reference_frame, cv2.COLOR_BGR2HSV).astype(float)
     
     stripe_width = color_reference_frame.shape[1] // 3
+    patch_width = int(stripe_width * 0.5)
+    start_offset = (stripe_width - patch_width) // 2  
     observed_hsv = {}
     
     for i, color_name in enumerate(["red", "green", "blue"]):
-        x_start = i * stripe_width
-        x_end = (i + 1) * stripe_width
+        x_start = i * stripe_width + start_offset
+        x_end = x_start + patch_width
         roi = calibrate_hsv[:, x_start:x_end]
         observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
     
