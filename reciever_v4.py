@@ -136,46 +136,46 @@ def receive_message():
 
         if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"): # If there are ROI coordinates and "recieve_message" doesn't have the attribute "roi_padded":
             
-            x0, x1, y0, y1 = roi_coordinates
+            start_x, end_x, start_y, end_y = roi_coordinates
 
 #           ROI expansion
 
             roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin
 
-            x0 = int(x0 - roi_padding_px)
-            x1 = int(x1 + roi_padding_px)
+            start_x = int(start_x - roi_padding_px)
+            end_x = int(end_x + roi_padding_px)
 
-            y0 = int(y0 - roi_padding_px)
-            y1 = int(y1 + roi_padding_px)
+            start_y = int(start_y - roi_padding_px)
+            end_y = int(end_y + roi_padding_px)
 
-            roi_height = y1 - y0
-            roi_width = x1 - x0
+#           Minimized ROI coordinates
 
-            sx0 = int(x0 - (roi_width / 2))
-            sy0 = int(y0 - (roi_height / 2))
-            
-            sx1 = int(x1 + (roi_width / 2))
-            sy1 = int(y1 + (roi_height / 2))
+            roi_height = end_y - start_y
+            roi_width = end_x - start_x
 
-            receive_message.roi_padded = (x0, x1, y0, y1) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+            minimized_start_x = int(start_x - (roi_width / 2))
+            minimized_start_y = int(start_y - (roi_height / 2))
 
-            if x0 < x1 and y0 < y1:
-                cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+            minimized_end_x = int(end_x + (roi_width / 2))
+            minimized_end_y = int(end_y + (roi_height / 2))
+
+            receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+
+            if start_x < end_x and start_y < end_y:
+                cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
         
         if roi_coordinates is not None: # If there are ROI coordinates:
-            roi = frame[y0:y1, x0:x1]
-            small_roi = frame[sy0:sy1, sx0:sx1]
+            roi = frame[start_y:end_y, start_x:end_x]
+            minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x]
         
         else: # Else (if there aren't any):
             roi = np.zeros((10, 10, 3), dtype = np.uint8)
-            small_roi = roi
+            minimized_roi = roi
 
-        color = dominant_color(small_roi)
+        color = dominant_color(minimized_roi)
 
         cv2.imshow("Webcam Receiver", display)
         cv2.imshow("ROI", roi)
-
-        # --- Waiting for green ---
 
         if waiting_for_sync:
 
@@ -194,7 +194,7 @@ def receive_message():
 
         elif syncing:
 
-            interval, syncing = decoding_functions.sync_receiver(small_roi, True)
+            interval, syncing = decoding_functions.sync_receiver(minimized_roi, True)
 
             
 
