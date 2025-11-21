@@ -116,7 +116,7 @@ def receive_message():
             corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame)
 
             if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None:
-                roi_coordinates, aruco_marker_width, aruco_marker_height = screen_alignment_functions.roi_alignment(frame)
+                roi_coordinates, aruco_marker_side_length, _ = screen_alignment_functions.roi_alignment(frame)
 
 #       Display drawings
         
@@ -140,23 +140,24 @@ def receive_message():
 
 #           ROI expansion
 
-            horizontal_roi_padding_px = (aruco_marker_width / aruco_marker_size) * aruco_marker_margin
-            vertical_roi_padding_px = (aruco_marker_height / aruco_marker_size) * aruco_marker_margin
+            roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin
 
-            x0 = int(x0 - horizontal_roi_padding_px)
-            y0 = int(y0 - vertical_roi_padding_px)
-            x1 = int(x1 + horizontal_roi_padding_px)
-            y1 = int(y1 + vertical_roi_padding_px)
+            x0 = int(x0 - roi_padding_px)
+            x1 = int(x1 + roi_padding_px)
 
-            dX = (x1 - x0) / 2
-            dY = (y1 - y0) / 2
+            y0 = int(y0 - roi_padding_px)
+            y1 = int(y1 + roi_padding_px)
 
-            sx0 = int(x0 - dX)
-            sy0 = int(y0 - dY)
-            sx1 = int(x1 + dX)
-            sy1 = int(y1 + dY)
+            roi_height = y1 - y0
+            roi_width = x1 - x0
 
-            receive_message.roi_padded = (x0, x1, y0, y1)
+            sx0 = int(x0 - (roi_width / 2))
+            sy0 = int(y0 - (roi_height / 2))
+            
+            sx1 = int(x1 + (roi_width / 2))
+            sy1 = int(y1 + (roi_height / 2))
+
+            receive_message.roi_padded = (x0, x1, y0, y1) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
