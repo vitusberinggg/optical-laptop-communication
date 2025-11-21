@@ -63,6 +63,6 @@ aruco_marker_frame_duration = 1
 
 # --- Sync definitions ---
 
-amount_of_transitions = 6
+number_of_sync_frames = 6
 
 sync_colors = [black, white]

@@ -13,8 +13,7 @@ from utilities.global_definitions import (
     aruco_marker_frame_duration,
     frame_duration,
     red_bgr,
-    sync_colors,
-    amount_of_transitions
+    sync_colors, number_of_sync_frames
 )
 
 # ---- Definitions ----
@@ -94,9 +93,10 @@ def send_message(message):
         
         time.sleep(0.001)
 
-# sync frames
+#   Sync frames
 
-    for i in range(amount_of_transitions/2):
+    for _ in range(number_of_sync_frames // 2):
+
         for sync_frame in sync_frames:
         
             sync_start_time = time.monotonic()
