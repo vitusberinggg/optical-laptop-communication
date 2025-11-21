@@ -39,7 +39,7 @@ def send_message(message):
 
     for color in sync_colors: # For each color in the preamble colors array
         color_frame = create_color_frame(color) # Creates a frame in the color
-        sync_frames.append(color_frame) # Adds the color frame to the preamble frame list
+        sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
@@ -51,32 +51,41 @@ def send_message(message):
 
     end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
+#   OpenCV window
+
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
     cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-#   Aruco marker frame
+#   Aruco marker frames
 
-    # --- ArUco marker frames (right first, then left) ---
-    aruco_frames = [
-        create_aruco_marker_frame(position="right"),
-        create_aruco_marker_frame(position="left")
-    ]
+    aruco_frames = [create_aruco_marker_frame(position = "right"), create_aruco_marker_frame(position = "left")]
 
     for aruco_frame in aruco_frames:
+
         start_time = time.monotonic()
+
         while time.monotonic() - start_time < aruco_marker_frame_duration:
+
             cv2.imshow(window, aruco_frame)
+
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 cv2.destroyAllWindows()
                 return
+            
             time.sleep(0.001)
 
-    color_start_time = time.monotonic()
-    while time.monotonic() - color_start_time < frame_duration:
+#   Color reference frame
+
+    color_reference_frame_start_time = time.monotonic()
+
+    while time.monotonic() - color_reference_frame_start_time < frame_duration:
+
         cv2.imshow(window, color_reference_frame)
+
         if cv2.waitKey(1) & 0xFF == ord("q"):
             return
+        
         time.sleep(0.001)
 
     try:
