@@ -6,12 +6,9 @@ from utilities.global_definitions import number_of_rows as rows, number_of_colum
 
 
 class BitColorTracker:
-    def __init__(self, LUT, color_names):
-        # frame buffer for each bit (2D array)
+    def __init__(self):
         self.rows = rows
         self.cols = cols
-        self.LUT = LUT
-        self.color_names = color_names
         self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
 
     def add_frame(self, roi, row, col):
@@ -24,7 +21,7 @@ class BitColorTracker:
 
         # classify each frame via LUT
         frame_classes = [
-            classify_frame_LUT(f, self.LUT)
+            classify_frame_LUT(f)
             for f in frames
         ]
 
@@ -41,9 +38,12 @@ class BitColorTracker:
     def reset(self):
         self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
-# For backward compatibility
-tracker = BitColorTracker()
+    def colors(self, LUT, color_names):
 
+        self.LUT = LUT
+        self.color_names = color_names
+
+tracker = BitColorTracker()
 
 # --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
 
@@ -93,10 +93,10 @@ def build_color_LUT(corrected_ranges):
 
     return LUT, color_names
 
-
 # --- Classifies the majority of the colors with help of LUT ---
 
-def classify_frame_LUT(frame, LUT):
+def classify_frame_LUT(frame):
+    LUT=tracker.LUT
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     H = hsv[:, :, 0]
@@ -112,7 +112,9 @@ def classify_frame_LUT(frame, LUT):
 
 
 
-def dominant_color_LUT(roi, LUT, names):
+def dominant_color(roi):
+    LUT = tracker.LUT
+    names = tracker.color_names
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     H = hsv[:, :, 0]
     S = hsv[:, :, 1]

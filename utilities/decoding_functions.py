@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 
 from utilities import color_functions
-from utilities.global_definitions import number_of_rows, number_of_columns, amount_of_transitions
+from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
 
 # --- Definitions ---
 
@@ -180,7 +180,7 @@ def sync_receiver(roi, verbose=True, state={}):
         state["last_color"] = color
 
         # --- Enough transitions? Compute interval ---
-        if len(state["transition_times"]) >= amount_of_transitions:
+        if len(state["transition_times"]) >= number_of_sync_frames:
             times = state["transition_times"]
             diffs = [
                 times[i+1] - times[i]
