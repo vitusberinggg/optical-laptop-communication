@@ -114,6 +114,53 @@ def create_aruco_marker_frame():
 
     return frame
 
+def create_large_aruco_marker_frame(position="right"):
+    """
+    Creates a single large vertical ArUco marker on a green background.
+
+
+    The marker:
+      - Is a square of side length (screen height - 2 * margin)
+      - Is placed with 15px margin top and bottom
+      - Is 15px from the left or right edge depending on `position`
+    """
+    # Green background
+    frame = create_color_frame([0, 255, 0])
+
+
+    margin = aruco_marker_margin
+    marker_size = sender_output_height - 2 * margin  # fills height minus top/bottom margins
+
+
+    # Vertical placement (top margin)
+    y_coordinate = margin
+
+
+    # Horizontal placement
+    if position == "right":
+        x_coordinate = sender_output_width - margin - marker_size
+    elif position == "left":
+        x_coordinate = margin
+    else:
+        raise ValueError("position must be 'left' or 'right'")
+
+
+    # Use first marker ID for right, second for left
+    aruco_marker_id = aruco_marker_ids[0] if position == "right" else aruco_marker_ids[1]
+
+
+    # Generate marker
+    marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, marker_size)
+    marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
+
+
+    # Paste marker onto frame
+    frame[y_coordinate:y_coordinate + marker_size, x_coordinate:x_coordinate + marker_size] = marker_bgr
+
+
+    return frame
+
+
 def create_color_reference_frame():
     
     """
