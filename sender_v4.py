@@ -7,7 +7,7 @@ import time
 from utilities.encoding_functions import message_to_frame_bit_arrays
 from utilities.image_generation_functions import (
     render_frame, create_color_frame,
-    create_aruco_marker_frame, create_color_reference_frame
+    create_aruco_marker_frame, create_color_reference_frame, create_large_aruco_marker_frame
 )
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
@@ -62,7 +62,10 @@ def send_message(message):
 
 #   Aruco marker frames
 
-    aruco_frames = [create_aruco_marker_frame(position = "right"), create_aruco_marker_frame(position = "left")]
+    aruco_frames = [
+    create_large_aruco_marker_frame(position="right"),
+    create_large_aruco_marker_frame(position="left")
+]
 
     for aruco_frame in aruco_frames:
 
