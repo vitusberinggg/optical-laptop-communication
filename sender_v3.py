@@ -13,7 +13,7 @@ from utilities.global_definitions import (
     frame_duration,
     blue_bgr, 
     end_frame_color,
-    preamble_colors
+    sync_colors
 )
 
 # ---- Definitions ----
@@ -40,11 +40,11 @@ def send_message(message):
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
 
-    preamble_frames = []
+    sync_frames = []
 
-    for color in preamble_colors: #For each color in the preamble colors array
-        color_frame = create_color_frame(color) #Creates a frame in the color
-        preamble_frames.append(color_frame) #Adds the color frame to the preamble frame list
+    for color in sync_colors: # For each color in the sync colors array
+        color_frame = create_color_frame(color) # Creates a frame in the color
+        sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
@@ -74,19 +74,19 @@ def send_message(message):
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-    for preamble_frame in preamble_frames:
+    for i in range(amount_of_transitions/2):
+        for sync_frame in sync_frames:
         
-        preamble_frame_start_time = time.monotonic() # Records the start time for the current frame
-
-        while time.monotonic() - preamble_frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
-
-            cv2.imshow(window, preamble_frame) # Display the current frame in the window
-
-            if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
-                    return # Exit the function
+            sync_start_time = time.monotonic()
+            
+            while time.monotonic() - sync_start_time < frame_duration:
                 
-            time.sleep(0.001) # Small sleep to prevent high CPU usage
-
+                cv2.imshow(window, color_reference_frame)
+                
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    return
+                    
+                time.sleep(0.001)
 
     """
 
