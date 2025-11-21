@@ -116,13 +116,14 @@ def create_aruco_marker_frame():
 
 def create_large_aruco_marker_frame(position="right"):
     """
-    Creates a single large vertical ArUco marker on a green background.
+    Creates a green frame with a single large ArUco marker on the left or right.
 
+    Arguments:
+        position (str): "right" or "left" side for the marker (default "right").
 
-    The marker:
-      - Is a square of side length (screen height - 2 * margin)
-      - Is placed with 15px margin top and bottom
-      - Is 15px from the left or right edge depending on `position`
+    Returns:
+        np.ndarray: The frame with the large ArUco marker.
+        
     """
     # Green background
     frame = create_color_frame([0, 255, 0])
