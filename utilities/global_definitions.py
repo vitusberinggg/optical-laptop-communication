@@ -5,9 +5,10 @@ import cv2
 
 # --- General definitions ---
 
-start_frame_color = (0, 255, 0) # Color of the start frame (BGR format)
-end_frame_color = (0, 0, 255) # Color of the end frame (BGR format)
-sync_frame_color = (255, 0, 0)
+red_bgr = (0, 0, 255)
+green_bgr = (0, 255, 0)
+blue_bgr = (255, 0, 0)
+
 black = (0, 0, 0)
 white = (255, 255, 255)
 
@@ -37,13 +38,14 @@ bit_cell_height = sender_output_height // number_of_rows # Height of each bit ce
 
 frame_duration = 0.3  # Duration for each frame in seconds
 
-preamble_colors = [black, white, black, white, black, white]
-
 # --- Reciever input definitions ---
 
 laptop_webcam_pixel_height = 1440
 laptop_webcam_pixel_width = 2650
 total_pixel_count = laptop_webcam_pixel_height * laptop_webcam_pixel_width
+
+roi_window_height = 200
+roi_window_width = 200
 
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
@@ -55,6 +57,7 @@ sample_space = frame_duration / samples_per_frame
 # --- ArUco marker definitions ---
 
 aruco_marker_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+aruco_detector_parameters = cv2.aruco.DetectorParameters()
 
 aruco_marker_size = min(sender_output_width, sender_output_height) // 2 - 50
 aruco_marker_margin = 15
@@ -62,7 +65,10 @@ aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 1
 
-
 # --- Sync definitions ---
 
-amount_of_transitions = 6
+number_of_sync_frames = 6
+
+sync_colors = [black, white]
+
+sync_frame_duration = 0.2

@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 
 from utilities.global_definitions import (
+    red_bgr, green_bgr, blue_bgr,
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
@@ -113,6 +114,52 @@ def create_aruco_marker_frame():
 
     return frame
 
+def create_large_aruco_marker_frame(position="right"):
+    """
+    Creates a green frame with a single large ArUco marker on the left or right.
+
+    Arguments:
+        position (str): "right" or "left" side for the marker (default "right").
+
+    Returns:
+        np.ndarray: The frame with the large ArUco marker.
+        
+    """
+    # Green background
+    frame = create_color_frame([0, 255, 0])
+
+
+    margin = aruco_marker_margin
+    marker_size = sender_output_height - 2 * margin  # fills height minus top/bottom margins
+
+
+    # Vertical placement (top margin)
+    y_coordinate = margin
+
+
+    # Horizontal placement
+    if position == "right":
+        x_coordinate = sender_output_width - margin - marker_size
+    elif position == "left":
+        x_coordinate = margin
+    else:
+        raise ValueError("position must be 'left' or 'right'")
+
+
+    # Use first marker ID for right, second for left
+    aruco_marker_id = aruco_marker_ids[0] if position == "right" else aruco_marker_ids[1]
+
+
+    # Generate marker
+    marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, marker_size)
+    marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
+
+
+    # Paste marker onto frame
+    frame[y_coordinate:y_coordinate + marker_size, x_coordinate:x_coordinate + marker_size] = marker_bgr
+
+
+    return frame
 
 
 def create_color_reference_frame():
@@ -124,19 +171,26 @@ def create_color_reference_frame():
         None
     
     Returns:
-        ref_frame (np.ndarray): The reference frame (BGR).
+        color_reference_frame (np.ndarray): The reference frame (BGR).
+
     """
-    # Create blank frame
-    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
 
-    # Divide frame into equal vertical stripes for each color
-    colors = [sync_frame_color, start_frame_color, end_frame_color]
-    num_colors = len(colors)
-    stripe_width = sender_output_width // num_colors
+    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8) # Creates a blank frame
 
-    for i, color in enumerate(colors):
-        x_start = i * stripe_width
-        x_end = (i + 1) * stripe_width if i != num_colors - 1 else sender_output_width
-        ref_frame[:, x_start:x_end] = color
+    colors = [blue_bgr, green_bgr, red_bgr]
+
+    stripe_width = sender_output_width // len(colors) # Divides the frame into equal vertical stripes for each color
+
+    for stripe_index, color in enumerate(colors):
+
+        x_start = stripe_index * stripe_width
+
+        if stripe_index != len(colors) - 1: # If the stripe index isn't the last one:
+            x_end = (stripe_index + 1) * stripe_width
+        
+        else: # Else (if it's the last one):
+            x_end = sender_output_width
+
+        color_reference_frame[:, x_start:x_end] = color # Fill the entire stripe with the current color
 
     return color_reference_frame

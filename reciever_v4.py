@@ -1,7 +1,7 @@
 
 # --- Imports ---
-import cProfile
 
+import cProfile
 import cv2
 import time
 import numpy as np
@@ -11,55 +11,47 @@ from utilities.color_functions import dominant_color, tracker
 from utilities import detection_functions, screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
+    roi_window_height, roi_window_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
+    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin
 )
 
-# --- Definitions ---
-delimiter_duration = 0.5  # red duration
-binary_duration = 0.3     # unused, just for reference
+# --- Video capture setup ---
 
-# Match sender's screen size (from sender script)
-sender_output_width = 1920
-sender_output_height = 1200
+videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
+# videoCapture = VideoThreadedCapture(0) # For live webcam
 
-# --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4")
-# For live webcam test instead of video, use:
-#cap = VideoThreadedCapture(0)
-
-if not cap.isOpened():
-
+if not videoCapture.isOpened():
     print("Error: Could not open camera/video.")
     exit()
 
-cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Webcam Receiver", 1920, 1200)
-
-cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("ROI", 192, 120)
-
-# Grab one initial frame so cap is "warmed up"
 while True:
 
-    ret, frame = cap.read()
+    read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
 
-    if ret:
+    if read_was_sucessful:
         break
+
     time.sleep(0.01)
 
-# --- ArUco setup (match sender) ---
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-aruco_params = cv2.aruco.DetectorParameters()
-aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
+# --- OpenCV window setup ---
 
+cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
+
+cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
+
+# --- ArUco detector setup ---
+
+aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
 # --- Main function ---
 
 def receive_message():
 
     """
-    Receives a message from the sender screen via webcam/video.
+    Receives a message from the sender screen.
     
     Arguments:
         None
@@ -68,6 +60,8 @@ def receive_message():
         None
     
     """
+
+#   Variable initialization
 
     bits = ""
     message = ""
@@ -81,62 +75,64 @@ def receive_message():
 
     decoding = False
     current_bit_colors = []
-    roi_coords = None
+    roi_coordinates = None
     frame_bit = 0
 
-    prev_time = time.time()
+    previous_time = time.time()
     frame_count = 0
 
+#   ArUco marker detection
 
-    print("Receiver started — waiting for GREEN to sync...")
+    print("Receiver started — searching for ArUco markers...")
 
     while True:
 
-        ret, frame = cap.read()
+        read_was_sucessful, frame = videoCapture.read()
 
-        if not ret:
+        if not read_was_sucessful:
 
             print("Error: Failed to capture frame.")
             continue
 
+#       --- Debugging ---
+
         frame_count += 1
+
         current_time = time.time()
-        if current_time - prev_time >= 1.0:
+
+        if current_time - previous_time >= 1.0:
             print(f"Loops per second: {frame_count}")
             frame_count = 0
-            prev_time = current_time
+            previous_time = current_time
 
-        # ---------- ArUco detection on the frame ----------
+#       --- End of debugging ---
 
         if arucos_found is False:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            corners, ids, rejected = aruco_detector.detectMarkers(gray)
 
-            if ids is not None and len(ids) > 0 and roi_coords is None:
-                roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+            grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        #rejected_count = 0 if rejected is None else len(rejected)
-        #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
+            corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame)
 
-
+            if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None:
+                roi_coordinates, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
 
         # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
 
         display = frame.copy()
 
-        if ids is not None and len(ids) > 0:
+        if marker_ids is not None and len(marker_ids) > 0:
 
-            cv2.aruco.drawDetectedMarkers(display, corners, ids)
+            cv2.aruco.drawDetectedMarkers(display, corners, marker_ids)
 
             cv2.putText(display,
-                        f"{len(ids)} ArUco marker(s) detected",
+                        f"{len(marker_ids)} ArUco marker(s) detected",
                         (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1.0,
                         (0, 255, 0),
                         2)
             arucos_found = True
-            ids = None
+            marker_ids = None
             
         else:
             cv2.putText(display,
@@ -147,9 +143,9 @@ def receive_message():
                         (0, 0, 255),
                         2)
 
-        if roi_coords is not None and not hasattr(receive_message, "roi_padded"):
+        if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"):
             
-            x0, x1, y0, y1 = roi_coords
+            x0, x1, y0, y1 = roi_coordinates
             x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
             y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
             x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
@@ -167,8 +163,8 @@ def receive_message():
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
-        roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-        small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+        roi = frame[y0:y1, x0:x1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+        small_roi = frame[sy0:sy1, sx0:sx1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
 
         color = dominant_color(small_roi)
 
@@ -243,7 +239,7 @@ def receive_message():
 
     print("Final message:", message)
     print(f"Interval: {interval}s")
-    cap.release()
+    videoCapture.release()
     cv2.destroyAllWindows()
 
 # --- Run ---
