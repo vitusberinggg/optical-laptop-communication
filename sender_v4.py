@@ -7,13 +7,12 @@ import time
 from utilities.encoding_functions import message_to_frame_bit_arrays
 from utilities.image_generation_functions import (
     render_frame, create_color_frame,
-    create_aruco_marker_frame, create_color_reference_frame, create_large_aruco_marker_frame
+    create_color_reference_frame, create_large_aruco_marker_frame
 )
 from utilities.global_definitions import (
-    aruco_marker_frame_duration,
-    frame_duration,
+    aruco_marker_frame_duration, frame_duration,
     red_bgr,
-    sync_colors, number_of_sync_frames
+    sync_colors, number_of_sync_frames, sync_frame_duration
 )
 
 # ---- Definitions ----
@@ -99,9 +98,9 @@ def send_message(message):
 
         for sync_frame in sync_frames:
         
-            sync_start_time = time.monotonic()
+            sync_frame_start_time = time.monotonic()
             
-            while time.monotonic() - sync_start_time < frame_duration:
+            while time.monotonic() - sync_frame_start_time < sync_frame_duration:
                 
                 cv2.imshow(window, sync_frame)
                 
