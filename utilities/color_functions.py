@@ -135,7 +135,7 @@ def color_offset_calculation(color_reference_frame):
         diff = (expected_h - observed_h + 90) % 180 - 90
         return diff
         
-    calibrate_hsv = cv2.cvtColor(color_reference_frame, cv2.COLOR_BGR2HSV)
+    calibrate_hsv = cv2.cvtColor(color_reference_frame, cv2.COLOR_BGR2HSV).astype(float)
     
     stripe_width = color_reference_frame.shape[1] // 3
     observed_hsv = {}
@@ -146,38 +146,66 @@ def color_offset_calculation(color_reference_frame):
         roi = calibrate_hsv[:, x_start:x_end]
         observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
     
-    h_offsets = {}
-    s_offsets = {}
-    v_offsets = {}
+    h_diffs = []
+    s_diffs = []
+    v_diffs = []
     
     for color in ["red","green","blue"]:
         exp = expected_hsv[color].astype(float)
         obs = observed_hsv[color].astype(float)
-        h_diffs.append(_hue_diff(float(exp[0]), float(obs[0])))  
+        h_diffs.append(hue_diff(float(exp[0]), float(obs[0])))  
         s_diffs.append(float(exp[1]) - float(obs[1]))
         v_diffs.append(float(exp[2]) - float(obs[2]))
     
-    avg_h_offset = np.mean([h_offsets[c] for c in h_offsets])
-    avg_s_offset = np.mean([s_offsets[c] for c in s_offsets])
-    avg_v_offset = np.mean([v_offsets[c] for c in v_offsets])
+    avg_h_offset = np.mean(h_diffs)
+    avg_s_offset = np.mean(s_diffs)
+    avg_v_offset = np.mean(v_diffs)
     
     corrected_ranges = {}
     for color, (lower, upper) in original_hsv_ranges.items():
-        lower_corrected = np.clip(np.array(lower) + np.array([avg_h_offset, avg_s_offset, avg_v_offset]), [0,0,0], [179,255,255])
-        upper_corrected = np.clip(np.array(upper) + np.array([avg_h_offset, avg_s_offset, avg_v_offset]), [0,0,0], [179,255,255])
-        corrected_ranges[color] = (lower_corrected.astype(int), upper_corrected.astype(int))
+        lower = np.array(lower, dtype=float)
+        upper = np.array(upper, dtype=float)
+
+        # hue add and wrap
+        lower_h = (lower[0] + avg_h_offset) % 180
+        upper_h = (upper[0] + avg_h_offset) % 180
+
+        # saturation/value shift and clip
+        sv_offset = np.array([avg_s_offset, avg_v_offset])
+
+        lower_sv = np.clip(lower[1:] + sv_offset, 0, 255)
+        upper_sv = np.clip(upper[1:] + sv_offset, 0, 255)
+
+        lower_corrected = np.array([lower_h, lower_sv[0], lower_sv[1]])
+        upper_corrected = np.array([upper_h, upper_sv[0], upper_sv[1]])
+
+        lower_corrected = np.clip(lower_corrected, [0,0,0], [179,255,255]).astype(int)
+        upper_corrected = np.clip(upper_corrected, [0,0,0], [179,255,255]).astype(int)
+
+        corrected_ranges[color] = (lower_corrected, upper_corrected)
     return corrected_ranges
 
 def dominant_color_with_offsets(roi, corrected_ranges):
 
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-    masks = {
-        color: cv2.inRange(hsv, lower, upper)
-        for color, (lower, upper) in corrected_ranges.items()
-    }
-    counts = {color: int(cv2.countNonZero(mask)) for color, mask in masks.items()}
+    masks = {}
+    for color, (lower, upper) in corrected_ranges.items():
+        lh = int(lower[0]); uh = int(upper[0])
+        lower_arr = np.array(lower, dtype=np.int32)
+        upper_arr = np.array(upper, dtype=np.int32)
+        if lh <= uh:
+            mask = cv2.inRange(hsv, lower_arr, upper_arr)
+        else:
+            # wrap: [lh..179] OR [0..uh]
+            part1 = cv2.inRange(hsv, np.array([lh, lower_arr[1], lower_arr[2]]), np.array([179, upper_arr[1], upper_arr[2]]))
+            part2 = cv2.inRange(hsv, np.array([0, lower_arr[1], lower_arr[2]]), np.array([uh, upper_arr[1], upper_arr[2]]))
+            mask = part1 | part2
+        masks[color] = mask
 
+    counts = {c: int(cv2.countNonZero(m)) for c,m in masks.items()}
+    if not counts:
+        return None
     return max(counts, key=counts.get)
 
     
