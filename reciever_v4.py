@@ -137,13 +137,19 @@ def receive_message():
         if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"): # If there are ROI coordinates and "recieve_message" doesn't have the attribute "roi_padded":
             
             x0, x1, y0, y1 = roi_coordinates
-            x0 = int(x0 - (aruco_marker_width / aruco_marker_size) * aruco_marker_margin)
-            y0 = int(y0 - (aruco_marker_height / aruco_marker_size) * aruco_marker_margin)
-            x1 = int(x1 + (aruco_marker_width / aruco_marker_size) * aruco_marker_margin)
-            y1 = int(y1 + (aruco_marker_height / aruco_marker_size) * aruco_marker_margin)
 
-            dX = (x1 - x0)/2
-            dY = (y1 - y0)/2
+#           ROI expansion
+
+            horizontal_roi_padding_px = (aruco_marker_width / aruco_marker_size) * aruco_marker_margin
+            vertical_roi_padding_px = (aruco_marker_height / aruco_marker_size) * aruco_marker_margin
+
+            x0 = int(x0 - horizontal_roi_padding_px)
+            y0 = int(y0 - vertical_roi_padding_px)
+            x1 = int(x1 + horizontal_roi_padding_px)
+            y1 = int(y1 + vertical_roi_padding_px)
+
+            dX = (x1 - x0) / 2
+            dY = (y1 - y0) / 2
 
             sx0 = int(x0 - dX)
             sy0 = int(y0 - dY)
@@ -154,9 +160,14 @@ def receive_message():
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
-
-        roi = frame[y0:y1, x0:x1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-        small_roi = frame[sy0:sy1, sx0:sx1] if roi_coordinates is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+        
+        if roi_coordinates is not None: # If there are ROI coordinates:
+            roi = frame[y0:y1, x0:x1]
+            small_roi = frame[sy0:sy1, sx0:sx1]
+        
+        else: # Else (if there aren't any):
+            roi = np.zeros((10, 10, 3), dtype = np.uint8)
+            small_roi = roi
 
         color = dominant_color(small_roi)
 
