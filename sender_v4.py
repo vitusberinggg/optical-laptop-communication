@@ -13,7 +13,8 @@ from utilities.global_definitions import (
     aruco_marker_frame_duration,
     frame_duration,
     end_frame_color,
-    sync_colors
+    sync_colors,
+    amount_of_transitions
 )
 
 # ---- Definitions ----
@@ -89,6 +90,22 @@ def send_message(message):
             return
         
         time.sleep(0.001)
+
+# sync frames
+
+    for i in range(amount_of_transitions/2)
+        for sync_frame in sync_frames
+        
+            sync_start_time = time.monotonic()
+            
+            while time.monotonic() - sync_start_time < frame_duration:
+                
+                cv2.imshow(window, color_reference_frame)
+                
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    return
+                    
+                time.sleep(0.001)
 
     try:
 
