@@ -13,7 +13,9 @@ from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin
+    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin,
+    display_text_font, display_text_size, display_text_thickness,
+    green_bgr, red_bgr
 )
 
 # --- Video capture setup ---
@@ -114,9 +116,9 @@ def receive_message():
             corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame)
 
             if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None:
-                roi_coordinates, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+                roi_coordinates, aruco_marker_width, aruco_marker_height = screen_alignment_functions.roi_alignment(frame)
 
-        # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
+#       Display drawings
 
         display = frame.copy()
 
@@ -124,32 +126,21 @@ def receive_message():
 
             cv2.aruco.drawDetectedMarkers(display, corners, marker_ids)
 
-            cv2.putText(display,
-                        f"{len(marker_ids)} ArUco marker(s) detected",
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 255, 0),
-                        2)
+            cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
+            
             arucos_found = True
             marker_ids = None
             
         else:
-            cv2.putText(display,
-                        "No ArUco markers detected",
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 0, 255),
-                        2)
+            cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
         if roi_coordinates is not None and not hasattr(receive_message, "roi_padded"):
             
             x0, x1, y0, y1 = roi_coordinates
-            x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
-            x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+            x0 = int(x0 - (aruco_marker_width / aruco_marker_size) * aruco_marker_margin)
+            y0 = int(y0 - (aruco_marker_height / aruco_marker_size) * aruco_marker_margin)
+            x1 = int(x1 + (aruco_marker_width / aruco_marker_size) * aruco_marker_margin)
+            y1 = int(y1 + (aruco_marker_height / aruco_marker_size) * aruco_marker_margin)
 
             dX = (x1 - x0)/2
             dY = (y1 - y0)/2
@@ -158,6 +149,7 @@ def receive_message():
             sy0 = int(y0 - dY)
             sx1 = int(x1 + dX)
             sy1 = int(y1 + dY)
+            
             receive_message.roi_padded = (x0, x1, y0, y1)
 
             if x0 < x1 and y0 < y1:
