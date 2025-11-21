@@ -44,6 +44,9 @@ laptop_webcam_pixel_height = 1440
 laptop_webcam_pixel_width = 2650
 total_pixel_count = laptop_webcam_pixel_height * laptop_webcam_pixel_width
 
+roi_window_height = 200
+roi_window_width = 200
+
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection
 start_frame_detection_tolerance = 40 # Tolerance for start frame color detection
@@ -54,6 +57,7 @@ sample_space = frame_duration / samples_per_frame
 # --- ArUco marker definitions ---
 
 aruco_marker_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+aruco_detector_parameters = cv2.aruco.DetectorParameters()
 
 aruco_marker_size = min(sender_output_width, sender_output_height) // 2 - 50
 aruco_marker_margin = 15

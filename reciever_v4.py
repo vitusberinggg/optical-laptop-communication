@@ -11,50 +11,40 @@ from utilities.color_functions import dominant_color, tracker
 from utilities import detection_functions, screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
+    roi_window_height, roi_window_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
+    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin
 )
 
-# --- Definitions ---
+# --- Video capture setup ---
 
-delimiter_duration = 0.5  # red duration
-binary_duration = 0.3     # unused, just for reference
+videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
+# videoCapture = VideoThreadedCapture(0) # For live webcam
 
-# Match sender's screen size (from sender script)
-sender_output_width = 1920
-sender_output_height = 1200
-
-# --- Setup capture ---
-
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4")
-# For live webcam test instead of video, use:
-#cap = VideoThreadedCapture(0)
-
-if not cap.isOpened():
-
+if not videoCapture.isOpened():
     print("Error: Could not open camera/video.")
     exit()
 
-cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Webcam Receiver", 1920, 1200)
-
-cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("ROI", 192, 120)
-
-# Grab one initial frame so cap is "warmed up"
 while True:
 
-    ret, frame = cap.read()
+    read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
 
-    if ret:
+    if read_was_sucessful:
         break
+
     time.sleep(0.01)
 
-# --- ArUco setup (match sender) ---
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-aruco_params = cv2.aruco.DetectorParameters()
-aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
+# --- OpenCV window setup ---
 
+cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
+
+cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
+
+# --- ArUco detector setup ---
+
+aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
 # --- Main function ---
 
@@ -94,7 +84,7 @@ def receive_message():
 
     while True:
 
-        ret, frame = cap.read()
+        ret, frame = videoCapture.read()
 
         if not ret:
 
@@ -245,7 +235,7 @@ def receive_message():
 
     print("Final message:", message)
     print(f"Interval: {interval}s")
-    cap.release()
+    videoCapture.release()
     cv2.destroyAllWindows()
 
 # --- Run ---
