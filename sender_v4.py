@@ -93,8 +93,8 @@ def send_message(message):
 
 # sync frames
 
-    for i in range(amount_of_transitions/2)
-        for sync_frame in sync_frames
+    for i in range(amount_of_transitions/2):
+        for sync_frame in sync_frames:
         
             sync_start_time = time.monotonic()
             
