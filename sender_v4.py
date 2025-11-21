@@ -1,11 +1,9 @@
-
-
 # --- Imports ---
 
 import cv2 # Imports the OpenCV library for image processing
 import time
 
-from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame
+from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame, create_color_reference_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
@@ -40,6 +38,8 @@ def send_message(message):
     reference_image_bgr = cv2.cvtColor(reference_image, cv2.COLOR_GRAY2BGR) # Converts the reference image to BGR format
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
+
+    color_reference_frame = create_color_reference_frame() 
 
     preamble_frames = []
 
