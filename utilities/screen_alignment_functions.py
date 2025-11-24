@@ -46,7 +46,7 @@ def roi_alignment(frame, inset_px = 0):
     return roi_coords, w_px, h_px
 
 def roi_alignment2(frame, inset_px = 0):
-        
+    return # other functions wont work unless this function holds something
 
 def detect_screen(frame):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
