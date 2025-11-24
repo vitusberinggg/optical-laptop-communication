@@ -197,11 +197,11 @@ def create_color_reference_frame():
 
 def create_grid_color_reference_frame():
 
-       image = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8)
+    image = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8)
 
-    for row in range(number_of_rows): # For each row:
+    for row in range(number_of_rows): 
 
-        for column in range(number_of_columns): # For each column:
+        for column in range(number_of_columns): 
 
             bit = int(bitgrid[row, column]) # Get the bit at the current position
 
