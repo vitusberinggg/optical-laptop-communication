@@ -208,14 +208,13 @@ def color_offset_calculation(roi):
     corrected_ranges = {}
 
     for color, (lower, upper) in original_hsv_ranges.items():
+
         lower = np.array(lower, dtype=float)
         upper = np.array(upper, dtype=float)
 
-        # hue add and wrap
         lower_h = (lower[0] + average_hue_offset) % 180
         upper_h = (upper[0] + average_hue_offset) % 180
 
-        # saturation/value shift and clip
         sv_offset = np.array([average_saturation_offset, average_value_offset])
 
         lower_sv = np.clip(lower[1:] + sv_offset, 0, 255)
@@ -228,6 +227,7 @@ def color_offset_calculation(roi):
         upper_corrected = np.clip(upper_corrected, [0,0,0], [179,255,255]).astype(int)
 
         corrected_ranges[color] = (lower_corrected, upper_corrected)
+        
     return corrected_ranges
 
 def dominant_color_with_offsets(roi, corrected_ranges):

@@ -188,13 +188,15 @@ def receive_message():
             minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
         minimized_roi = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
+
         color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
+
         cv2.imshow("ROI", roi)
 
         cv2.imshow("Webcam Receiver", display)
-        
 
 #       Waiting for sync
+
         if roi_coordinates is not None:
             if waiting_for_sync:
 
