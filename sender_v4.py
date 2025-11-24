@@ -34,7 +34,7 @@ def send_message(message):
     
     """
 
-    color_reference_frame = create_grid_color_reference_frame()
+    color_reference_frame = create_color_reference_frame()
 
     sync_frames = []
 

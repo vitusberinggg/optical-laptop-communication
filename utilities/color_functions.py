@@ -126,7 +126,7 @@ def dominant_color(roi):
     best = int(values[counts.argmax()])
     return names[best] 
 
-def color_offset_calculation(color_reference_frame):
+def color_offset_calculation(roi):
 
     expected_hsv = {
     "red": np.array([0, 255, 255]),
@@ -147,9 +147,9 @@ def color_offset_calculation(color_reference_frame):
         diff = (expected_h - observed_h + 90) % 180 - 90
         return diff
         
-    calibrate_hsv = cv2.cvtColor(color_reference_frame, cv2.COLOR_BGR2HSV).astype(float)
+    calibrate_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV).astype(float)
     
-    stripe_width = color_reference_frame.shape[1] // 3
+    stripe_width = roi.shape[1] // 3
     patch_width = int(stripe_width * 0.5)
     start_offset = (stripe_width - patch_width) // 2  
     observed_hsv = {}
@@ -157,7 +157,7 @@ def color_offset_calculation(color_reference_frame):
     for i, color_name in enumerate(["red", "green", "blue"]):
         x_start = i * stripe_width + start_offset
         x_end = x_start + patch_width
-        roi = calibrate_hsv[:, x_start:x_end]
+        roi_stripe = calibrate_hsv[:, x_start:x_end]
         observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
     
     h_diffs = []
