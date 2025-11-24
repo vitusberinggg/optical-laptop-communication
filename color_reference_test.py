@@ -24,7 +24,7 @@ for i, color in enumerate(colors):
     lower, upper = corrected_ranges[color]
     text = f"{color}: lower={lower}, upper={upper}"
     cv2.putText(frame, text, (x_start, y_start), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
--
+
 cv2.imshow("Color Reference Frame", frame)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
