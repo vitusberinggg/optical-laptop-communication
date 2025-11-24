@@ -1,42 +1,24 @@
 
 # --- Imports ---
-
 from collections import Counter
+from utilities import color_functions
 import numpy as np
 import cv2
-import time
 
-from utilities import color_functions
-from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
-
-# --- Definitions ---
-
-bits = [[[]]] # 3D list to hold the bits "decode_bitgrid" returns (bits[frame][row][column])
+from utilities.global_definitions import number_of_rows, number_of_columns, bit_cell_height, bit_cell_width, cell_brightness_threshold
 
 # --- Functions ---
 
-def decode_bitgrid(hsv_frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
+# --- Variables for decode_bitgrid ---
 
-    """
-    Decodes a grid of bits.
+bits = [[[]]] # 3D list: bits[frame][row][column]
 
-    Arguments:
-        "frame"
-        "frame_bit"
-        "add_frame"
-        "recall"
-        "end_frame"
-
-    Returns:
-        None
-
-    """
-
+def decode_bitgrid(frame, frame_bit=0, add_frame=False, recall=False, end_frame=False):
     global bits
 
-    frame_height, frame_width = hsv_frame.shape[:2]
-    bit_cell_height = frame_height / number_of_rows
-    bit_cell_width  = frame_width / number_of_columns
+    h, w = frame.shape[:2]
+    bit_cell_height = h / number_of_rows
+    bit_cell_width  = w / number_of_columns
 
     # --- ADD FRAME ---
     if add_frame:
@@ -62,7 +44,7 @@ def decode_bitgrid(hsv_frame, frame_bit = 0, add_frame = False, recall = False, 
                 y1 = int(y0 + bit_cell_height)
                 x0 = int(column * bit_cell_width)
                 x1 = int(x0 + bit_cell_width)
-                cell = hsv_frame[y0:y1, x0:x1]
+                cell = frame[y0:y1, x0:x1]
 
                 if end_frame:
                     bit = color_functions.tracker.end_bit(row, column)
@@ -127,73 +109,6 @@ def bits_to_message(bit_matrix):
         characters.append(chr(int(byte_str, 2)))
 
     return "".join(characters)
-
-
-def sync_receiver(roi, verbose=True, state={}):
-    """
-    Syncs timing by detecting black/white transitions.
-
-    This version is designed for cases where YOU provide each ROI frame
-    manually
-
-    Args:
-        roi (np.ndarray): The ROI frame for this moment.
-        detect_color_fn: Function that returns "black" or "white".
-        transitions_needed (int): How many transitions we need to detect.
-        verbose (bool): Print debug info.
-        state (dict): Internal persistent state across calls.
-
-    Returns:
-        float | None:
-            - Returns frame_interval (float) when enough transitions are detected.
-            - Returns None otherwise.
-    """
-
-    # --- INITIALIZE STATE ---
-    if "last_color" not in state:
-        state["last_color"] = None
-        state["transition_times"] = []
-        if verbose:
-            print("[SYNC] Waiting for first stable color...")
-
-    # --- Detect color ---
-    color = color_functions.dominant_color(roi)
-
-    # First color → just store it
-    if state["last_color"] is None:
-        state["last_color"] = color
-        if verbose:
-            print(f"[SYNC] Initial color = {color}")
-        return 0, True
-
-    # --- Detect transition ---
-    if color != state["last_color"]:
-        timestamp = time.time()
-        state["transition_times"].append(timestamp)
-
-        if verbose:
-            t = len(state["transition_times"])
-            print(f"[SYNC] Transition {t}: {state['last_color']} → {color}")
-
-        state["last_color"] = color
-
-        # --- Enough transitions? Compute interval ---
-        if len(state["transition_times"]) >= (number_of_sync_frames - 1):
-            times = state["transition_times"]
-            diffs = [
-                times[i+1] - times[i]
-                for i in range(len(times)-1)
-            ]
-            frame_interval = sum(diffs) / len(diffs)
-
-            if verbose:
-                print(f"[SYNC] Estimated frame interval: {frame_interval:.4f} seconds")
-
-            return frame_interval, False
-
-    return 0, True
-
-
 
 def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
