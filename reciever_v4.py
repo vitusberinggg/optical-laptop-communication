@@ -8,7 +8,7 @@ import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
 
-from utilities.color_functions import dominant_color, colorTracker, build_color_LUT
+from utilities.color_functions import dominant_color, colorTracker, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment
 from utilities.decoding_functions import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
@@ -95,7 +95,7 @@ def receive_message():
         }
     
     LUT, color_names = build_color_LUT(corrected_ranges)
-    colorTracker.colors(LUT, color_names)
+    tracker.colors(LUT, color_names)
 
 
 #   ArUco marker detection
@@ -187,10 +187,9 @@ def receive_message():
             roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
             minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
-        if roi_coordinates is not None:
-            minimized_roi = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
-            color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
-            cv2.imshow("ROI", roi)
+        minimized_roi = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
+        color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
+        cv2.imshow("ROI", roi)
 
         cv2.imshow("Webcam Receiver", display)
         
@@ -201,11 +200,11 @@ def receive_message():
 
                 if color == "green" and last_color != "green": # If the color is green and the last color wasn't green:
                     print("Green detected, waiting for sync...")
-                    colorTracker.reset() # Reset the color tracker
+                    tracker.reset() # Reset the color tracker
 
                 elif color != "green" and last_color == "green": # If the color is not green and the last color was green:
                     print("Green ended, starting sync!")
-                    colorTracker.reset() # Reset the color tracker
+                    tracker.reset() # Reset the color tracker
                     waiting_for_sync = False
                     color_calibration = True
                     syncing = True
@@ -216,7 +215,7 @@ def receive_message():
             elif color_calibration:
 
                 LUT, color_names = build_color_LUT(corrected_ranges)
-                colorTracker.colors(LUT, color_names)
+                tracker.colors(LUT, color_names)
                 color_calibration = False
                 syncing = True
 
@@ -248,10 +247,10 @@ def receive_message():
                     recall = True # Set recall to True
 
                 if recall: # If it's a recall frame:
-                    message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                    message = decode_bitgrid(minimized_roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                 else: # Else (if it's not a recall frame):
-                    decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                    decode_bitgrid(minimized_roi, frame_bit, add_frame, recall, end_frame)
 
                 if end_frame: # If it's an end frame:
                     frame_bit += 1 # Increment the frame bit index
