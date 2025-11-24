@@ -16,7 +16,7 @@ font_scale = 0.5
 thickness = 1
 
 stripe_width = frame.shape[1] // 3
-colors = ["red", "green", "blue"]
+colors = ["red1","red2", "green", "blue"]
 
 for i, color in enumerate(colors):
     x_start = i * stripe_width + 5  
