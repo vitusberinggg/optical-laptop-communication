@@ -127,7 +127,18 @@ def dominant_color(hsv):
 
 def color_offset_calculation(roi):
 
-    expected_hsv = {
+    """
+    Calculates color offsets based on a calibration ROI containing red, green, and blue stripes.
+
+    Arguments:
+        "roi" (numpy.ndarray): The region of interest image in BGR color space.
+    
+    Returns:
+        "corrected_ranges" (dict): A dictionary containing the corrected HSV ranges for various colors.
+
+    """
+
+    expected_hsv_ranges = {
     "red": np.array([0, 255, 255]),
     "green": np.array([60, 255, 255]),
     "blue": np.array([120, 255, 255])
@@ -143,6 +154,19 @@ def color_offset_calculation(roi):
     }
 
     def hue_diff(expected_h, observed_h):
+
+        """
+        Calculates the shortest difference between two hue values, considering the circular nature of hue.
+
+        Arguments:
+            "expected_h" (float): The expected hue value.
+            "observed_h" (float): The observed hue value.
+
+        Returns:
+            "diff" (float): The shortest difference between the expected and observed hue values.
+            
+        """
+
         diff = (expected_h - observed_h + 90) % 180 - 90
         return diff
         
@@ -164,7 +188,7 @@ def color_offset_calculation(roi):
     v_diffs = []
     
     for color in ["red","green","blue"]:
-        exp = expected_hsv[color].astype(float)
+        exp = expected_hsv_ranges[color].astype(float)
         obs = observed_hsv[color].astype(float)
         h_diffs.append(hue_diff(float(exp[0]), float(obs[0])))  
         s_diffs.append(float(exp[1]) - float(obs[1]))
