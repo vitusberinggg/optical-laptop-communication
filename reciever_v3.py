@@ -211,6 +211,7 @@ def receive_message():
 
         elif syncing:
             small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+            small_roi = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
             interval, syncing = decoding_functions.sync_receiver(small_roi, True)
             decoding = True
 
