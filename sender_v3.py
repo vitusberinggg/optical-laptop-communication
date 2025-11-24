@@ -4,17 +4,14 @@
 import cv2 # Imports the OpenCV library for image processing
 import time
 
-from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame, create_color_reference_frame
+from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
     aruco_marker_frame_duration,
     reference_image_duration,
     frame_duration,
-    blue_bgr, 
-    red_bgr,
-    sync_colors,
-    number_of_sync_frames
+    sync_frame_color, end_frame_color
 )
 
 # ---- Definitions ----
@@ -41,14 +38,6 @@ def send_message(message):
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
 
-    color_reference_frame = create_color_reference_frame() 
-
-    sync_frames = []
-
-    for color in sync_colors: # For each color in the sync colors array
-        color_frame = create_color_frame(color) # Creates a frame in the color
-        sync_frames.append(color_frame) # Adds the color frame to the sync frame list
-
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
 
     data_frames = []
@@ -57,8 +46,8 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    blue_frame = create_color_frame(blue_bgr)
-    end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
+    sync_frame = create_color_frame(sync_frame_color)
+    end_frame  = create_color_frame(end_frame_color) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
@@ -66,9 +55,9 @@ def send_message(message):
 
 #   Aruco marker frame
 
-    aruco_marker_frame_start_time = time.monotonic()
+    aruco_marker_frame_start_time = time.time()
 
-    while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
+    while time.time() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
         cv2.imshow(window, aruco_marker_frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
@@ -77,40 +66,13 @@ def send_message(message):
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-    #   Color reference frame
-
-    color_reference_frame_start_time = time.monotonic()
-
-    while time.monotonic() - color_reference_frame_start_time < (frame_duration * 2):
-
-        cv2.imshow(window, color_reference_frame)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            return
-        
-        time.sleep(0.001)
-
-    for i in range(number_of_sync_frames//2):
-        for sync_frame in sync_frames:
-        
-            sync_start_time = time.monotonic()
-            
-            while time.monotonic() - sync_start_time < frame_duration:
-                
-                cv2.imshow(window, sync_frame)
-                
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    return
-                    
-                time.sleep(0.001)
-
     """
 
 #   ECC reference frame
 
-    reference_image_start_time = time.monotonic() # Records the start time for the reference image display
+    reference_image_start_time = time.time() # Records the start time for the reference image display
 
-    while time.monotonic() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
+    while time.time() - reference_image_start_time < reference_image_duration: # While the reference image duration limit hasn't been reached:
 
         cv2.imshow(window, reference_image_bgr) # Display the reference image
 
@@ -128,9 +90,9 @@ def send_message(message):
 
         for frame in data_frames: # For each frame:
 
-            frame_start_time = time.monotonic() # Records the start time for the current frame
+            frame_start_time = time.time() # Records the start time for the current frame
 
-            while time.monotonic() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+            while time.time() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
 
                 cv2.imshow(window, frame) # Display the current frame in the window
 
@@ -139,11 +101,11 @@ def send_message(message):
                 
                 time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-            blue_frame_start_time = time.monotonic()
+            sync_frame_start_time = time.time()
 
-            while time.monotonic() - blue_frame_start_time < frame_duration:
+            while time.time() - sync_frame_start_time < frame_duration:
 
-                cv2.imshow(window, blue_frame)
+                cv2.imshow(window, sync_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
                     return # Exit the function
@@ -152,9 +114,9 @@ def send_message(message):
 
 #       End frame
 
-        end_frame_start_time = time.monotonic() # Records the start time for the end frame
+        end_frame_start_time = time.time() # Records the start time for the end frame
 
-        while time.monotonic() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
+        while time.time() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
 
             cv2.imshow(window, end_frame) # Display the end frame in the window
 
