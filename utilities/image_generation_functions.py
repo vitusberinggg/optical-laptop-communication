@@ -216,13 +216,13 @@ def create_grid_color_reference_frame():
 
             for i, color in enumerate(colors):
 
-                sx = start_x + i * stripe_width
+                sx = start_x_coordinate + i * stripe_width
 
                 if i != num_stripes - 1:
-                    ex = start_x + (i + 1) * stripe_width
+                    ex = start_x_coordinate + (i + 1) * stripe_width
                 else:
-                    ex = end_x  # last stripe fills remaining rounding
+                    ex = end_x_coordinate  # last stripe fills remaining rounding
 
-                image[start_y:end_y, sx:ex] = color
+                image[start_y_coordinate:end_y_coordinate, sx:ex] = color
             
     return image
