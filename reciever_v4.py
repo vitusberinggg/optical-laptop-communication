@@ -8,7 +8,7 @@ import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
 
-from utilities.color_functions import dominant_color, colorTracker
+from utilities.color_functions import dominant_color, colorTracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment
 from utilities.decoding_functions import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
@@ -21,7 +21,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
 # videoCapture = VideoThreadedCapture(0) # For live webcam
 
 if not videoCapture.isOpened():
@@ -83,6 +83,20 @@ def receive_message():
 
     previous_time = time.time()
     frame_count = 0 # Frame count for debugging
+
+
+    corrected_ranges = {
+            "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
+            "red2":   (np.array([160, 100, 100]), np.array([179, 255, 255])),  # hue 160–179
+            "green":  (np.array([45, 80, 80]), np.array([75, 255, 255])),
+            "blue":   (np.array([95, 120, 70]), np.array([130, 255, 255])),
+            "white":  (np.array([0, 0, 220]), np.array([180, 25, 255])),
+            "black":  (np.array([0, 0, 0]), np.array([180, 255, 35]))
+        }
+    
+    LUT, color_names = build_color_LUT(corrected_ranges)
+    colorTracker.colors(LUT, color_names)
+
 
 #   ArUco marker detection
 
@@ -173,68 +187,80 @@ def receive_message():
             roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
             minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
-        color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
+        if roi_coordinates is not None:
+            color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
+            cv2.imshow("ROI", roi)
 
         cv2.imshow("Webcam Receiver", display)
-        cv2.imshow("ROI", roi)
+        
 
 #       Waiting for sync
+        if roi_coordinates is not None:
+            if waiting_for_sync:
 
-        if waiting_for_sync:
+                if color == "green" and last_color != "green": # If the color is green and the last color wasn't green:
+                    print("Green detected, waiting for sync...")
+                    colorTracker.reset() # Reset the color tracker
 
-            if color == "green" and last_color != "green": # If the color is green and the last color wasn't green:
-                print("Green detected, waiting for sync...")
-                colorTracker.reset() # Reset the color tracker
+                elif color != "green" and last_color == "green": # If the color is not green and the last color was green:
+                    print("Green ended, starting sync!")
+                    colorTracker.reset() # Reset the color tracker
+                    waiting_for_sync = False
+                    color_calibration = True
+                    syncing = True
+                    decoding = True
 
-            elif color != "green" and last_color == "green": # If the color is not green and the last color was green:
-                print("Green ended, starting sync!")
-                colorTracker.reset() # Reset the color tracker
-                waiting_for_sync = False
+            # --- Color calibration ---
+
+            elif color_calibration:
+
+                LUT, color_names = build_color_LUT(corrected_ranges)
+                colorTracker.colors(LUT, color_names)
+                color_calibration = False
                 syncing = True
-                decoding = True
 
-        # --- Sync ---
+            # --- Sync ---
 
-        elif syncing: # If we're syncing:
+            elif syncing: # If we're syncing:
 
-            interval, syncing = sync_receiver(minimized_roi, True) # Try to sync and get the interval
+                interval, syncing = sync_receiver(minimized_roi, True) # Try to sync and get the interval
 
-        # --- Decode ---
+            # --- Decode ---
 
-        elif decoding: # If we're decoding:
+            elif decoding: # If we're decoding:
 
-            recall = False # Initialize recall flag as False
-            end_frame = False # Initialize end_frame flag as False
-            add_frame = False # Initialize add_frame flag as False
+                recall = False # Initialize recall flag as False
+                end_frame = False # Initialize end_frame flag as False
+                add_frame = False # Initialize add_frame flag as False
 
-            if color == "blue" and last_color != "blue": # If the color is blue and the last color wasn't blue:
-                
-                end_frame = True
-                add_frame = True
+                if color == "blue" and last_color != "blue": # If the color is blue and the last color wasn't blue:
+                    
+                    end_frame = True
+                    add_frame = True
 
-            elif color in ["white", "black"]: # If the color is white or black:
+                elif color in ["white", "black"]: # If the color is white or black:
 
-                add_frame = True
+                    add_frame = True
 
-            elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
+                elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
 
-                recall = True # Set recall to True
+                    recall = True # Set recall to True
 
-            if recall: # If it's a recall frame:
-                message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                if recall: # If it's a recall frame:
+                    message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
-            else: # Else (if it's not a recall frame):
-                decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                else: # Else (if it's not a recall frame):
+                    decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
 
-            if end_frame: # If it's an end frame:
-                frame_bit += 1 # Increment the frame bit index
+                if end_frame: # If it's an end frame:
+                    frame_bit += 1 # Increment the frame bit index
 
-        last_color = color # Update the last color
+            last_color = color # Update the last color
 
-        key = cv2.waitKey(1) & 0xFF
+            key = cv2.waitKey(1) & 0xFF
 
-        if key == ord('q'):
-            break
+            if key == ord('q'):
+                break
 
     if current_bit_colors: # If there are colors collected for the current unfinished bit:
         print(f"Colors collected for last unfinished bit: {current_bit_colors}")
