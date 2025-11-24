@@ -7,7 +7,7 @@ import time
 from utilities.encoding_functions import message_to_frame_bit_arrays
 from utilities.image_generation_functions import (
     render_frame, create_color_frame,
-    create_color_reference_frame, create_large_aruco_marker_frame
+    create_color_reference_frame, create_large_aruco_marker_frame, create_grid_color_reference_frame
 )
 from utilities.global_definitions import (
     aruco_marker_frame_duration, frame_duration,
@@ -34,7 +34,7 @@ def send_message(message):
     
     """
 
-    color_reference_frame = create_color_reference_frame() 
+    color_reference_frame = create_color_reference_frame()
 
     sync_frames = []
 
@@ -61,8 +61,8 @@ def send_message(message):
 #   Aruco marker frames
 
     aruco_frames = [
-    create_large_aruco_marker_frame(position="right"),
-    create_large_aruco_marker_frame(position="left")
+    create_large_aruco_marker_frame(position = "right"),
+    create_large_aruco_marker_frame(position = "left")
 ]
 
     for aruco_frame in aruco_frames:
@@ -83,7 +83,7 @@ def send_message(message):
 
     color_reference_frame_start_time = time.monotonic()
 
-    while time.monotonic() - color_reference_frame_start_time < frame_duration:
+    while time.monotonic() - color_reference_frame_start_time < (frame_duration * 2):
 
         cv2.imshow(window, color_reference_frame)
 

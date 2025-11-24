@@ -197,19 +197,14 @@ def create_color_reference_frame():
 
 def create_grid_color_reference_frame():
 
-       image = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8)
+    image = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8)
 
-    for row in range(number_of_rows): # For each row:
+    colors = [blue_bgr, green_bgr, red_bgr]
+    num_stripes = len(colors)
 
-        for column in range(number_of_columns): # For each column:
+    for row in range(number_of_rows): 
 
-            bit = int(bitgrid[row, column]) # Get the bit at the current position
-
-            if bit == 1: # If the bit is 1:
-                color = (255, 255, 255) # Set the color to white
-            
-            else: # Else (if the bit is 0):
-                color = (0, 0, 0) # Set the color to black
+        for column in range(number_of_columns): 
 
             start_x_coordinate = column * bit_cell_width
             end_x_coordinate = start_x_coordinate + bit_cell_width
@@ -217,6 +212,17 @@ def create_grid_color_reference_frame():
             start_y_coordinate = row * bit_cell_height
             end_y_coordinate = start_y_coordinate + bit_cell_height
 
-            cv2.rectangle(image, (start_x_coordinate, start_y_coordinate), (end_x_coordinate - 1, end_y_coordinate - 1), color, thickness = -1) # Draw the rectangle on the image
+            stripe_width = bit_cell_width // num_stripes
 
+            for i, color in enumerate(colors):
+
+                sx = start_x_coordinate + i * stripe_width
+
+                if i != num_stripes - 1:
+                    ex = start_x_coordinate + (i + 1) * stripe_width
+                else:
+                    ex = end_x_coordinate  # last stripe fills remaining rounding
+
+                image[start_y_coordinate:end_y_coordinate, sx:ex] = color
+            
     return image
