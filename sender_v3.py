@@ -4,7 +4,7 @@
 import cv2 # Imports the OpenCV library for image processing
 import time
 
-from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame
+from utilities.image_generation_functions import generate_reference_image, render_frame, create_color_frame, create_aruco_marker_frame, create_color_reference_frame
 from utilities.encoding_functions import message_to_frame_bit_arrays
 
 from utilities.global_definitions import (
@@ -41,6 +41,8 @@ def send_message(message):
 
     aruco_marker_frame = create_aruco_marker_frame() # Creates the ArUco marker frame
 
+    color_reference_frame = create_color_reference_frame() 
+
     sync_frames = []
 
     for color in sync_colors: # For each color in the sync colors array
@@ -74,6 +76,19 @@ def send_message(message):
             return # Exit the function
         
         time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+    #   Color reference frame
+
+    color_reference_frame_start_time = time.monotonic()
+
+    while time.monotonic() - color_reference_frame_start_time < (frame_duration * 2):
+
+        cv2.imshow(window, color_reference_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            return
+        
+        time.sleep(0.001)
 
     for i in range(number_of_sync_frames//2):
         for sync_frame in sync_frames:
