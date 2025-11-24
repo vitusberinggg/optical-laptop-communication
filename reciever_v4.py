@@ -8,7 +8,7 @@ import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
 
-from utilities.color_functions import dominant_color, colorTracker, tracker, build_color_LUT
+from utilities.color_functions import dominant_color, color_offset_calculation, colorTracker, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment
 from utilities.decoding_functions import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
@@ -198,26 +198,15 @@ def receive_message():
 #       Waiting for sync
 
         if roi_coordinates is not None:
-            if waiting_for_sync:
-
-                if color == "green" and last_color != "green": # If the color is green and the last color wasn't green:
-                    print("Green detected, waiting for sync...")
-                    tracker.reset() # Reset the color tracker
-
-                elif color != "green" and last_color == "green": # If the color is not green and the last color was green:
-                    print("Green ended, starting sync!")
-                    tracker.reset() # Reset the color tracker
-                    waiting_for_sync = False
-                    color_calibration = True
-                    syncing = True
-                    decoding = True
 
             # --- Color calibration ---
 
-            elif color_calibration:
+            if color_calibration:
 
+                corrected_ranges = color_offset_calculation(roi)
                 LUT, color_names = build_color_LUT(corrected_ranges)
                 tracker.colors(LUT, color_names)
+                
                 color_calibration = False
                 syncing = True
 
