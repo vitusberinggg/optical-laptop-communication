@@ -83,7 +83,7 @@ def send_message(message):
 
     color_reference_frame_start_time = time.monotonic()
 
-    while time.monotonic() - color_reference_frame_start_time < frame_duration:
+    while time.monotonic() - color_reference_frame_start_time < (frame_duration * 2):
 
         cv2.imshow(window, color_reference_frame)
 
