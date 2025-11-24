@@ -12,18 +12,10 @@ from utilities.global_definitions import (
     aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
 )
 
-# --- Definitions ---
-delimiter_duration = 0.5  # red duration
-binary_duration = 0.3     # unused, just for reference
-
-# Match sender's screen size (from sender script)
-sender_output_width = 1920
-sender_output_height = 1200
-
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore_part2.0.mp4")
+#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore_part2.0.mp4")
 # For live webcam test instead of video, use:
-# cap = VideoThreadedCapture(0)
+cap = VideoThreadedCapture(0)
 
 if not cap.isOpened():
 

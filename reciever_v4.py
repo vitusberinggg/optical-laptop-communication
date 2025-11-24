@@ -98,9 +98,7 @@ def receive_message():
     LUT, color_names = build_color_LUT(corrected_ranges)
     tracker.colors(LUT, color_names)
 
-#   ArUco marker detection
-
-    print("[INFO] Receiver started, searching for ArUco markers...")
+    print("[INFO] Receiver started.")
 
     try:
 
@@ -127,12 +125,17 @@ def receive_message():
 
     #       --- End of debugging ---
 
+#           ArUco marker detection
+
             if not arucos_found: # If no ArUco markers have been found:
 
                 try:
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
                     print("[INFO] Running the ArUco detector...")
+                    print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
+                    print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")
+
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
