@@ -45,6 +45,8 @@ class BitColorTracker:
 
 colorTracker = BitColorTracker()
 
+tracker = BitColorTracker()
+
 # --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
 
 def build_color_LUT(corrected_ranges):
@@ -122,9 +124,6 @@ def dominant_color(hsv):
     classes = LUT[H, S, V]
     hist = np.bincount(classes.ravel(), minlength=len(names))
     return names[int(hist.argmax())]
-
-    best = int(values[counts.argmax()])
-    return names[best] 
 
 def color_offset_calculation(roi):
 
