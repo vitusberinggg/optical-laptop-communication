@@ -14,7 +14,7 @@ bits = [[[]]] # 3D list to hold the bits "decode_bitgrid" returns (bits[frame][r
 
 # --- Functions ---
 
-def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
+def decode_bitgrid(hsv_frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
 
     """
     Decodes a grid of bits.
@@ -33,7 +33,7 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
 
     global bits
 
-    frame_height, frame_width = frame.shape[:2]
+    frame_height, frame_width = hsv_frame.shape[:2]
     bit_cell_height = frame_height / number_of_rows
     bit_cell_width  = frame_width / number_of_columns
 
@@ -61,7 +61,7 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
                 y1 = int(y0 + bit_cell_height)
                 x0 = int(column * bit_cell_width)
                 x1 = int(x0 + bit_cell_width)
-                cell = frame[y0:y1, x0:x1]
+                cell = hsv_frame[y0:y1, x0:x1]
 
                 if end_frame:
                     bit = color_functions.tracker.end_bit(row, column)

@@ -69,7 +69,7 @@ def receive_message():
     last_color = None
     color = None
 
-    waiting_for_sync = True
+    aligning_screen = True
     syncing = False
     color_calibration = False
     interval = 0
@@ -78,7 +78,6 @@ def receive_message():
     current_bit_colors = []
     roi_coords = None
     frame_bit = 0
-    small_roi_active = False
 
     prev_time = time.time()
     frame_count = 0
@@ -96,7 +95,7 @@ def receive_message():
 
 
 
-    print("Receiver started — waiting for GREEN to sync...")
+    print("Receiver started — waiting for Arucos...")
 
     while True:
 
@@ -178,18 +177,16 @@ def receive_message():
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
 
-        roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-
-        if small_roi_active:
-            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-            color = dominant_color(small_roi)
-
         cv2.imshow("Webcam Receiver", display)
-        cv2.imshow("ROI", roi)
+
+        if not aligning_screen:
+            roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+            hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            cv2.imshow("ROI", roi)
 
         # --- Waiting for arucos ---
 
-        if waiting_for_sync:
+        if aligning_screen:
 
             if arucos_found and ids is not None and len(ids) > 0:
                 print("Arucos detected — waiting for color calibration...")
@@ -199,7 +196,7 @@ def receive_message():
             elif keep_looking and ids is None:
                 print("Arucos disappeared — starting color calibration!")
                 tracker.reset()
-                waiting_for_sync = False
+                aligning_screen = False
                 keep_looking = False
                 color_calibration = True
 
@@ -207,21 +204,15 @@ def receive_message():
 
             LUT, color_names = build_color_LUT(corrected_ranges)
             tracker.colors(LUT, color_names)
-
-            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-
-            small_roi_active = True
             color_calibration = False
             syncing = True
 
         # --- Sync ---
 
         elif syncing:
-
+            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
             interval, syncing = decoding_functions.sync_receiver(small_roi, True)
             decoding = True
-
-            
 
         # --- Decode ---
 
@@ -230,12 +221,15 @@ def receive_message():
             recall = False
             end_frame = False
             add_frame = False
+            
+            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+            small_roi = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
+            color = dominant_color(small_roi)
 
             if color == "blue" and last_color != "blue":
                 
                 end_frame = True
                 add_frame = True
-
 
             elif color in ["white", "black"]:
                 
@@ -248,9 +242,9 @@ def receive_message():
                 recall = True    
 
             if recall:
-                message = decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                message = decoding_functions.decode_bitgrid(hsv_roi, frame_bit, add_frame, recall, end_frame)
             else:
-                decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                decoding_functions.decode_bitgrid(hsv_roi, frame_bit, add_frame, recall, end_frame)
 
             if end_frame:
                 frame_bit += 1

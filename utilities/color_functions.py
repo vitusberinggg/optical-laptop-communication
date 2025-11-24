@@ -11,8 +11,8 @@ class BitColorTracker:
         self.cols = cols
         self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
 
-    def add_frame(self, roi, row, col):
-        self.current_bit_roi[row][col].append(roi)
+    def add_frame(self, hsv_roi, row, col):
+        self.current_bit_roi[row][col].append(hsv_roi)
 
     def end_bit(self, row, col):
         frames = self.current_bit_roi[row][col]
@@ -95,9 +95,8 @@ def build_color_LUT(corrected_ranges):
 
 # --- Classifies the majority of the colors with help of LUT ---
 
-def classify_frame_LUT(frame):
+def classify_frame_LUT(hsv):
     LUT=tracker.LUT
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     H = hsv[:, :, 0]
     S = hsv[:, :, 1]
@@ -112,19 +111,17 @@ def classify_frame_LUT(frame):
 
 
 
-def dominant_color(roi):
+def dominant_color(hsv):
     LUT = tracker.LUT
     names = tracker.color_names
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
     H = hsv[:, :, 0]
     S = hsv[:, :, 1]
     V = hsv[:, :, 2]
 
     classes = LUT[H, S, V]
-    values, counts = np.unique(classes, return_counts=True)
-
-    best = int(values[counts.argmax()])
-    return names[best] 
+    hist = np.bincount(classes.ravel(), minlength=len(names))
+    return names[int(hist.argmax())]
 
 def color_offset_calculation(color_reference_frame):
 
