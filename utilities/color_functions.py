@@ -131,10 +131,10 @@ def color_offset_calculation(roi):
     Calculates color offsets based on a calibration ROI containing red, green, and blue stripes.
 
     Arguments:
-        "roi" (numpy.ndarray): The region of interest image in BGR color space.
+        "roi" (numpy.ndarray): The region of interest image in BGR format.
     
     Returns:
-        "corrected_ranges" (dict): A dictionary containing the corrected HSV ranges for various colors.
+        "corrected_hsv_ranges" (dict): A dictionary containing the corrected HSV ranges for various colors.
 
     """
 
@@ -153,62 +153,70 @@ def color_offset_calculation(roi):
         "blue":  ([100, 150, 0], [140, 255, 255])
     }
 
-    def hue_diff(expected_h, observed_h):
+    def calculate_hue_difference(expected_hue_value, observed_hue_value):
 
         """
-        Calculates the shortest difference between two hue values, considering the circular nature of hue.
+        Calculates the shortest difference between two hue values.
 
         Arguments:
-            "expected_h" (float): The expected hue value.
-            "observed_h" (float): The observed hue value.
+            "expected_hue_value" (float): The expected hue value.
+            "observed_hue_value" (float): The observed hue value.
 
         Returns:
-            "diff" (float): The shortest difference between the expected and observed hue values.
-            
+            "hue_difference" (float): The shortest difference between the expected and observed hue values.
+
         """
 
-        diff = (expected_h - observed_h + 90) % 180 - 90
-        return diff
+        hue_difference = (expected_hue_value - observed_hue_value + 90) % 180 - 90
+
+        return hue_difference
         
-    calibrate_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV).astype(float)
+    roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV).astype(float) # Converts the ROI to HSV format
     
-    stripe_width = roi.shape[1] // 3
-    patch_width = int(stripe_width * 0.5)
-    start_offset = (stripe_width - patch_width) // 2  
+    stripe_width = roi.shape[1] // 3 # Width of each color stripe
+    patch_width = int(stripe_width * 0.5) # Width of the patch to sample within each stripe
+    start_offset = (stripe_width - patch_width) // 2 # Offset to center the patch within the stripe
+
     observed_hsv = {}
     
-    for i, color_name in enumerate(["red", "green", "blue"]):
-        x_start = i * stripe_width + start_offset
+    for stripe_index, color in enumerate(["red", "green", "blue"]):
+
+        x_start = stripe_index * stripe_width + start_offset
         x_end = x_start + patch_width
-        roi_stripe = calibrate_hsv[:, x_start:x_end]
-        observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
+
+        roi_stripe = roi_hsv[:, x_start:x_end]
+
+        observed_hsv[color] = np.median(roi_stripe.reshape(-1,3), axis = 0)
     
-    h_diffs = []
-    s_diffs = []
-    v_diffs = []
+    hue_differences = []
+    saturation_differences = []
+    value_differences = []
     
-    for color in ["red","green","blue"]:
-        exp = expected_hsv_ranges[color].astype(float)
-        obs = observed_hsv[color].astype(float)
-        h_diffs.append(hue_diff(float(exp[0]), float(obs[0])))  
-        s_diffs.append(float(exp[1]) - float(obs[1]))
-        v_diffs.append(float(exp[2]) - float(obs[2]))
+    for color in ["red", "green", "blue"]:
+        
+        expected_hsv_range = expected_hsv_ranges[color].astype(float)
+        observed_hsv = observed_hsv[color].astype(float)
+
+        hue_differences.append(calculate_hue_difference(float(expected_hsv_range[0]), float(observed_hsv[0])))  
+        saturation_differences.append(float(expected_hsv_range[1]) - float(observed_hsv[1]))
+        value_differences.append(float(expected_hsv_range[2]) - float(observed_hsv[2]))
     
-    avg_h_offset = np.mean(h_diffs)
-    avg_s_offset = np.mean(s_diffs)
-    avg_v_offset = np.mean(v_diffs)
+    average_hue_offset = np.mean(hue_differences)
+    average_saturation_offset = np.mean(saturation_differences)
+    average_value_offset = np.mean(value_differences)
     
     corrected_ranges = {}
+
     for color, (lower, upper) in original_hsv_ranges.items():
         lower = np.array(lower, dtype=float)
         upper = np.array(upper, dtype=float)
 
         # hue add and wrap
-        lower_h = (lower[0] + avg_h_offset) % 180
-        upper_h = (upper[0] + avg_h_offset) % 180
+        lower_h = (lower[0] + average_hue_offset) % 180
+        upper_h = (upper[0] + average_hue_offset) % 180
 
         # saturation/value shift and clip
-        sv_offset = np.array([avg_s_offset, avg_v_offset])
+        sv_offset = np.array([average_saturation_offset, average_value_offset])
 
         lower_sv = np.clip(lower[1:] + sv_offset, 0, 255)
         upper_sv = np.clip(upper[1:] + sv_offset, 0, 255)
