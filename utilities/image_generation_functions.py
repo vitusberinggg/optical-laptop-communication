@@ -214,7 +214,7 @@ def create_grid_color_reference_frame():
 
             stripe_width = bit_cell_width // num_stripes
 
-             for i, color in enumerate(colors):
+            for i, color in enumerate(colors):
 
                 sx = start_x + i * stripe_width
 
