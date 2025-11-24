@@ -7,7 +7,7 @@ import time
 from utilities.encoding_functions import message_to_frame_bit_arrays
 from utilities.image_generation_functions import (
     render_frame, create_color_frame,
-    create_color_reference_frame, create_large_aruco_marker_frame, create_grid_color_reference_frame()
+    create_color_reference_frame, create_large_aruco_marker_frame, create_grid_color_reference_frame
 )
 from utilities.global_definitions import (
     aruco_marker_frame_duration, frame_duration,
