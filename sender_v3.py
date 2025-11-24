@@ -57,7 +57,7 @@ def send_message(message):
         rendered_frame = render_frame(frame_bit_array) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    sync_frame = create_color_frame(blue_bgr)
+    blue_frame = create_color_frame(blue_bgr)
     end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
 
     window = "SENDER" # The name of the OpenCV window
@@ -139,11 +139,11 @@ def send_message(message):
                 
                 time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-            sync_frame_start_time = time.monotonic()
+            blue_frame_start_time = time.monotonic()
 
-            while time.monotonic() - sync_frame_start_time < frame_duration:
+            while time.monotonic() - blue_frame_start_time < frame_duration:
 
-                cv2.imshow(window, sync_frame)
+                cv2.imshow(window, blue_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
                     return # Exit the function
