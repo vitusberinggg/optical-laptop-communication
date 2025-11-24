@@ -25,7 +25,7 @@ from utilities.global_definitions import (
 videoCapture = VideoThreadedCapture(0) # For live webcam
 
 if not videoCapture.isOpened():
-    print("Error: Could not open camera/video.")
+    print("[WARNING] Couldn't start video capture.")
     exit()
 
 while True:
@@ -86,7 +86,6 @@ def receive_message():
     previous_time = time.time()
     frame_count = 0 # Frame count for debugging
 
-
     corrected_ranges = {
             "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
             "red2":   (np.array([160, 100, 100]), np.array([179, 255, 255])),  # hue 160–179
@@ -101,15 +100,17 @@ def receive_message():
 
 #   ArUco marker detection
 
-    print("Receiver started — searching for ArUco markers...")
+    print("[INFO] Receiver started, searching for ArUco markers...")
+
     try:
+
         while True:
 
             read_was_sucessful, frame = videoCapture.read() # Reads a frame from the video capture
 
             if not read_was_sucessful:
 
-                print("Error: Failed to capture frame.")
+                print("[WARNING] Failed to capture frame.")
                 time.sleep(0.01)
                 continue
 
@@ -131,12 +132,18 @@ def receive_message():
                 try:
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
+                    print("[INFO] Running the ArUco detector...")
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment(frame) # Get the ROI coordinates based on the detected markers
+                        print("[INFO] ArUco markers detected, calculating ROI coordinates...")
+                    
+                    else:
+                        print("[INFO] No ArUco markers detected.")
                 
                 except Exception:
+                    print("[WARNING] ArUco detection failed.")
                     marker_ids = None
                     corners = None
                     aruco_marker_side_length = 0
