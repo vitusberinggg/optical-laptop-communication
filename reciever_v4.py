@@ -182,12 +182,12 @@ def receive_message():
 
         if waiting_for_sync:
 
-            if color == "green" and last_color != "green":
-                print("Green detected — waiting for sync...")
+            if color == "green" and last_color != "green": # If the color is green and the last color wasn't green:
+                print("Green detected, waiting for sync...")
                 colorTracker.reset() # Reset the color tracker
 
-            elif color != "green" and last_color == "green":
-                print("Green ended — starting sync!")
+            elif color != "green" and last_color == "green": # If the color is not green and the last color was green:
+                print("Green ended, starting sync!")
                 colorTracker.reset() # Reset the color tracker
                 waiting_for_sync = False
                 syncing = True
@@ -203,16 +203,16 @@ def receive_message():
 
         elif decoding: # If we're decoding:
 
-            recall = False
-            end_frame = False
-            add_frame = False
+            recall = False # Initialize recall flag as False
+            end_frame = False # Initialize end_frame flag as False
+            add_frame = False # Initialize add_frame flag as False
 
-            if color == "blue" and last_color != "blue":
+            if color == "blue" and last_color != "blue": # If the color is blue and the last color wasn't blue:
                 
                 end_frame = True
                 add_frame = True
 
-            elif color in ["white", "black"]:
+            elif color in ["white", "black"]: # If the color is white or black:
 
                 add_frame = True
 
@@ -226,19 +226,21 @@ def receive_message():
             else: # Else (if it's not a recall frame):
                 decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
 
-            if end_frame:
-                frame_bit += 1
+            if end_frame: # If it's an end frame:
+                frame_bit += 1 # Increment the frame bit index
 
-        last_color = color
+        last_color = color # Update the last color
+
         key = cv2.waitKey(1) & 0xFF
+
         if key == ord('q'):
             break
 
-    if current_bit_colors:
+    if current_bit_colors: # If there are colors collected for the current unfinished bit:
         print(f"Colors collected for last unfinished bit: {current_bit_colors}")
 
-    if bits:
-        print(f"Remaining bits not yet converted: {bits}")
+    if bits: # If there are remaining bits not yet converted:
+        print(f"Bits not yet converted: {bits}")
 
     print("Final message:", message)
     print(f"Interval: {interval}s")
