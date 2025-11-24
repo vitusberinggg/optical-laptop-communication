@@ -4,6 +4,7 @@
 from collections import Counter
 import numpy as np
 import cv2
+import time
 
 from utilities import color_functions
 from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
@@ -127,9 +128,6 @@ def bits_to_message(bit_matrix):
 
     return "".join(characters)
 
-import time
-
-import time
 
 def sync_receiver(roi, verbose=True, state={}):
     """
@@ -180,7 +178,7 @@ def sync_receiver(roi, verbose=True, state={}):
         state["last_color"] = color
 
         # --- Enough transitions? Compute interval ---
-        if len(state["transition_times"]) >= number_of_sync_frames:
+        if len(state["transition_times"]) >= (number_of_sync_frames - 1):
             times = state["transition_times"]
             diffs = [
                 times[i+1] - times[i]

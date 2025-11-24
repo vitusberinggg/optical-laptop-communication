@@ -16,7 +16,7 @@ from utilities.global_definitions import (
 
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test.mp4")
+cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test2.0.mp4")
 # For live webcam test instead of video, use:
 #cap = VideoThreadedCapture(0)
 
@@ -82,6 +82,11 @@ def receive_message():
     prev_time = time.time()
     frame_count = 0
 
+    x0 = 0
+    y0 = 0
+    x1 = 0
+    y1 = 0
+
     # --- Testing ---
 
     corrected_ranges = {
@@ -93,7 +98,8 @@ def receive_message():
         "black":  (np.array([0, 0, 0]), np.array([180, 255, 35]))
     }
 
-
+    LUT, color_names = build_color_LUT(corrected_ranges)
+    tracker.colors(LUT, color_names)
 
     print("Receiver started — waiting for Arucos...")
 
@@ -165,23 +171,36 @@ def receive_message():
             x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
             y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
 
-            dX = (x1 - x0)/3
-            dY = (y1 - y0)/3
+            dX = ((x1 - x0) * 2)/5
+            dY = ((y1 - y0) * 2)/5
 
-            sx0 = int(x0 + dX)
-            sy0 = int(y0 + dY)
-            sx1 = int(x1 - dX)
-            sy1 = int(y1 - dY)
+            if ((x1 - x0)/5 * (y1 - y0)/5) < 400:
+                # Padded square ROI
+                sx0 = int(x0 + dX)
+                sy0 = int(y0 + dY)
+                sx1 = int(x1 - dX)
+                sy1 = int(y1 - dY)
+
+            else:
+                # Centered square ROI
+                sx0 = int(x1/2 - 10)
+                sy0 = int(y1/2 - 10)
+                sx1 = int(x1/2 + 10)
+                sy1 = int(y1/2 + 10)
             receive_message.roi_padded = (x0, x1, y0, y1)
 
-            if x0 < x1 and y0 < y1:
-                cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+        if x0 < x1 and y0 < y1:
+            cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)
+            cv2.rectangle(display, (sx0, sy0), (sx1, sy1), (255, 0, 255), 2)
 
         cv2.imshow("Webcam Receiver", display)
 
         if not aligning_screen:
             roi = frame[y0:y1, x0:x1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+
             hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            small_roi = hsv_roi[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
+
             cv2.imshow("ROI", roi)
 
         # --- Waiting for arucos ---
@@ -202,18 +221,21 @@ def receive_message():
 
         elif color_calibration:
 
-            LUT, color_names = build_color_LUT(corrected_ranges)
-            tracker.colors(LUT, color_names)
-            color_calibration = False
-            syncing = True
+            #LUT, color_names = build_color_LUT(corrected_ranges)
+            #tracker.colors(LUT, color_names)
+
+            color = dominant_color(small_roi)
+
+            if color is not "green":
+                color_calibration = False
+                syncing = True
 
         # --- Sync ---
 
-        elif syncing:
-            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-            small_roi = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
+        if syncing:
             interval, syncing = decoding_functions.sync_receiver(small_roi, True)
-            decoding = True
+            if not syncing:
+                decoding = True
 
         # --- Decode ---
 
@@ -223,8 +245,6 @@ def receive_message():
             end_frame = False
             add_frame = False
             
-            small_roi = frame[sy0:sy1, sx0:sx1] if roi_coords is not None else np.zeros((10, 10, 3), dtype=np.uint8)
-            small_roi = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
             color = dominant_color(small_roi)
 
             if color == "blue" and last_color != "blue":
