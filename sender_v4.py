@@ -61,8 +61,8 @@ def send_message(message):
 #   Aruco marker frames
 
     aruco_frames = [
-    create_large_aruco_marker_frame(position="right"),
-    create_large_aruco_marker_frame(position="left")
+    create_large_aruco_marker_frame(position = "right"),
+    create_large_aruco_marker_frame(position = "left")
 ]
 
     for aruco_frame in aruco_frames:
