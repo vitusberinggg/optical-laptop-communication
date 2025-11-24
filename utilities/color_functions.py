@@ -195,7 +195,7 @@ def color_offset_calculation(roi):
     for color in ["red", "green", "blue"]:
         
         expected_hsv_range = expected_hsv_ranges[color].astype(float)
-        observed_hsv = observed_hsv[color].astype(float)
+        observed_hsv_color = observed_hsv[color].astype(float)
 
         hue_differences.append(calculate_hue_difference(float(expected_hsv_range[0]), float(observed_hsv[0])))  
         saturation_differences.append(float(expected_hsv_range[1]) - float(observed_hsv[1]))
