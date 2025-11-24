@@ -181,7 +181,7 @@ def color_offset_calculation(roi):
         x_start = i * stripe_width + start_offset
         x_end = x_start + patch_width
         roi_stripe = calibrate_hsv[:, x_start:x_end]
-        observed_hsv[color_name] = np.median(roi.reshape(-1,3), axis=0)
+        observed_hsv[color_name] = np.median(roi_stripe.reshape(-1,3), axis=0)
     
     h_diffs = []
     s_diffs = []
