@@ -43,7 +43,7 @@ class BitColorTracker:
         self.LUT = LUT
         self.color_names = color_names
 
-tracker = BitColorTracker()
+colorTracker = BitColorTracker()
 
 # --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
 
@@ -96,7 +96,7 @@ def build_color_LUT(corrected_ranges):
 # --- Classifies the majority of the colors with help of LUT ---
 
 def classify_frame_LUT(frame):
-    LUT=tracker.LUT
+    LUT=colorTracker.LUT
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     H = hsv[:, :, 0]
@@ -113,8 +113,8 @@ def classify_frame_LUT(frame):
 
 
 def dominant_color(roi):
-    LUT = tracker.LUT
-    names = tracker.color_names
+    LUT = colorTracker.LUT
+    names = colorTracker.color_names
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     H = hsv[:, :, 0]
     S = hsv[:, :, 1]
