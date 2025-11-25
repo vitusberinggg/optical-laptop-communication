@@ -51,7 +51,7 @@ def roi_alignment2(corners, marker_ids, saved_corners = {}):
     h_px = 0
     roi_coords = None
     if corners is not None and ids is not None and len(marker_ids) > 0:
-        ids_flat = marker_ids.flatten() if hasattr(marker_ids, "flatten") else np.array(ids).flatten()
+        ids_flat = marker_ids.flatten() if hasattr(marker_ids, "flatten") else np.array(marker_ids).flatten()
         id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
 
         for marker_id in [0, 1]:
