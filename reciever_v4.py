@@ -141,7 +141,7 @@ def receive_message():
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment(frame) # Get the ROI coordinates based on the detected markers
+                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment(corners, marker_ids) # Get the ROI coordinates based on the detected markers
                         print("[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                     else:
@@ -163,7 +163,7 @@ def receive_message():
 
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
                 
-                arucos_found = True
+#                arucos_found = True
 #                marker_ids = None # Reset marker IDs to avoid repeated processing
                 
             else:
