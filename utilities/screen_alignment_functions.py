@@ -46,6 +46,7 @@ def roi_alignment(frame, inset_px = 0):
     return roi_coords, w_px, h_px
 
 def roi_alignment2(frame, inset_px = 0):
+    saved_corners = {0: None, 1: None}
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
@@ -55,16 +56,18 @@ def roi_alignment2(frame, inset_px = 0):
         ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
         id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
 
-        required_ids = [0, 1]
-        if all(i in id_to_corners for i in required_ids):
+        for marker_id in [0, 1]:
+            if marker_id in id_to_corners:
+                saved_corners[marker_id] = id_to_corners[marker_id]
 
-            # Size of markers
-            pts = id_to_corners[0]
+        if saved_corners[0] is not None and saved_corners[1] is not None:
+            
+            pts = saved_corners[0]
             w_px = np.linalg.norm(pts[1] - pts[0])  # width in pixels
             h_px = np.linalg.norm(pts[2] - pts[1])  # height in pixels
 
             # Collect all corners from the four markers
-            all_corners = np.vstack([id_to_corners[i] for i in required_ids])
+            all_corners = np.vstack([saved_corners[0], saved_corners[1]])
             x0, y0 = np.min(all_corners, axis=0) + inset_px
             x1, y1 = np.max(all_corners, axis=0) - inset_px
 
