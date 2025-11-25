@@ -74,6 +74,8 @@ def receive_message():
     bits = ""
     message = ""
 
+    minimized_roi_fraction = 1/5
+
     printed_aruco_detector_message = False
     arucos_found = False
     marker_ids = None
@@ -223,11 +225,14 @@ def receive_message():
                 roi_height = end_y - start_y
                 roi_width = end_x - start_x
 
-                minimized_start_x = max(0, int(start_x - (roi_width / 2)))
-                minimized_start_y = max(0, int(start_y - (roi_height / 2)))
+                minimized_roi_height = int(roi_height * minimized_roi_fraction)
+                minimized_roi_width = int(roi_width * minimized_roi_fraction)
 
-                minimized_end_x = min(roi_width, int(end_x + (roi_width / 2)))
-                minimized_end_y = min(roi_height, int(end_y + (roi_height / 2)))
+                minimized_start_x = (frame_width - minimized_width) // 2
+                minimized_end_x   = minimized_start_x + minimized_width
+
+                minimized_start_y = (frame_height - minimized_height) // 2
+                minimized_end_y = minimized_start_y + minimized_height
 
                 print(f"[DEBUG] minimized_roi coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')}), frame shape = {frame.shape}")
 
