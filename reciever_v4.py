@@ -8,10 +8,11 @@ import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
 
-from utilities.color_functions import dominant_color, tracker
-from utilities.color_functions_v3 import color_offset_calculation, colorTracker, build_color_LUT
+from utilities.color_functions import dominant_color
+from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment
-from utilities.decoding_functions import decode_bitgrid, sync_receiver
+from utilities.decoding_functions import decode_bitgrid
+from utilities.decoding_functions_v3 import sync_receiver
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
@@ -101,6 +102,9 @@ def receive_message():
 
     print("[INFO] Receiver started.")
 
+    print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
+    print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")   
+
     try:
 
         while True:
@@ -134,8 +138,6 @@ def receive_message():
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
                     print("[INFO] Running the ArUco detector...")
-                    print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
-                    print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
@@ -163,7 +165,7 @@ def receive_message():
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
                 
                 arucos_found = True
-                marker_ids = None # Reset marker IDs to avoid repeated processing
+#                marker_ids = None # Reset marker IDs to avoid repeated processing
                 
             else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
