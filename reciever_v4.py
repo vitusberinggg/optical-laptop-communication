@@ -10,7 +10,7 @@ from recievers.webCamSim import VideoThreadedCapture
 
 from utilities.color_functions import dominant_color
 from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT
-from utilities.screen_alignment_functions import roi_alignment
+from utilities.screen_alignment_functions import roi_alignment2
 from utilities.decoding_functions_v3 import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
@@ -141,7 +141,7 @@ def receive_message():
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment(corners, marker_ids) # Get the ROI coordinates based on the detected markers
+                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment2(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                         print("[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                     else:
