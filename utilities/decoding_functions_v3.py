@@ -6,108 +6,94 @@ import numpy as np
 import cv2
 import time
 
-from utilities import color_functions
+from utilities import color_functions_v3
 from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
 
 # --- Definitions ---
 
-bits = [[[]]] # 3D list to hold the bits "decode_bitgrid" returns (bits[frame][row][column])
+bitgrids = []    # stores each (rows × cols) bitgrid individually
 
 # --- Functions ---
 
-def decode_bitgrid(hsv_frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
 
+# --- Main Decoder Function ---
+
+def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
     """
-    Decodes a grid of bits.
+    Handles bitgrid collection and decoding.
 
-    Arguments:
-        "frame"
-        "frame_bit"
-        "add_frame"
-        "recall"
-        "end_frame"
+    Args:
+        hsv_frame: HSV frame for processing (only used when add_frame=True)
+        add_frame: Add this frame to the tracker
+        recall: Decode collected bitgrids into bytes and characters
+        end_frame: Marks the end of the bit period (pushes 1 full bitgrid)
 
     Returns:
-        None
-
+        str | None: Decoded message (if recall=True)
     """
+    global bitgrids
 
-    global bits
-
-    frame_height, frame_width = hsv_frame.shape[:2]
-    bit_cell_height = frame_height / number_of_rows
-    bit_cell_width  = frame_width / number_of_columns
-
-    # --- ADD FRAME ---
+    # --- ADDING FRAMES ---
     if add_frame:
+        if end_frame:
+            # Retrieve completed bitgrid from tracker
+            bitgrid = color_functions_v3.tracker.end_bit()   # e.g. shape (8, 16)
 
-        # ensure list for this frame
-        while len(bits) <= frame_bit:
-            bits.append([])
+            if bitgrid is not None:
+                bitgrids.append(bitgrid)   # Store safely as a separate frame
 
-        for row in range(number_of_rows):
-
-            # ensure row list exists
-            while len(bits[frame_bit]) <= row:
-                bits[frame_bit].append([])
-
-            for column in range(number_of_columns):
-
-                # ensure column exists
-                while len(bits[frame_bit][row]) <= column:
-                    bits[frame_bit][row].append(None)
-
-                # extract ROI
-                y0 = int(row * bit_cell_height)
-                y1 = int(y0 + bit_cell_height)
-                x0 = int(column * bit_cell_width)
-                x1 = int(x0 + bit_cell_width)
-                cell = hsv_frame[y0:y1, x0:x1]
-
-                if end_frame:
-                    bit = color_functions.tracker.end_bit(row, column)
-
-                    # Ensure safe bit (string "0" / "1")
-                    if bit not in ["0", "1"]:
-                        bit = "0"
-
-                    bits[frame_bit][row][column] = bit
-
-                else:
-                    color_functions.tracker.add_frame(cell, row, column)
+            color_functions_v3.tracker.reset()
+        else:
+            color_functions_v3.tracker.add_frame(hsv_frame)
 
         return None
 
-    # --- RECALL AND DECODE ---
+
+    # --- DECODING ---
     if recall:
+        if len(bitgrids) == 0:
+            print("No bitgrids collected yet.")
+            return None
 
-        collected_bytes = []
-        current_byte = []
+        # Combine all bitgrids horizontally
+        combined = np.hstack(bitgrids)     # shape becomes (8, N)
 
-        for f in range(frame_bit):      # each finalized frame
-            for row in range(number_of_rows):
-                for column in range(number_of_columns):
+        flat = combined.ravel()
+        num_bytes = len(flat) // 8
 
-                    value = bits[f][row][column]
+        # Split into 8-bit chunks
+        byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
 
-                    # safety: convert None → "0"
-                    if value is None:
-                        value = "0"
+        print(f"Decoded {len(byte_matrix)} bytes:")
 
-                    current_byte.append(value)
+        for i, byte_bits in enumerate(byte_matrix):
+            # Convert booleans to '0'/'1'
+            s = "".join(['1' if b else '0' for b in byte_bits])
+            try:
+                char = chr(int(s, 2))
+            except ValueError:
+                char = '?'
+            print(f"Byte {i}: {s} (char: '{char}')")
 
-                    if len(current_byte) == 8:
-                        collected_bytes.append(current_byte)
-                        current_byte = []
-
-        print(f"Decoded {len(collected_bytes)} bytes from {frame_bit} frames.")
-        for i, byte_bits in enumerate(collected_bytes):
-            byte_str = "".join(str(b) for b in byte_bits)
-            print(f"Byte {i}: {byte_str} (char: '{chr(int(byte_str,2))}')")
-        return bits_to_message(collected_bytes)
+        return bits_to_message(byte_matrix)
 
     return None
 
+
+
+# --- Helper: Convert 8-bit arrays to characters ---
+
+def bits_to_message(byte_matrix):
+    chars = []
+    for byte_bits in byte_matrix:
+        s = "".join(['1' if b else '0' for b in byte_bits])
+        try:
+            chars.append(chr(int(s, 2)))
+        except ValueError:
+            chars.append('?')  # placeholder for invalid or partial bytes
+    return "".join(chars)
+
+'''
 def bits_to_message(bit_matrix):
     """
     Converts a 2D list of bits (each inner list is a byte) into a readable message.
@@ -127,7 +113,7 @@ def bits_to_message(bit_matrix):
         characters.append(chr(int(byte_str, 2)))
 
     return "".join(characters)
-
+'''
 
 def sync_receiver(roi, verbose=True, state={}):
     """
@@ -157,7 +143,7 @@ def sync_receiver(roi, verbose=True, state={}):
             print("[SYNC] Waiting for first stable color...")
 
     # --- Detect color ---
-    color = color_functions.dominant_color(roi)
+    color = color_functions_v3.dominant_color(roi)
 
     # First color → just store it
     if state["last_color"] is None:

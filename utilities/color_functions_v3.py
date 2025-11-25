@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 from collections import Counter
+from numba import njit, prange
 from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
 
 
@@ -9,39 +10,78 @@ class BitColorTracker:
     def __init__(self):
         self.rows = rows
         self.cols = cols
-        self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
+        self.hsv_frames = []
 
-    def add_frame(self, hsv_roi, row, col):
-        self.current_bit_roi[row][col].append(hsv_roi)
+    def add_frame(self, hsv_roi):
+        self.hsv_frames.append(hsv_roi)
 
-    def end_bit(self, row, col):
-        frames = self.current_bit_roi[row][col]
-        if not frames:
+    def _pad_frames(self, frames):
+        N, H, W, C = frames.shape
+        cell_h = int(np.ceil(H / self.rows))
+        cell_w = int(np.ceil(W / self.cols))
+        padded_H = cell_h * self.rows
+        padded_W = cell_w * self.cols
+        pad_bottom = padded_H - H
+        pad_right = padded_W - W
+
+        padded_frames = np.pad(
+            frames,
+            ((0, 0), (0, pad_bottom), (0, pad_right), (0, 0)),
+            mode='edge'
+        )
+        return padded_frames, cell_h, cell_w
+
+    def end_bit(self, sample_step=4):
+        if len(self.hsv_frames) == 0:
             return None
 
-        # classify each frame via LUT
-        frame_classes = [
-            classify_frame_LUT(f)
-            for f in frames
-        ]
+        hsv_frames = np.asarray(self.hsv_frames)
+        padded_frames, self.cell_h, self.cell_w = self._pad_frames(hsv_frames)
+        self.hsv_frames = []
 
-        # majority vote
-        frame_classes = np.array(frame_classes, dtype=np.int16)
-        majority_idx = int(np.bincount(frame_classes).argmax())
+        N, H, W, _ = padded_frames.shape
 
-        # reset buffer
-        self.current_bit_roi[row][col] = []
+        # Split frames into grid cells
+        cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
 
-        white_index = self.color_names.index("white")
-        return "1" if majority_idx == white_index else "0"
+        # Sample every `sample_step` pixel inside each cell
+        sampled_cells = cells[:, :, ::sample_step, :, ::sample_step, :]
+
+        # LUT lookup
+        classes = self.LUT[sampled_cells[...,0], sampled_cells[...,1], sampled_cells[...,2]]
+
+        # Merge pixel and frame dims for majority vote
+        merged = classes.reshape(self.rows, self.cols, -1)
+
+        num_classes = len(self.color_names)
+        white_idx = self.color_names.index("white")
+
+        majority_class = majority_vote_numba(merged, num_classes)
+
+        bitgrid = (majority_class == white_idx).astype(str)
+        return bitgrid
 
     def reset(self):
-        self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
+        self.hsv_frames = []
 
     def colors(self, LUT, color_names):
-
         self.LUT = LUT
         self.color_names = color_names
+
+
+# --- Numba helper for majority vote ---
+@njit(parallel=True)
+def majority_vote_numba(merged, num_classes):
+    rows, cols, samples = merged.shape
+    result = np.zeros((rows, cols), dtype=np.int32)
+
+    for i in prange(rows):
+        for j in prange(cols):
+            counts = np.zeros(num_classes, dtype=np.int32)
+            for k in range(samples):
+                counts[merged[i,j,k]] += 1
+            result[i,j] = np.argmax(counts)
+    return result
 
 colorTracker = BitColorTracker()
 
@@ -113,15 +153,30 @@ def classify_frame_LUT(hsv):
 
 
 
-def dominant_color(hsv):
+@njit
+def dominant_color_numba(classes, num_colors):
+    hist = np.zeros(num_colors, dtype=np.int32)
+    for i in range(classes.size):
+        hist[classes.ravel()[i]] += 1
+    return np.argmax(hist)
+
+
+def dominant_color(hsv, sample_step=4):
+    """
+    Computes the dominant color in an HSV frame by sampling every `sample_step` pixel.
+    """
     LUT = tracker.LUT
     names = tracker.color_names
 
-    H = hsv[:, :, 0]
-    S = hsv[:, :, 1]
-    V = hsv[:, :, 2]
+    # Sample every `sample_step` pixel in height and width
+    H = hsv[::sample_step, ::sample_step, 0]
+    S = hsv[::sample_step, ::sample_step, 1]
+    V = hsv[::sample_step, ::sample_step, 2]
 
+    # LUT lookup for sampled pixels
     classes = LUT[H, S, V]
+
+    # Majority vote
     hist = np.bincount(classes.ravel(), minlength=len(names))
     return names[int(hist.argmax())]
 

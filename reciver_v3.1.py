@@ -1,13 +1,20 @@
 # --- Imports ---
 import cProfile
+import pstats
+
+profiler = cProfile.Profile()
+profiler.enable()
+
+import threading
+import queue
 
 import cv2
 import time
 import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
-from utilities.color_functions import dominant_color, tracker, build_color_LUT
-from utilities import detection_functions, screen_alignment_functions, decoding_functions
+from utilities.color_functions_v3 import dominant_color, tracker, build_color_LUT
+from utilities import detection_functions, screen_alignment_functions, decoding_functions_v3
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
@@ -44,6 +51,32 @@ while True:
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 aruco_params = cv2.aruco.DetectorParameters()
 aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
+
+
+frame_queue = queue.Queue(maxsize=10)
+decoded_message = ""
+stop_thread = False
+
+def decoding_worker():
+    global decoded_message
+    while not stop_thread or not frame_queue.empty():
+        try:
+            hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout=0.1)
+        except queue.Empty:
+            continue
+        
+        if recall:
+            decoded_message = decoding_functions_v3.decode_bitgrid(
+                hsv_roi, add_frame, recall, end_frame
+            )
+        else:
+            decoding_functions_v3.decode_bitgrid(
+                hsv_roi, add_frame, recall, end_frame
+            )
+
+# Start decoding thread
+decode_thread = threading.Thread(target=decoding_worker, daemon=True)
+decode_thread.start()
 
 
 # --- Main function ---
@@ -174,7 +207,7 @@ def receive_message():
             dX = ((x1 - x0) * 2)/5
             dY = ((y1 - y0) * 2)/5
 
-            if ((x1 - x0)/5 * (y1 - y0)/5) < 400:
+            if ((x1 - x0)/5 * (y1 - y0)/5) < 16:
                 # Padded square ROI
                 sx0 = int(x0 + dX)
                 sy0 = int(y0 + dY)
@@ -183,10 +216,10 @@ def receive_message():
 
             else:
                 # Centered square ROI
-                sx0 = int(x1/2 - 10)
-                sy0 = int(y1/2 - 10)
-                sx1 = int(x1/2 + 10)
-                sy1 = int(y1/2 + 10)
+                sx0 = int(x1/2 - 2)
+                sy0 = int(y1/2 - 2)
+                sx1 = int(x1/2 + 2)
+                sy1 = int(y1/2 + 2)
             receive_message.roi_padded = (x0, x1, y0, y1)
 
         if x0 < x1 and y0 < y1:
@@ -208,7 +241,9 @@ def receive_message():
         if aligning_screen:
 
             if arucos_found and ids is not None and len(ids) > 0:
-                print("Arucos detected — waiting for color calibration...")
+                if not hasattr(receive_message, "walla"):
+                    print("Arucos detected — waiting for color calibration...")
+                    receive_message.walla = ("bingbing")
                 tracker.reset()
                 keep_looking = True
 
@@ -226,14 +261,14 @@ def receive_message():
 
             color = dominant_color(small_roi)
 
-            if color is not "green":
+            if color != "green":
                 color_calibration = False
                 syncing = True
 
         # --- Sync ---
 
         if syncing:
-            interval, syncing = decoding_functions.sync_receiver(small_roi, True)
+            interval, syncing = decoding_functions_v3.sync_receiver(small_roi, True)
             if not syncing:
                 decoding = True
 
@@ -262,10 +297,10 @@ def receive_message():
 
                 recall = True    
 
-            if recall:
-                message = decoding_functions.decode_bitgrid(hsv_roi, frame_bit, add_frame, recall, end_frame)
-            else:
-                decoding_functions.decode_bitgrid(hsv_roi, frame_bit, add_frame, recall, end_frame)
+            try:
+                frame_queue.put_nowait((hsv_roi.copy(), recall, add_frame, end_frame))
+            except queue.Full:
+                pass  # skip if queue is full
 
             if end_frame:
                 frame_bit += 1
@@ -290,4 +325,11 @@ def receive_message():
     cv2.destroyAllWindows()
 
 # --- Run ---
-cProfile.run("receive_message()")
+receive_message()
+
+profiler.disable()
+
+stats = pstats.Stats(profiler)
+stats.strip_dirs()        # remove full paths
+stats.sort_stats("cumtime")  # sort by cumulative time
+stats.print_stats(20)      # print only top 20 functions
