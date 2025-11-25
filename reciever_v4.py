@@ -203,6 +203,8 @@ def receive_message():
             else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
+            cv2.imshow("Webcam Receiver", display)
+
             if roi_coordinates is not None: # If there are ROI coordinates:
                 
                 if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
@@ -256,14 +258,12 @@ def receive_message():
 
                 color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
 
-                cv2.imshow("ROI", roi)
-
                 if color == "green" and last_color != "green": 
                     color_calibration = True
                     
                 last_color = color 
 
-                # --- Color calibration ---
+                # Color calibration
 
                 if color_calibration:
 
@@ -321,7 +321,7 @@ def receive_message():
 
                 last_color = color # Update the last color
 
-            cv2.imshow("Webcam Receiver", display)
+                cv2.imshow("ROI", roi)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
