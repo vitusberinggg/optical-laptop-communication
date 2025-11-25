@@ -144,7 +144,7 @@ def receive_message():
             current_time = time.time()
 
             if current_time - previous_time >= 1.0:
-                print(f"Loops per second: {frame_count}")
+                print(f"[INFO] Loops per second: {frame_count}")
                 frame_count = 0
                 previous_time = current_time
 
@@ -258,6 +258,8 @@ def receive_message():
                     
                 last_color = color 
 
+                cv2.imshow("Webcam Receiver", display)
+
                 # Color calibration
 
                 """
@@ -270,7 +272,7 @@ def receive_message():
                         tracker.colors(LUT, color_names)
 
                     except Exception as e:
-                        print("Color calibration error:", e)
+                        print("[INFO] Color calibration error:", e)
 
                     color_calibration = False
                     syncing = True
