@@ -45,17 +45,13 @@ def roi_alignment(frame, inset_px = 0):
                 print("ROI set around outer corners of markers.")
     return roi_coords, w_px, h_px
 
-saved_corners = {0: None, 1: None}
-
-def roi_alignment2(frame, inset_px = 0):
-    global saved_corners
+def roi_alignment2(corners, marker_ids, saved_corners = {}):
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
     roi_coords = None
-    display, corners, ids = detect_screen(frame)
-    if corners is not None and ids is not None and len(ids) > 0:
-        ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
+    if corners is not None and ids is not None and len(marker_ids) > 0:
+        ids_flat = marker_ids.flatten() if hasattr(marker_ids, "flatten") else np.array(ids).flatten()
         id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
 
         for marker_id in [0, 1]:
@@ -70,8 +66,8 @@ def roi_alignment2(frame, inset_px = 0):
 
             # Collect all corners from the four markers
             all_corners = np.vstack([saved_corners[0], saved_corners[1]])
-            x0, y0 = np.min(all_corners, axis=0) + inset_px
-            x1, y1 = np.max(all_corners, axis=0) - inset_px
+            x0, y0 = np.min(all_corners, axis=0) 
+            x1, y1 = np.max(all_corners, axis=0) 
 
             # Clip to frame
             x0, x1 = max(0, int(x0)), min(w, int(x1))
