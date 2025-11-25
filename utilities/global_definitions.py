@@ -8,9 +8,9 @@ import cv2
 red_bgr = (0, 0, 255)
 green_bgr = (0, 255, 0)
 blue_bgr = (255, 0, 0)
-
-black = (0, 0, 0)
-white = (255, 255, 255)
+black_bgr = (0, 0, 0)
+white_bgr = (255, 255, 255)
+yellow_bgr = (0, 255, 255)
 
 mask_frame_hsv_lower_limit = [40, 100, 100] # [Hue, Saturation, Value]
 mask_frame_hsv_upper_limit = [80, 255, 255] # [Hue, Saturation, Value]
@@ -69,12 +69,15 @@ aruco_marker_frame_duration = 1
 
 number_of_sync_frames = 6
 
-sync_colors = [black, white]
+sync_colors = [black_bgr, white_bgr]
 
 sync_frame_duration = 0.2
 
-# --- Display text definitions ---
+# --- Display definitions ---
 
 display_text_font = cv2.FONT_HERSHEY_SIMPLEX
 display_text_size = 1.0
 display_text_thickness = 2
+
+roi_rectangle_thickness = 3
+minimized_roi_rectangle_thickness = 2
