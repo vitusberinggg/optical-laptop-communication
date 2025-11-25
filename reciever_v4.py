@@ -192,11 +192,13 @@ def receive_message():
                 roi_height = end_y - start_y
                 roi_width = end_x - start_x
 
-                minimized_start_x = int(start_x - (roi_width / 2))
-                minimized_start_y = int(start_y - (roi_height / 2))
+                minimized_start_x = max(0, int(start_x - (roi_width / 2)))
+                minimized_start_y = max(0, int(start_y - (roi_height / 2)))
 
-                minimized_end_x = int(end_x + (roi_width / 2))
-                minimized_end_y = int(end_y + (roi_height / 2))
+                minimized_end_x = min(roi_width, int(end_x + (roi_width / 2)))
+                minimized_end_y = min(roi_height, int(end_y + (roi_height / 2)))
+
+                print(f"[DEBUG] minimized_roi coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')}), frame shape = {frame.shape}")
 
                 receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
