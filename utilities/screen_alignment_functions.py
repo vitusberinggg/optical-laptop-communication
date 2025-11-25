@@ -45,12 +45,15 @@ def roi_alignment(frame, inset_px = 0):
                 print("ROI set around outer corners of markers.")
     return roi_coords, w_px, h_px
 
-def roi_alignment2(corners, marker_ids, saved_corners = {}):
+saved_corners = {0: None, 1: None} 
+
+def roi_alignment2(corners, marker_ids, frame):
+    global saved_corners
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
     roi_coords = None
-    if corners is not None and ids is not None and len(marker_ids) > 0:
+    if corners is not None and marker_ids is not None and len(marker_ids) > 0:
         ids_flat = marker_ids.flatten() if hasattr(marker_ids, "flatten") else np.array(marker_ids).flatten()
         id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
 
