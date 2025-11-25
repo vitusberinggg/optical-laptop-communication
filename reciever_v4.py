@@ -228,10 +228,10 @@ def receive_message():
                 minimized_roi_height = int(roi_height * minimized_roi_fraction)
                 minimized_roi_width = int(roi_width * minimized_roi_fraction)
 
-                minimized_start_x = (frame_width - minimized_roi_width) // 2
+                minimized_start_x = (roi_width - minimized_roi_width) // 2
                 minimized_end_x   = minimized_start_x + minimized_roi_width
 
-                minimized_start_y = (frame_height - minimized_roi_height) // 2
+                minimized_start_y = (roi_height - minimized_roi_height) // 2
                 minimized_end_y = minimized_start_y + minimized_roi_height
 
                 print(f"[DEBUG] minimized_roi coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')}), frame shape = {frame.shape}")
