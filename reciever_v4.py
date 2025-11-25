@@ -11,8 +11,7 @@ from recievers.webCamSim import VideoThreadedCapture
 from utilities.color_functions import dominant_color
 from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment
-from utilities.decoding_functions import decode_bitgrid
-from utilities.decoding_functions_v3 import sync_receiver
+from utilities.decoding_functions_v3 import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
