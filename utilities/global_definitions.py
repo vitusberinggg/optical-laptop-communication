@@ -44,8 +44,8 @@ laptop_webcam_pixel_height = 1440
 laptop_webcam_pixel_width = 2560
 total_pixel_count = laptop_webcam_pixel_height * laptop_webcam_pixel_width
 
-roi_window_height = 200
-roi_window_width = 200
+roi_window_height = 480
+roi_window_width = 854
 
 cell_brightness_threshold = 100 # Brightness threshold for determining bit values
 end_frame_detection_tolerance = 40 # Tolerance for end frame color detection

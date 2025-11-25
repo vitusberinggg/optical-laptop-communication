@@ -29,9 +29,6 @@ videoCapture = cv2.VideoCapture(0) # For live webcam
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
-actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
-actual_capture_height = actual_h = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
 if not videoCapture.isOpened():
     print("[WARNING] Couldn't start video capture.")
     exit()
@@ -77,6 +74,7 @@ def receive_message():
     bits = ""
     message = ""
 
+    printed_aruco_detector_message = False
     arucos_found = False
     marker_ids = None
 
@@ -91,8 +89,16 @@ def receive_message():
     roi_coordinates = None
     frame_bit = 0 # Current frame bit index
 
+    # --- Debugging ---
+
+    """
+
     previous_time = time.time()
-    frame_count = 0 # Frame count for debugging
+    frame_count = 0
+
+    """
+
+    # --- End of debugging ---
 
     corrected_ranges = {
             "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
@@ -106,15 +112,23 @@ def receive_message():
     LUT, color_names = build_color_LUT(corrected_ranges)
     tracker.colors(LUT, color_names)
 
-    print("[INFO] Receiver started.")
+    print("[INFO] Receiver started")
 
     actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    print(f"[INFO] Video capture resolution: {actual_capture_width} x {actual_capture_height}")
+    print(f"[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
+
+    # --- Debugging ---
+
+    """
 
     print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
     print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")   
+
+    """
+
+    # --- End of debugging ---
 
     try:
 
@@ -128,7 +142,9 @@ def receive_message():
                 time.sleep(0.01)
                 continue
 
-    #       --- Debugging ---
+            # --- Debugging ---
+
+            """
 
             frame_count += 1
 
@@ -139,16 +155,21 @@ def receive_message():
                 frame_count = 0
                 previous_time = current_time
 
-    #       --- End of debugging ---
+            """
+
+            # --- End of debugging ---
 
 #           ArUco marker detection
 
             if not arucos_found: # If no ArUco markers have been found:
 
                 try:
+                    
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
-                    print("[INFO] Running the ArUco detector...")
+                    if not printed_aruco_detector_message:
+                        print("[INFO] Running the ArUco marker detector...")
+                        printed_aruco_detector_message = True
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
@@ -156,9 +177,6 @@ def receive_message():
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment2(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                         print("[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
-                    else:
-                        print("[INFO] No ArUco markers detected.")
-                
                 except Exception:
                     print("[WARNING] ArUco detection failed.")
                     marker_ids = None
@@ -174,9 +192,10 @@ def receive_message():
                 cv2.aruco.drawDetectedMarkers(display, corners, marker_ids) # Draw the detected markers on the display frame
 
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
-                
-#                arucos_found = True
-#                marker_ids = None # Reset marker IDs to avoid repeated processing
+            
+                if len(marker_ids) >= 2:  
+                    arucos_found = True
+    #                marker_ids = None # Reset marker IDs to avoid repeated processing
                 
             else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
