@@ -13,6 +13,7 @@ from utilities.color_functions_v3 import color_offset_calculation, tracker, buil
 from utilities.screen_alignment_functions import roi_alignment2
 from utilities.decoding_functions_v3 import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
+    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
     aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin,
@@ -23,7 +24,13 @@ from utilities.global_definitions import (
 # --- Video capture setup ---
 
 # videoCapture = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
-videoCapture = VideoThreadedCapture(0) # For live webcam
+videoCapture = cv2.VideoCapture(0) # For live webcam
+
+videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+
+actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
+actual_capture_height = actual_h = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
 if not videoCapture.isOpened():
     print("[WARNING] Couldn't start video capture.")
@@ -100,6 +107,11 @@ def receive_message():
     tracker.colors(LUT, color_names)
 
     print("[INFO] Receiver started.")
+
+    actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
+    actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+    print(f"[INFO] Video capture resolution: {actual_capture_width} x {actual_capture_height}")
 
     print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
     print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")   

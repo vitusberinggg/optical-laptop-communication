@@ -41,7 +41,7 @@ frame_duration = 0.3  # Duration for each frame in seconds
 # --- Reciever input definitions ---
 
 laptop_webcam_pixel_height = 1440
-laptop_webcam_pixel_width = 2650
+laptop_webcam_pixel_width = 2560
 total_pixel_count = laptop_webcam_pixel_height * laptop_webcam_pixel_width
 
 roi_window_height = 200
