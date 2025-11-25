@@ -45,8 +45,10 @@ def roi_alignment(frame, inset_px = 0):
                 print("ROI set around outer corners of markers.")
     return roi_coords, w_px, h_px
 
+saved_corners = {0: None, 1: None}
+
 def roi_alignment2(frame, inset_px = 0):
-    saved_corners = {0: None, 1: None}
+    global saved_corners
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
