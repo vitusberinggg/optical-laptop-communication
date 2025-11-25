@@ -264,6 +264,10 @@ def receive_message():
 
             if roi_coordinates is not None:
 
+                if color == "green" and last_color != "green": 
+                    color_calibration = True
+                last_color = color 
+
                 # --- Color calibration ---
 
                 if color_calibration:
