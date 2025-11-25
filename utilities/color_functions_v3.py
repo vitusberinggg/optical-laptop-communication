@@ -259,6 +259,11 @@ def color_offset_calculation(roi):
     average_hue_offset = np.mean(hue_differences)
     average_saturation_offset = np.mean(saturation_differences)
     average_value_offset = np.mean(value_differences)
+
+    print("\n=== Average HSV offsets applied ===")
+    print(f"Average H offset: {average_hue_offset:.2f}")
+    print(f"Average S offset: {average_saturation_offset:.2f}")
+    print(f"Average V offset: {average_value_offset:.2f}\n")
     
     corrected_ranges = {}
 

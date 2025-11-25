@@ -4,7 +4,7 @@ import cv2
 from utilities.global_definitions import (
     red_bgr, green_bgr, blue_bgr
 )
-from utilities.color_functions import color_offset_calculation
+from utilities.color_functions_v3 import color_offset_calculation
 from utilities.image_generation_functions import create_color_reference_frame
 
 frame = create_color_reference_frame()

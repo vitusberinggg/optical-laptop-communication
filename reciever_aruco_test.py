@@ -115,7 +115,7 @@ def receive_message():
                         2)
 
         if roi_coords is None:
-            roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment(frame)
+            roi_coords, marker_w, marker_h = screen_alignment_functions.roi_alignment2(corners, ids, frame)
 
         if roi_coords is not None:
             x0, x1, y0, y1 = roi_coords
