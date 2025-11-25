@@ -125,8 +125,8 @@ def create_large_aruco_marker_frame(position="right"):
         np.ndarray: The frame with the large ArUco marker.
         
     """
-    # Green background
-    frame = create_color_frame([0, 255, 0])
+    # Gray background
+    frame = create_color_frame([128, 128, 128])
 
 
     margin = aruco_marker_margin
