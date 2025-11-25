@@ -234,7 +234,7 @@ def receive_message():
                     minimized_start_x = start_x + ((roi_width - minimized_roi_width) // 2)
                     minimized_end_x   = minimized_start_x + minimized_roi_width
 
-                    minimized_start_y = start_ y + ((roi_height - minimized_roi_height) // 2)
+                    minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
                     minimized_end_y = minimized_start_y + minimized_roi_height
 
                     print(f"[DEBUG] minimized_roi coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')}), frame shape = {frame.shape}")
@@ -258,17 +258,9 @@ def receive_message():
 
                 cv2.imshow("ROI", roi)
 
-            cv2.imshow("Webcam Receiver", display)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-    #       Waiting for sync
-
-            if roi_coordinates is not None:
-
                 if color == "green" and last_color != "green": 
                     color_calibration = True
+                    
                 last_color = color 
 
                 # --- Color calibration ---
