@@ -258,7 +258,20 @@ def receive_message():
 
                 cv2.imshow("ROI", roi)
 
-                # Color calibration
+            cv2.imshow("Webcam Receiver", display)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+    #       Waiting for sync
+
+            if roi_coordinates is not None:
+
+                if color == "green" and last_color != "green": 
+                    color_calibration = True
+                last_color = color 
+
+                # --- Color calibration ---
 
                 if color_calibration:
 
