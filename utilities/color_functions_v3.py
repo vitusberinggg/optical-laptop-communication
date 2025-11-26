@@ -41,37 +41,47 @@ class BitColorTracker:
 
         N, H, W, _ = padded_frames.shape
 
-        # Split frames into grid cells
-        cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
+        # Split into grid cells
+        cells = padded_frames.reshape(
+            N, self.rows, self.cell_h,
+            self.cols, self.cell_w, 3
+        )
 
-        # Sample every `sample_step` pixel inside each cell
-        #sampled_cells = cells[:, :, ::sample_step, :, ::sample_step, :]
-
+        # Downsample inside each cell
         ds_h = max(self.cell_h // 4, 1)
         ds_w = max(self.cell_w // 4, 1)
 
         sampled_cells = cells[:, :, ::ds_h, :, ::ds_w, :]
 
-        # LUT lookup
-        H = sampled_cells[...,0].astype(np.uint16)
-        S = sampled_cells[...,1].astype(np.uint16)
-        V = sampled_cells[...,2].astype(np.uint16)
+        # HSV → class IDs via LUT
+        Hc = sampled_cells[..., 0].astype(np.uint16)
+        Sc = sampled_cells[..., 1].astype(np.uint16)
+        Vc = sampled_cells[..., 2].astype(np.uint16)
 
-        classes = self.LUT[H, S, V]
+        classes = self.LUT[Hc, Sc, Vc]    # shape: (N, rows, ds_h, cols, ds_w)
 
-        # Merge pixel and frame dims for majority vote
-        merged = classes.reshape(self.rows, self.cols, -1)
+        # we collapse all samples inside each cell to 1 dimension:
+        #   for each frame n, row r, col c, collect all sample values
+        N, R, Sh, C, Sw = classes.shape
+        num_samples = Sh * Sw
 
-        num_classes = len(self.color_names)
-        white_idx = self.color_names.index("white")
+        merged = classes.reshape(N, R, C, num_samples)
+        # now merged.shape = (frames, rows, cols, samples_per_cell)
 
-        if merged.ndim == 3:
-            merged = merged[:, :, 0]
+        # number of classes in LUT
+        num_classes = int(self.LUT.max()) + 1
 
-        majority_class = majority_vote_numba(merged, num_classes)
+        bitgrid = majority_vote_3d(merged, num_classes)  # shape: (rows, cols)
 
-        bitgrid = (majority_class == white_idx).astype(str)
-        return bitgrid
+        # --------------------------------------------------
+        # Convert class IDs → bit string
+        # (assuming 0 = black, 1 = white)
+        # --------------------------------------------------
+        white_idx = 1
+        bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
+
+        return bitgrid_str
+
 
     def reset(self):
         self.hsv_frames = []
@@ -82,26 +92,37 @@ class BitColorTracker:
 
 
 # --- Numba helper for majority vote ---
-@njit
-def majority_vote_numba(arr, num_classes):
-    h, w = arr.shape
-    counts = np.zeros(num_classes, dtype=np.int32)
+@njit(parallel=True)
+def majority_vote_3d(merged, num_classes):
+    # merged shape: (N_frames, R_rows, C_cols, S_samples)
+    N, R, C, S = merged.shape
 
-    for y in range(h):
-        for x in range(w):
-            v = arr[y, x]
-            if 0 <= v < num_classes:
-                counts[v] += 1
+    out = np.empty((R, C), dtype=np.int32)
 
-    # return class with max count
-    max_idx = 0
-    max_val = counts[0]
-    for i in range(1, num_classes):
-        if counts[i] > max_val:
-            max_val = counts[i]
-            max_idx = i
+    for r in prange(R):
+        for c in range(C):
 
-    return max_idx
+            # histogram for this cell
+            counts = np.zeros(num_classes, dtype=np.int32)
+
+            # accumulate across all frames and samples inside the cell
+            for n in range(N):
+                for s in range(S):
+                    cls = merged[n, r, c, s]
+                    if 0 <= cls < num_classes:
+                        counts[cls] += 1
+
+            # find max
+            max_class = 0
+            max_val = counts[0]
+            for k in range(1, num_classes):
+                if counts[k] > max_val:
+                    max_class = k
+                    max_val = counts[k]
+
+            out[r, c] = max_class
+
+    return out
 
 
 colorTracker = BitColorTracker()
