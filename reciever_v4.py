@@ -262,8 +262,6 @@ def receive_message():
 
                 # Color calibration
 
-                """
-
                 if color_calibration:
 
                     try:
@@ -277,7 +275,7 @@ def receive_message():
                     color_calibration = False
                     syncing = True
 
-                """
+                
 
                 # Syncing
 
@@ -291,7 +289,9 @@ def receive_message():
 
                     except Exception as e:
                         print("[WARNING] Sync error:", e)
-                        syncing = False
+                    
+                    syncing = False
+                    decoding = True
 
                 # Decoding
 
@@ -319,10 +319,10 @@ def receive_message():
                         recall = True # Set recall to True
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame)
 
                     if end_frame: # If it's an end frame:
                         frame_bit += 1 # Increment the frame bit index
