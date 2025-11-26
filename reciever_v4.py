@@ -255,8 +255,6 @@ def receive_message():
 
                 if color == "green" and last_color != "green": 
                     color_calibration = True
-                    
-                last_color = color 
 
                 cv2.imshow("Webcam Receiver", display)
 
