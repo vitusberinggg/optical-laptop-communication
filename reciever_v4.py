@@ -244,13 +244,13 @@ def receive_message():
                     roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
                     minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
+                color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
+
+                roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
 
-                color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
-
-                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
-
-                if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection": 
+                if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection":
+                    print("[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
                 cv2.imshow("Webcam Receiver", display)
@@ -258,6 +258,8 @@ def receive_message():
                 # Color calibration
 
                 if current_state == "color_calibration":
+
+                    print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
                     try:
                         corrected_ranges = color_offset_calculation(roi)
@@ -271,7 +273,7 @@ def receive_message():
                 
                 # Syncing
 
-                if current_state == "syncing": # If we're syncing:
+                if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
 
                     print("\n[INFO] Trying to sync and get the interval...")
 
@@ -310,10 +312,10 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame)
+                        decode_bitgrid(roi_hsv, add_frame, recall, end_frame)
 
                 last_color = color # Update the last color
 
@@ -336,5 +338,5 @@ def receive_message():
 
 # --- Execution ---
 
-if __name__ == "main":
+if __name__ == "__main__":
     receive_message()
