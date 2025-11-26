@@ -77,22 +77,20 @@ def receive_message():
 
     minimized_roi_fraction = 1/5
 
-    arucos_found = False
     marker_ids = None
 
     last_color = None
-    color_calibration = False
 
-    syncing = False
     interval = 0 # Interval between frames in seconds
 
-    decoding = False
     current_bit_colors = [] # Colors collected for the current bit
     roi_coordinates = None
     frame_bit = 0 # Current frame bit index
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
+
+    current_state = "aruco_marker_detection"
 
     # --- Debugging ---
 
@@ -154,7 +152,7 @@ def receive_message():
 
             # ArUco marker detection
 
-            if not arucos_found: # If no ArUco markers have been found:
+            if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
 
                 try:
                     
@@ -186,8 +184,6 @@ def receive_message():
 
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
             
-                if len(marker_ids) >= 2:  
-                    arucos_found = True
                 # marker_ids = None # Reset marker IDs to avoid repeated processing
                 
             else:
@@ -253,18 +249,14 @@ def receive_message():
 
                 color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
 
-                if color == "green" and last_color != "green": 
-                    color_calibration = True
-                    
-                last_color = color 
+                if color == "green" and last_color != "green" and len(marker_ids) >= 2 and current_state == "aruco_marker_detection": 
+                    current_state = "color_calibration"
 
                 cv2.imshow("Webcam Receiver", display)
 
                 # Color calibration
 
-                """
-
-                if color_calibration:
+                if current_state == "color_calibration":
 
                     try:
                         corrected_ranges = color_offset_calculation(roi)
@@ -274,14 +266,12 @@ def receive_message():
                     except Exception as e:
                         print("[INFO] Color calibration error:", e)
 
-                    color_calibration = False
-                    syncing = True
-
-                """
+                    current_state = "syncing"
+                
 
                 # Syncing
 
-                if syncing: # If we're syncing:
+                if current_state == "syncing": # If we're syncing:
 
                     print("[INFO] Trying to sync and get the interval...")
 
@@ -291,11 +281,12 @@ def receive_message():
 
                     except Exception as e:
                         print("[WARNING] Sync error:", e)
-                        syncing = False
+                    
+                    current_state = "decoding"
 
                 # Decoding
 
-                elif decoding: # If we're decoding:
+                elif current_state == "decoding": # If we're decoding:
                     
                     if not has_printed_decoding_message:
                         print("[INFO] Decoding...")
@@ -319,10 +310,10 @@ def receive_message():
                         recall = True # Set recall to True
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame)
 
                     if end_frame: # If it's an end frame:
                         frame_bit += 1 # Increment the frame bit index
