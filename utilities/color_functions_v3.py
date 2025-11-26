@@ -45,16 +45,28 @@ class BitColorTracker:
         cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
 
         # Sample every `sample_step` pixel inside each cell
-        sampled_cells = cells[:, :, ::sample_step, :, ::sample_step, :]
+        #sampled_cells = cells[:, :, ::sample_step, :, ::sample_step, :]
+
+        ds_h = max(self.cell_h // 4, 1)
+        ds_w = max(self.cell_w // 4, 1)
+
+        sampled_cells = cells[:, :, ::ds_h, :, ::ds_w, :]
 
         # LUT lookup
-        classes = self.LUT[sampled_cells[...,0], sampled_cells[...,1], sampled_cells[...,2]]
+        H = sampled_cells[...,0].astype(np.uint16)
+        S = sampled_cells[...,1].astype(np.uint16)
+        V = sampled_cells[...,2].astype(np.uint16)
+
+        classes = self.LUT[H, S, V]
 
         # Merge pixel and frame dims for majority vote
         merged = classes.reshape(self.rows, self.cols, -1)
 
         num_classes = len(self.color_names)
         white_idx = self.color_names.index("white")
+
+        if merged.ndim == 3:
+            merged = merged[:, :, 0]
 
         majority_class = majority_vote_numba(merged, num_classes)
 
@@ -70,18 +82,27 @@ class BitColorTracker:
 
 
 # --- Numba helper for majority vote ---
-@njit(parallel=True)
-def majority_vote_numba(merged, num_classes):
-    rows, cols, samples = merged.shape
-    result = np.zeros((rows, cols), dtype=np.int32)
+@njit
+def majority_vote_numba(arr, num_classes):
+    h, w = arr.shape
+    counts = np.zeros(num_classes, dtype=np.int32)
 
-    for i in prange(rows):
-        for j in prange(cols):
-            counts = np.zeros(num_classes, dtype=np.int32)
-            for k in range(samples):
-                counts[merged[i,j,k]] += 1
-            result[i,j] = np.argmax(counts)
-    return result
+    for y in range(h):
+        for x in range(w):
+            v = arr[y, x]
+            if 0 <= v < num_classes:
+                counts[v] += 1
+
+    # return class with max count
+    max_idx = 0
+    max_val = counts[0]
+    for i in range(1, num_classes):
+        if counts[i] > max_val:
+            max_val = counts[i]
+            max_idx = i
+
+    return max_idx
+
 
 colorTracker = BitColorTracker()
 
@@ -107,9 +128,9 @@ def build_color_LUT(corrected_ranges):
     V = np.arange(256)[None, None, :]
 
     # Broadcast to 3D grid
-    H = H + np.zeros((1, 256, 256), dtype=np.uint16)
-    S = np.zeros((180, 1, 256), dtype=np.uint16) + S
-    V = np.zeros((180, 256, 1), dtype=np.uint16) + V
+    H = np.broadcast_to(np.arange(180, dtype=np.uint16)[:,None,None], (180,256,256))
+    S = np.broadcast_to(np.arange(256, dtype=np.uint16)[None,:,None], (180,256,256))
+    V = np.broadcast_to(np.arange(256, dtype=np.uint16)[None,None,:], (180,256,256))
 
     # Fill LUT by writing integer class indices
     for idx, (color, (lower, upper)) in enumerate(corrected_ranges.items()):

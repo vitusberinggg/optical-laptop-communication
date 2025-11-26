@@ -41,6 +41,7 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
 
             if bitgrid is not None:
                 bitgrids.append(bitgrid)   # Store safely as a separate frame
+                print(f"bitgrids: {bitgrids}")
 
             color_functions_v3.tracker.reset()
         else:
