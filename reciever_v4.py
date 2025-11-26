@@ -231,8 +231,6 @@ def receive_message():
 
                     receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
-                    current_state = ""
-
                 if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
 
                     cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (green_bgr), roi_rectangle_thickness)
@@ -249,6 +247,8 @@ def receive_message():
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
 
                 color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
+
+                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
                 if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection": 
                     current_state = "color_calibration"
@@ -336,4 +336,5 @@ def receive_message():
 
 # --- Execution ---
 
-cProfile.run("receive_message()") 
+if __name__ == "main":
+    receive_message()
