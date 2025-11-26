@@ -31,7 +31,7 @@ class BitColorTracker:
         )
         return padded_frames, cell_h, cell_w
 
-    def end_bit(self, sample_step=4):
+    def end_bit(self):
         if len(self.hsv_frames) == 0:
             return None
 
@@ -60,23 +60,20 @@ class BitColorTracker:
 
         classes = self.LUT[Hc, Sc, Vc]    # shape: (N, rows, ds_h, cols, ds_w)
 
-        # we collapse all samples inside each cell to 1 dimension:
-        #   for each frame n, row r, col c, collect all sample values
+        # collapse all samples inside each cell to 1 dimension:
+        # for each frame n, row r, col c, collect all sample values
         N, R, Sh, C, Sw = classes.shape
         num_samples = Sh * Sw
 
         merged = classes.reshape(N, R, C, num_samples)
-        # now merged.shape = (frames, rows, cols, samples_per_cell)
+        # merged.shape = (frames, rows, cols, samples_per_cell)
 
-        # number of classes in LUT
+        # makes a variable that has the value of the amount different colors in the Lookup Table
         num_classes = int(self.LUT.max()) + 1
 
-        bitgrid = majority_vote_3d(merged, num_classes)  # shape: (rows, cols)
+        bitgrid = bitgrid_majority_calc(merged, num_classes)  # bitgrid(rows, cols)
 
-        # --------------------------------------------------
-        # Convert class IDs → bit string
-        # (assuming 0 = black, 1 = white)
-        # --------------------------------------------------
+        # checks if its white or not
         white_idx = 1
         bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
 
@@ -93,12 +90,13 @@ class BitColorTracker:
 
 # --- Numba helper for majority vote ---
 @njit(parallel=True)
-def majority_vote_3d(merged, num_classes):
+def bitgrid_majority_calc(merged, num_classes):
     # merged shape: (N_frames, R_rows, C_cols, S_samples)
     N, R, C, S = merged.shape
 
     out = np.empty((R, C), dtype=np.int32)
 
+    # parallell looping for speed
     for r in prange(R):
         for c in range(C):
 
