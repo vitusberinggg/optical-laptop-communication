@@ -81,3 +81,4 @@ display_text_thickness = 2
 
 roi_rectangle_thickness = 3
 minimized_roi_rectangle_thickness = 2
+minimized_roi_fraction = 1/5 
