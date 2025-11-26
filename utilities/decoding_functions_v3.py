@@ -7,6 +7,7 @@ import cv2
 import time
 
 from utilities import color_functions_v3
+from utilities.color_functions_v3 import dominant_color
 from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
 
 # --- Definitions ---
@@ -116,64 +117,70 @@ def bits_to_message(bit_matrix):
     return "".join(characters)
 '''
 
-def sync_receiver(roi, verbose=True, state={}):
+def sync_interval_detector(roi, printing = True, sync_state_dictionary = {}):
+
     """
     Syncs timing by detecting black/white transitions.
 
-    This version is designed for cases where YOU provide each ROI frame
-    manually
-
     Args:
-        roi (np.ndarray): The ROI frame for this moment.
-        detect_color_fn: Function that returns "black" or "white".
-        transitions_needed (int): How many transitions we need to detect.
-        verbose (bool): Print debug info.
-        state (dict): Internal persistent state across calls.
+        "roi" (np.ndarray): The ROI frame.
+        "detect_color_fn": Function that returns "black" or "white".
+        "transitions_needed" (int): How many transitions we need to detect.
+        "printing" (bool): Print debug info.
+        "sync_state_dictionary" (dict): Internal persistent state across calls.
 
     Returns:
-        float | None:
-            - Returns frame_interval (float) when enough transitions are detected.
-            - Returns None otherwise.
+        "frame_interval" (float):
+
     """
 
-    # --- INITIALIZE STATE ---
-    if "last_color" not in state:
-        state["last_color"] = None
-        state["transition_times"] = []
-        if verbose:
-            print("[SYNC] Waiting for first stable color...")
+    # Sync state dictionary initialization
 
-    # --- Detect color ---
-    color = color_functions_v3.dominant_color(roi)
+    if "last_color" not in sync_state_dictionary:
 
-    # First color → just store it
-    if state["last_color"] is None:
-        state["last_color"] = color
-        if verbose:
+        sync_state_dictionary["last_color"] = None
+        sync_state_dictionary["transition_timestamps"] = []
+
+        if printing:
+            print("[SYNC] Initialized sync state dictionary, waiting for first stable color...")
+
+    color = dominant_color(roi) # Gets the dominant color in the current ROI
+
+    # First function call
+
+    if sync_state_dictionary["last_color"] is None: # If this is the first function call:
+        sync_state_dictionary["last_color"] = color # Store the current color in "last_color"
+
+        if printing:
             print(f"[SYNC] Initial color = {color}")
-        return 0, True
 
-    # --- Detect transition ---
-    if color != state["last_color"]:
-        timestamp = time.time()
-        state["transition_times"].append(timestamp)
+        return 0, True # Quit the function early (no transition has occured yet)
 
-        if verbose:
-            t = len(state["transition_times"])
-            print(f"[SYNC] Transition {t}: {state['last_color']} → {color}")
+    # Transition detection
 
-        state["last_color"] = color
+    if color != sync_state_dictionary["last_color"]: # If the current color isn't the same as the last color:
 
-        # --- Enough transitions? Compute interval ---
-        if len(state["transition_times"]) >= (number_of_sync_frames - 1):
-            times = state["transition_times"]
-            diffs = [
-                times[i+1] - times[i]
-                for i in range(len(times)-1)
-            ]
+        timestamp = time.time() # Capture the time
+        sync_state_dictionary["transition_timestamps"].append(timestamp) # Save the timestamp in the sync state dictionary
+        amount_of_timestamps = len(sync_state_dictionary["transition_timestamps"])
+
+        if printing:
+            print(f"[SYNC] Transition {amount_of_timestamps}: {sync_state_dictionary['last_color']} → {color}")
+
+        sync_state_dictionary["last_color"] = color # Update "last_color"
+
+        if amount_of_timestamps >= (number_of_sync_frames - 1):
+
+            times = sync_state_dictionary["transition_timestamps"]
+
+            diffs = []
+
+            for i in range (len(times) - 1):
+                diffs.append(times[i + 1] - times[i])
+
             frame_interval = sum(diffs) / len(diffs)
 
-            if verbose:
+            if printing:
                 print(f"[SYNC] Estimated frame interval: {frame_interval:.4f} seconds")
 
             return frame_interval, False
