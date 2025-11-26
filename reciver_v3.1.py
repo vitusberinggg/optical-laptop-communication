@@ -94,7 +94,6 @@ def receive_message():
     
     """
 
-    bits = ""
     message = ""
     arucos_found = False
     keep_looking = False
@@ -108,7 +107,6 @@ def receive_message():
     interval = 0
 
     decoding = False
-    current_bit_colors = []
     roi_coords = None
     frame_bit = 0
 
@@ -313,13 +311,7 @@ def receive_message():
         if key == ord('q'):
             break
 
-    if current_bit_colors:
-        print(f"Colors collected for last unfinished bit: {current_bit_colors}")
-
-    if bits:
-        print(f"Remaining bits not yet converted: {bits}")
-
-    print("Final message:", message)
+    print("Final message:", decoded_message)
     print(f"Interval: {interval}s")
     cap.release()
     cv2.destroyAllWindows()
