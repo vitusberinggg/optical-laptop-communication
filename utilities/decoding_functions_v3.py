@@ -169,25 +169,23 @@ def sync_interval_detector(roi, printing = True, sync_state_dictionary = {}):
 
         sync_state_dictionary["last_color"] = color # Update "last_color"
 
-        if amount_of_timestamps >= (number_of_sync_frames - 1):
+        if amount_of_timestamps >= (number_of_sync_frames - 1): # If the amount of timestamps is equal to or more than the amount of sync frames - 1 (the amount of transitions):
 
-            times = sync_state_dictionary["transition_timestamps"]
+            timestamps = sync_state_dictionary["transition_timestamps"] # Get the list of timestamps
 
-            diffs = []
+            frame_intervals = [] # Create an empty list for timestamp differences
 
-            for i in range (len(times) - 1):
-                diffs.append(times[i + 1] - times[i])
+            for timestamp_index in range (len(timestamps) - 1): # For each timestamp index in the list of timestamps:
+                frame_intervals.append(timestamps[timestamp_index + 1] - timestamps[timestamp_index]) # Add the difference between that timestamp and the next one to the timestamp differences list
 
-            frame_interval = sum(diffs) / len(diffs)
+            average_frame_interval = sum(frame_intervals) / len(frame_intervals) # Calculate the average frame interval
 
             if printing:
-                print(f"[SYNC] Estimated frame interval: {frame_interval:.4f} seconds")
+                print(f"[SYNC] Estimated frame interval: {average_frame_interval:.4f} seconds")
 
-            return frame_interval, False
+            return average_frame_interval, False
 
-    return 0, True
-
-
+    return 0, True # If "color" = "last_color", quit (no transition detected yet)
 
 def decode_bits_with_blue(frames, roi_size=100, verbose=False):
     """
