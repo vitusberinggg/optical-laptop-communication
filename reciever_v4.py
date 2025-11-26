@@ -269,7 +269,6 @@ def receive_message():
 
                     current_state = "syncing"
                 
-
                 # Syncing
 
                 if current_state == "syncing": # If we're syncing:
