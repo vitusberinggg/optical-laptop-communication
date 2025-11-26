@@ -1,4 +1,5 @@
 
+
 # --- Imports ---
 
 import cProfile
@@ -24,11 +25,11 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4") # For video test
+videoCapture = cv2.VideoCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4")
 #videoCapture = cv2.VideoCapture(0) # For live webcam
 
-videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
-videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+#videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+#videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
 if not videoCapture.isOpened():
     print("[WARNING] Couldn't start video capture.")
@@ -77,20 +78,20 @@ def receive_message():
 
     minimized_roi_fraction = 1/5
 
-    printed_aruco_detector_message = False
-    arucos_found = False
     marker_ids = None
 
     last_color = None
-    color_calibration = False
 
-    syncing = False
     interval = 0 # Interval between frames in seconds
 
-    decoding = False
     current_bit_colors = [] # Colors collected for the current bit
     roi_coordinates = None
     frame_bit = 0 # Current frame bit index
+
+    has_printed_aruco_detector_message = False
+    has_printed_decoding_message = False
+
+    current_state = "aruco_marker_detection"
 
     # --- Debugging ---
 
@@ -102,18 +103,6 @@ def receive_message():
     """
 
     # --- End of debugging ---
-
-    corrected_ranges = {
-            "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
-            "red2":   (np.array([160, 100, 100]), np.array([179, 255, 255])),  # hue 160–179
-            "green":  (np.array([45, 80, 80]), np.array([75, 255, 255])),
-            "blue":   (np.array([95, 120, 70]), np.array([130, 255, 255])),
-            "white":  (np.array([0, 0, 220]), np.array([180, 25, 255])),
-            "black":  (np.array([0, 0, 0]), np.array([180, 255, 35]))
-        }
-    
-    LUT, color_names = build_color_LUT(corrected_ranges)
-    tracker.colors(LUT, color_names)
 
     print("[INFO] Receiver started")
 
@@ -141,7 +130,7 @@ def receive_message():
 
             if not read_was_sucessful:
 
-                print("[WARNING] Failed to capture frame.")
+                print("[WARNING] Failed to capture a frame, trying again...")
                 time.sleep(0.5)
                 continue
 
@@ -154,7 +143,7 @@ def receive_message():
             current_time = time.time()
 
             if current_time - previous_time >= 1.0:
-                print(f"Loops per second: {frame_count}")
+                print(f"[INFO] Loops per second: {frame_count}")
                 frame_count = 0
                 previous_time = current_time
 
@@ -164,15 +153,15 @@ def receive_message():
 
             # ArUco marker detection
 
-            if not arucos_found: # If no ArUco markers have been found:
+            if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
 
                 try:
                     
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
-                    if not printed_aruco_detector_message: # If we haven't already printed the ArUco detector message:
+                    if not has_printed_aruco_detector_message: # If we haven't already printed the ArUco detector message:
                         print("[INFO] Running the ArUco marker detector...")
-                        printed_aruco_detector_message = True
+                        has_printed_aruco_detector_message = True
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
@@ -196,16 +185,18 @@ def receive_message():
 
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
             
-                if len(marker_ids) >= 2:  
-                    arucos_found = True
                 # marker_ids = None # Reset marker IDs to avoid repeated processing
                 
             else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
+            cv2.imshow("Webcam Receiver", display)
+
             if roi_coordinates is not None: # If there are ROI coordinates:
                 
                 if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
+
+                    print("[INFO] Calculating padded ROI coordinates...")
                 
                     try:
                         roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin # Calculate the padding in pixels
@@ -225,6 +216,8 @@ def receive_message():
 
                     # Minimized ROI coordinates
 
+                    print("[INFO] Calculating minimized ROI coordinates...")
+
                     roi_height = end_y - start_y
                     roi_width = end_x - start_x
 
@@ -237,7 +230,7 @@ def receive_message():
                     minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
                     minimized_end_y = minimized_start_y + minimized_roi_height
 
-                    print(f"[DEBUG] minimized_roi coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')}), frame shape = {frame.shape}")
+                    print(f"[DEBUG] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
 
                     receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
@@ -248,7 +241,8 @@ def receive_message():
                     roi = frame[start_y:end_y, start_x:end_x] # Extract the ROI from the frame
                     minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
             
-                else: # Else (if there aren't any):
+                else: # Else (if they aren't):
+                    print("[WARNING] Invalid ROI coordinates, creating dummy ROI...")
                     roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
                     minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
@@ -256,24 +250,14 @@ def receive_message():
 
                 color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
 
-                cv2.imshow("ROI", roi)
+                if color == "green" and last_color != "green" and len(marker_ids) >= 2 and current_state == "aruco_marker_detection": 
+                    current_state = "color_calibration"
 
-            cv2.imshow("Webcam Receiver", display)
+                cv2.imshow("Webcam Receiver", display)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                # Color calibration
 
-    #       Waiting for sync
-
-            if roi_coordinates is not None:
-
-                if color == "green" and last_color != "green": 
-                    color_calibration = True
-                last_color = color 
-
-                # --- Color calibration ---
-
-                if color_calibration:
+                if current_state == "color_calibration":
 
                     try:
                         corrected_ranges = color_offset_calculation(roi)
@@ -281,25 +265,33 @@ def receive_message():
                         tracker.colors(LUT, color_names)
 
                     except Exception as e:
-                        print("Color calibration error:", e)
+                        print("[INFO] Color calibration error:", e)
 
-                    color_calibration = False
-                    syncing = True
+                    current_state = "syncing"
+                
 
                 # Syncing
 
-                elif syncing: # If we're syncing:
+                if current_state == "syncing": # If we're syncing:
+
+                    print("[INFO] Trying to sync and get the interval...")
 
                     try:
                         interval, syncing = sync_receiver(minimized_roi_hsv, True) # Try to sync and get the interval
+                        print(f"[INFO] Interval: {interval} s")
 
                     except Exception as e:
-                        print("Sync error:", e)
-                        syncing = False
+                        print("[WARNING] Sync error:", e)
+                    
+                    current_state = "decoding"
 
                 # Decoding
 
-                elif decoding: # If we're decoding:
+                elif current_state == "decoding": # If we're decoding:
+                    
+                    if not has_printed_decoding_message:
+                        print("[INFO] Decoding...")
+                        has_printed_decoding_message = True
 
                     recall = False # Initialize recall flag as False
                     end_frame = False # Initialize end_frame flag as False
@@ -319,29 +311,28 @@ def receive_message():
                         recall = True # Set recall to True
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(minimized_roi_hsv, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame)
 
                     if end_frame: # If it's an end frame:
                         frame_bit += 1 # Increment the frame bit index
 
                 last_color = color # Update the last color
 
-            cv2.imshow("Webcam Receiver", display)
+                cv2.imshow("ROI", roi)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:
-            print(f"Colors collected for last unfinished bit: {current_bit_colors}")
+            print(f"[INFO] Colors collected for last unfinished bit: {current_bit_colors}")
 
         if bits: # If there are remaining bits not yet converted:
-            print(f"Bits not yet converted: {bits}")
+            print(f"[INFO] Bits not yet converted: {bits}")
 
-        print("Final message:", message)
-        print(f"Interval: {interval}s")
+        print("[INFO] Final message:", message)
     
     finally:
         videoCapture.release()
