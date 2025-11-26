@@ -78,6 +78,7 @@ def receive_message():
     minimized_roi_fraction = 1/5
 
     marker_ids = None
+    corners = None
 
     last_color = None
 
@@ -85,7 +86,6 @@ def receive_message():
 
     current_bit_colors = [] # Colors collected for the current bit
     roi_coordinates = None
-    frame_bit = 0 # Current frame bit index
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
@@ -170,8 +170,6 @@ def receive_message():
                     
                 except Exception:
                     print("[WARNING] ArUco detection failed.")
-                    marker_ids = None
-                    corners = None
                     aruco_marker_side_length = 0
 
             # Display drawings
@@ -249,7 +247,7 @@ def receive_message():
 
                 color = dominant_color(minimized_roi_hsv) # Get the dominant color in the minimized ROI
 
-                if color == "green" and last_color != "green" and len(marker_ids) >= 2 and current_state == "aruco_marker_detection": 
+                if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection": 
                     current_state = "color_calibration"
 
                 cv2.imshow("Webcam Receiver", display)
@@ -296,12 +294,7 @@ def receive_message():
                     end_frame = False # Initialize end_frame flag as False
                     add_frame = False # Initialize add_frame flag as False
 
-                    if color == "blue" and last_color != "blue": # If the color is blue and the last color wasn't blue:
-                        
-                        end_frame = True
-                        add_frame = True
-
-                    elif color in ["white", "black"]: # If the color is white or black:
+                    if color in ["white", "black"]: # If the color is white or black:
 
                         add_frame = True
 
@@ -309,14 +302,14 @@ def receive_message():
 
                         recall = True # Set recall to True
 
+                    elif color == "red" and last_color == "red":
+                        break
+
                     if recall: # If it's a recall frame:
                         message = decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
                         decode_bitgrid(minimized_roi_hsv, add_frame, recall, end_frame)
-
-                    if end_frame: # If it's an end frame:
-                        frame_bit += 1 # Increment the frame bit index
 
                 last_color = color # Update the last color
 
