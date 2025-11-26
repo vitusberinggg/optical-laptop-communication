@@ -16,14 +16,23 @@ class BitColorTracker:
         self.hsv_frames.append(hsv_roi)
 
     def _pad_frames(self, frames):
+        # H = frame height, W = frame width
         N, H, W, C = frames.shape
+
+        # dividing H/W into cell_H/-W
+        # always rounds up, ex. 4.1 -> 5
         cell_h = int(np.ceil(H / self.rows))
         cell_w = int(np.ceil(W / self.cols))
+
+        # creating the padded H/W
         padded_H = cell_h * self.rows
         padded_W = cell_w * self.cols
+
+        # calculating how much it should extend in H/W
         pad_bottom = padded_H - H
         pad_right = padded_W - W
 
+        # making the padded frames
         padded_frames = np.pad(
             frames,
             ((0, 0), (0, pad_bottom), (0, pad_right), (0, 0)),
@@ -32,25 +41,31 @@ class BitColorTracker:
         return padded_frames, cell_h, cell_w
 
     def end_bit(self):
+        # checks if hsv_frames has any elements in it, if so return None to prevent an exception
         if len(self.hsv_frames) == 0:
             return None
 
+        # hsv_frames = all hsv in an array
+        # if the given hsv is not divisible by the number of rows/cols in height/width it will padd the hsv
+        # hsv = frame but is read in hsv and not bgr
         hsv_frames = np.asarray(self.hsv_frames)
         padded_frames, self.cell_h, self.cell_w = self._pad_frames(hsv_frames)
         self.hsv_frames = []
 
         N, H, W, _ = padded_frames.shape
+        # N = number frames, H = height of padded frame, W = width of the padded frame
 
-        # Split into grid cells
+        # split padded frame into grid cells
         cells = padded_frames.reshape(
             N, self.rows, self.cell_h,
             self.cols, self.cell_w, 3
         )
 
-        # Downsample inside each cell
+        # size of the smaller sample inside each cell
         ds_h = max(self.cell_h // 4, 1)
         ds_w = max(self.cell_w // 4, 1)
 
+        # making the smaller sample with the given sizes
         sampled_cells = cells[:, :, ::ds_h, :, ::ds_w, :]
 
         # HSV → class IDs via LUT
@@ -64,11 +79,12 @@ class BitColorTracker:
         # for each frame n, row r, col c, collect all sample values
         N, R, Sh, C, Sw = classes.shape
         num_samples = Sh * Sw
+        # num_samples basically means all the pixels inside the sample in each cell
 
         merged = classes.reshape(N, R, C, num_samples)
         # merged.shape = (frames, rows, cols, samples_per_cell)
 
-        # makes a variable that has the value of the amount different colors in the Lookup Table
+        # makes a variable that has the value of the number of different colors in the Lookup Table
         num_classes = int(self.LUT.max()) + 1
 
         bitgrid = bitgrid_majority_calc(merged, num_classes)  # bitgrid(rows, cols)
@@ -100,6 +116,7 @@ def bitgrid_majority_calc(merged, num_classes):
     for r in prange(R):
         for c in range(C):
 
+            # histogram will help us calc the dominant color
             # histogram for this cell
             counts = np.zeros(num_classes, dtype=np.int32)
 
@@ -110,7 +127,7 @@ def bitgrid_majority_calc(merged, num_classes):
                     if 0 <= cls < num_classes:
                         counts[cls] += 1
 
-            # find max
+            # find the average of this particular cell
             max_class = 0
             max_val = counts[0]
             for k in range(1, num_classes):
@@ -118,8 +135,11 @@ def bitgrid_majority_calc(merged, num_classes):
                     max_class = k
                     max_val = counts[k]
 
+            # gives the average of the cell to that particular position
+            # gives the value is the "id" of that particular color
             out[r, c] = max_class
 
+    # returns an 2-D array of color ids
     return out
 
 
