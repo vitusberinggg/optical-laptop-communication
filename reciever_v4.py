@@ -31,7 +31,7 @@ videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
 if not videoCapture.isOpened():
-    print("[WARNING] Couldn't start video capture.")
+    print("\n[WARNING] Couldn't start video capture.")
     exit()
 
 while True:
@@ -103,7 +103,7 @@ def receive_message():
 
     # --- End of debugging ---
 
-    print("[INFO] Receiver started")
+    print("\n[INFO] Receiver started")
 
     actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -129,7 +129,7 @@ def receive_message():
 
             if not read_was_sucessful:
 
-                print("[WARNING] Failed to capture a frame, trying again...")
+                print("\n[WARNING] Failed to capture a frame, trying again...")
                 time.sleep(0.5)
                 continue
 
@@ -159,17 +159,17 @@ def receive_message():
                     grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
 
                     if not has_printed_aruco_detector_message: # If we haven't already printed the ArUco detector message:
-                        print("[INFO] Running the ArUco marker detector...")
+                        print("\n[INFO] Running the ArUco marker detector...")
                         has_printed_aruco_detector_message = True
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment2(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
-                        print("[INFO] ArUco markers detected, calculating ROI coordinates...")
+                        print("\n[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                 except Exception:
-                    print("[WARNING] ArUco detection failed.")
+                    print("\n[WARNING] ArUco detection failed.")
                     aruco_marker_side_length = 0
 
             # Display drawings
@@ -193,7 +193,7 @@ def receive_message():
                 
                 if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
 
-                    print("[INFO] Calculating padded ROI coordinates...")
+                    print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
                         roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin # Calculate the padding in pixels
@@ -213,7 +213,7 @@ def receive_message():
 
                     # Minimized ROI coordinates
 
-                    print("[INFO] Calculating minimized ROI coordinates...")
+                    print("\n[INFO] Calculating minimized ROI coordinates...")
 
                     roi_height = end_y - start_y
                     roi_width = end_x - start_x
@@ -232,14 +232,17 @@ def receive_message():
                     receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
                 if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
+
                     cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (green_bgr), roi_rectangle_thickness)
                     cv2.rectangle(display, (minimized_start_x, minimized_start_y), (minimized_end_x, minimized_end_y), (yellow_bgr), minimized_roi_rectangle_thickness)
             
                     roi = frame[start_y:end_y, start_x:end_x] # Extract the ROI from the frame
                     minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
+
+                    current_state = ""
             
                 else: # Else (if they aren't):
-                    print("[WARNING] Invalid ROI coordinates, creating dummy ROI...")
+                    print("\n[WARNING] Invalid ROI coordinates, creating dummy ROI...")
                     roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
                     minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
@@ -262,7 +265,7 @@ def receive_message():
                         tracker.colors(LUT, color_names)
 
                     except Exception as e:
-                        print("[INFO] Color calibration error:", e)
+                        print("\n[INFO] Color calibration error:", e)
 
                     current_state = "syncing"
                 
@@ -271,14 +274,14 @@ def receive_message():
 
                 if current_state == "syncing": # If we're syncing:
 
-                    print("[INFO] Trying to sync and get the interval...")
+                    print("\n[INFO] Trying to sync and get the interval...")
 
                     try:
                         interval, syncing = sync_receiver(minimized_roi_hsv, True) # Try to sync and get the interval
                         print(f"[INFO] Interval: {interval} s")
 
                     except Exception as e:
-                        print("[WARNING] Sync error:", e)
+                        print("\n[WARNING] Sync error:", e)
                     
                     current_state = "decoding"
 
@@ -287,7 +290,7 @@ def receive_message():
                 elif current_state == "decoding": # If we're decoding:
                     
                     if not has_printed_decoding_message:
-                        print("[INFO] Decoding...")
+                        print("\n[INFO] Decoding...")
                         has_printed_decoding_message = True
 
                     recall = False # Initialize recall flag as False
@@ -324,7 +327,7 @@ def receive_message():
         if bits: # If there are remaining bits not yet converted:
             print(f"[INFO] Bits not yet converted: {bits}")
 
-        print("[INFO] Final message:", message)
+        print("\n[INFO] Final message:", message)
     
     finally:
         videoCapture.release()
