@@ -17,11 +17,11 @@ def roi_alignment(frame, inset_px = 0):
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
-    roi_coords = None
+    roi_coordinates = None
     display, corners, ids = detect_screen(frame)
     if corners is not None and ids is not None and len(ids) > 0:
         ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
-        id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
+        id_to_corners = {int(marker_id): corners[idx][0] for idx, marker_id in enumerate(ids_flat)}
 
         required_ids = [0, 1, 2, 3]
         if all(i in id_to_corners for i in required_ids):
@@ -41,45 +41,71 @@ def roi_alignment(frame, inset_px = 0):
             y0, y1 = max(0, int(y0)), min(h, int(y1))
 
             if x1 - x0 > 5 and y1 - y0 > 5:
-                roi_coords = (x0, x1, y0, y1)
+                roi_coordinates = (x0, x1, y0, y1)
                 print("ROI set around outer corners of markers.")
-    return roi_coords, w_px, h_px
+    return roi_coordinates, w_px, h_px
 
 saved_corners = {0: None, 1: None} 
 
 def roi_alignment2(corners, marker_ids, frame):
+
+    """
+    Creates a ROI around the outer corners of the ArUco markers.
+
+    Arguments:
+        "corners":
+        "marker_ids":
+        "frame":
+
+    Returns:
+        "roi_coordinates":
+        "w_px":
+        "h_px":
+
+    """
+    
     global saved_corners
+    
     h, w = frame.shape[:2]
     w_px = 0
     h_px = 0
-    roi_coords = None
-    if corners is not None and marker_ids is not None and len(marker_ids) > 0:
-        ids_flat = marker_ids.flatten() if hasattr(marker_ids, "flatten") else np.array(marker_ids).flatten()
-        id_to_corners = {int(m_id): corners[idx][0] for idx, m_id in enumerate(ids_flat)}
+    roi_coordinates = None
 
-        for marker_id in [0, 1]:
-            if marker_id in id_to_corners:
-                saved_corners[marker_id] = id_to_corners[marker_id]
+    if hasattr(marker_ids, "flatten"):
+        ids_flat = marker_ids.flatten()
+    
+    else:
+        ids_flat = np.array(marker_ids).flatten()
 
-        if saved_corners[0] is not None and saved_corners[1] is not None:
-            
-            pts = saved_corners[0]
-            w_px = np.linalg.norm(pts[1] - pts[0])  # width in pixels
-            h_px = np.linalg.norm(pts[2] - pts[1])  # height in pixels
+    id_to_corners = {}
+    
+    for idx, marker_id in enumerate(ids_flat):
+        id_to_corners[int(marker_id)] = corners[idx][0]
 
-            # Collect all corners from the four markers
-            all_corners = np.vstack([saved_corners[0], saved_corners[1]])
-            x0, y0 = np.min(all_corners, axis=0) 
-            x1, y1 = np.max(all_corners, axis=0) 
+    for marker_id in [0, 1]:
+        if marker_id in id_to_corners:
+            saved_corners[marker_id] = id_to_corners[marker_id]
 
-            # Clip to frame
-            x0, x1 = max(0, int(x0)), min(w, int(x1))
-            y0, y1 = max(0, int(y0)), min(h, int(y1))
+    if saved_corners[0] is not None and saved_corners[1] is not None:
+        
+        pts = saved_corners[0]
 
-            if x1 - x0 > 5 and y1 - y0 > 5:
-                roi_coords = (x0, x1, y0, y1)
-                print("ROI set around outer corners of markers.")
-    return roi_coords, w_px, h_px
+        w_px = np.linalg.norm(pts[1] - pts[0])
+        h_px = np.linalg.norm(pts[2] - pts[1])
+
+        all_corners = np.vstack([saved_corners[0], saved_corners[1]])
+
+        x0, y0 = np.min(all_corners, axis = 0) 
+        x1, y1 = np.max(all_corners, axis = 0) 
+
+        x0, x1 = max(0, int(x0)), min(w, int(x1))
+        y0, y1 = max(0, int(y0)), min(h, int(y1))
+
+        if x1 - x0 > 5 and y1 - y0 > 5:
+            roi_coordinates = (x0, x1, y0, y1)
+            print("\n[INFO] ROI set around outer corners of markers.")
+
+    return roi_coordinates, w_px, h_px
 
 def detect_screen(frame):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
