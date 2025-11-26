@@ -13,13 +13,25 @@ import time
 import numpy as np
 
 from recievers.webCamSim import VideoThreadedCapture
-from utilities.color_functions_v3 import dominant_color, tracker, build_color_LUT
+from utilities.color_functions_v3 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
 from utilities import detection_functions, screen_alignment_functions, decoding_functions_v3
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
 )
+
+# function that pre-compiles the numba functions to prevent lag on initial launch with them
+def warmup_all():
+    from utilities.color_functions_v3 import bitgrid_majority_calc, dominant_color_numba
+
+    # Warm up bitgrid majority calc
+    dummy_merged = np.zeros((2, 8, 16, 10), dtype=np.uint8)
+    bitgrid_majority_calc(dummy_merged, 5)
+
+    # Warm up dominant color analyzer
+    dummy_classes = np.zeros((100,), dtype=np.uint8)
+    dominant_color_numba(dummy_classes, 5)
 
 
 # --- Setup capture ---
@@ -53,18 +65,26 @@ aruco_params = cv2.aruco.DetectorParameters()
 aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 
 
-frame_queue = queue.Queue(maxsize=10)
+frame_queue = queue.Queue(maxsize=100)
+last_queue_debug = 0
+decode_last_time = time.time()
 decoded_message = ""
 stop_thread = False
 
 def decoding_worker():
-    global decoded_message
+    global decoded_message, last_queue_debug, decode_last_time
     while not stop_thread or not frame_queue.empty():
         try:
             hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout=0.1)
         except queue.Empty:
             continue
+
+        now = time.time()
+        if now - last_queue_debug > 0.5:
+            print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
+            last_queue_debug = now
         
+        t0 = time.time()
         if recall:
             decoded_message = decoding_functions_v3.decode_bitgrid(
                 hsv_roi, add_frame, recall, end_frame
@@ -74,9 +94,27 @@ def decoding_worker():
                 hsv_roi, add_frame, recall, end_frame
             )
 
+        decode_last_time = time.time()  # helps watchdog to see if decode works or not
+
+
+        t1 = time.time()
+
+        # Print timing occasionally
+        if t1 - last_queue_debug > 0.5:
+            print(f"[DEBUG] Decode time: {(t1 - t0)*1000:.2f} ms")
+
 # Start decoding thread
 decode_thread = threading.Thread(target=decoding_worker, daemon=True)
 decode_thread.start()
+
+def watchdog():
+    while True:
+        if time.time() - decode_last_time > 1.0:
+            print("[WARNING] Decode thread is stalled or starving (no frames processed)!")
+        time.sleep(0.2)
+
+watch_thread = threading.Thread(target=watchdog, daemon=True)
+watch_thread.start()
 
 
 # --- Main function ---
@@ -108,7 +146,6 @@ def receive_message():
 
     decoding = False
     roi_coords = None
-    frame_bit = 0
 
     prev_time = time.time()
     frame_count = 0
@@ -118,7 +155,8 @@ def receive_message():
     x1 = 0
     y1 = 0
 
-    # --- Testing ---
+    # --- To help pre-compile the numba functions ---
+    # also prevents exceptions caused by LUT or color_names not having any values
 
     corrected_ranges = {
         "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
@@ -131,6 +169,8 @@ def receive_message():
 
     LUT, color_names = build_color_LUT(corrected_ranges)
     tracker.colors(LUT, color_names)
+
+    warmup_all()
 
     print("Receiver started — waiting for Arucos...")
 
@@ -299,15 +339,15 @@ def receive_message():
                 frame_queue.put_nowait((hsv_roi.copy(), recall, add_frame, end_frame))
             except queue.Full:
                 pass  # skip if queue is full
-
-            if end_frame:
-                frame_bit += 1
+                
+            if frame_queue.empty():
+                print("queue empty")
 
         if color is not None:
             last_color = color
 
 
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.pollKey() & 0xFF
         if key == ord('q'):
             break
 
