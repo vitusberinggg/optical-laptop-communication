@@ -108,7 +108,7 @@ def receive_message():
     actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    print(f"[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
+    print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
 
     # --- Debugging ---
 
@@ -164,7 +164,7 @@ def receive_message():
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
-                    if marker_ids is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
+                    if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment2(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                         print("\n[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
@@ -227,9 +227,11 @@ def receive_message():
                     minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
                     minimized_end_y = minimized_start_y + minimized_roi_height
 
-                    print(f"[DEBUG] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
+                    print(f"\n[DEBUG] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
 
                     receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+
+                    current_state = ""
 
                 if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
 
@@ -238,8 +240,6 @@ def receive_message():
             
                     roi = frame[start_y:end_y, start_x:end_x] # Extract the ROI from the frame
                     minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
-
-                    current_state = ""
             
                 else: # Else (if they aren't):
                     print("\n[WARNING] Invalid ROI coordinates, creating dummy ROI...")
@@ -277,12 +277,14 @@ def receive_message():
 
                     try:
                         interval, syncing = sync_interval_detector(minimized_roi_hsv, True) # Try to sync and get the interval
-                        print(f"[INFO] Interval: {interval} s")
+                        print(f"\n[INFO] Interval: {interval} s")
 
                     except Exception as e:
                         print("\n[WARNING] Sync error:", e)
+                        syncing = False
                     
-                    current_state = "decoding"
+                    if syncing == False:
+                        current_state = "decoding"
 
                 # Decoding
 
