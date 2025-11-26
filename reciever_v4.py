@@ -251,7 +251,7 @@ def receive_message():
 
                 print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
-                if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection":
+                if color == "blue" and roi_coordinates is not None and current_state == "aruco_marker_detection":
                     print("[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
