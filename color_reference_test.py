@@ -27,8 +27,8 @@ from utilities.global_definitions import (
 videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0) # For live webcam
 
-videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
-videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+#videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+#videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
 if not videoCapture.isOpened():
     print("[WARNING] Couldn't start video capture.")
