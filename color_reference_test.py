@@ -24,7 +24,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4") # For video test
+videoCapture = cv2.VideoCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4")
 #videoCapture = cv2.VideoCapture(0) # For live webcam
 
 #videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
