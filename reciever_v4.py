@@ -249,6 +249,8 @@ def receive_message():
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
 
+                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
+
                 if color == "green" and last_color != "green" and roi_coordinates is not None and current_state == "aruco_marker_detection":
                     print("[INFO] Starting color calibration...")
                     current_state = "color_calibration"
