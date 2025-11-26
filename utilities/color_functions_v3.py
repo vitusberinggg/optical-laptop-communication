@@ -330,7 +330,7 @@ def color_offset_calculation(roi):
 
         corrected_ranges[color] = (lower_corrected, upper_corrected)
         
-    return corrected_ranges
+    return original_hsv_ranges
 
 def dominant_color_with_offsets(roi, corrected_ranges):
 
