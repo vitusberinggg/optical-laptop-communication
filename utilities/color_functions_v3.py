@@ -236,9 +236,9 @@ def color_offset_calculation(roi):
     """
 
     expected_hsv_ranges = {
-    "red": np.array([0, 255, 255]),
+    "blue": np.array([120, 255, 255]),
     "green": np.array([60, 255, 255]),
-    "blue": np.array([120, 255, 255])
+     "red": np.array([0, 255, 255])
     }
 
     original_hsv_ranges = {
@@ -276,7 +276,7 @@ def color_offset_calculation(roi):
 
     observed_hsv_dictionary = {}
     
-    for stripe_index, color in enumerate(["red", "green", "blue"]):
+    for stripe_index, color in enumerate(["blue", "green", "red"]):
 
         x_start = stripe_index * stripe_width + start_offset
         x_end = x_start + patch_width
@@ -289,7 +289,7 @@ def color_offset_calculation(roi):
     saturation_differences = []
     value_differences = []
     
-    for color in ["red", "green", "blue"]:
+    for color in ["blue", "green", "red"]:
         
         expected_hsv_range = expected_hsv_ranges[color].astype(float)
         observed_hsv = observed_hsv_dictionary[color].astype(float)
