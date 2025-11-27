@@ -89,6 +89,8 @@ class BitColorTracker:
 
         bitgrid = bitgrid_majority_calc(merged, num_classes)  # bitgrid(rows, cols)
 
+        print(f"[DEBUG] bitgrid with colors ids: {bitgrid}")
+
         # checks if its white or not
         white_idx = 1
         bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
