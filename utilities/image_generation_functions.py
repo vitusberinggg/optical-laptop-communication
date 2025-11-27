@@ -9,7 +9,6 @@ from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
-    reference_image_seed,
     aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin, aruco_marker_ids
 )
 
@@ -51,24 +50,6 @@ def render_frame(bitgrid):
             cv2.rectangle(image, (start_x_coordinate, start_y_coordinate), (end_x_coordinate - 1, end_y_coordinate - 1), color, thickness = -1) # Draw the rectangle on the image
 
     return image
-
-def generate_reference_image():
-
-    """
-    Generates a reference image by putting the image seed into a bit generator.
-
-    Arguments:
-        None
-
-    Returns:
-        "reference_image": The reference image.
-
-    """
-
-    bit_generator = np.random.RandomState(reference_image_seed)
-    reference_image = bit_generator.randint(0, 256, (sender_output_height, sender_output_width), dtype = np.uint8)
-
-    return reference_image
 
 def create_color_frame(color):
 
@@ -114,7 +95,8 @@ def create_aruco_marker_frame():
 
     return frame
 
-def create_large_aruco_marker_frame(position="right"):
+def create_large_aruco_marker_frame(position = "right"):
+    
     """
     Creates a green frame with a single large ArUco marker on the left or right.
 
@@ -125,42 +107,31 @@ def create_large_aruco_marker_frame(position="right"):
         np.ndarray: The frame with the large ArUco marker.
         
     """
-    # Gray background
+
     frame = create_color_frame([128, 128, 128])
 
-
     margin = aruco_marker_margin
-    marker_size = sender_output_height - 2 * margin  # fills height minus top/bottom margins
+    marker_size = sender_output_height - 2 * margin
 
-
-    # Vertical placement (top margin)
     y_coordinate = margin
 
-
-    # Horizontal placement
     if position == "right":
         x_coordinate = sender_output_width - margin - marker_size
+
     elif position == "left":
         x_coordinate = margin
+
     else:
         raise ValueError("position must be 'left' or 'right'")
 
-
-    # Use first marker ID for right, second for left
     aruco_marker_id = aruco_marker_ids[0] if position == "right" else aruco_marker_ids[1]
 
-
-    # Generate marker
     marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, marker_size)
     marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
 
-
-    # Paste marker onto frame
     frame[y_coordinate:y_coordinate + marker_size, x_coordinate:x_coordinate + marker_size] = marker_bgr
 
-
     return frame
-
 
 def create_color_reference_frame():
     
@@ -194,35 +165,3 @@ def create_color_reference_frame():
         color_reference_frame[:, x_start:x_end] = color # Fill the entire stripe with the current color
 
     return color_reference_frame
-
-def create_grid_color_reference_frame():
-
-    image = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8)
-
-    colors = [blue_bgr, green_bgr, red_bgr]
-    num_stripes = len(colors)
-
-    for row in range(number_of_rows): 
-
-        for column in range(number_of_columns): 
-
-            start_x_coordinate = column * bit_cell_width
-            end_x_coordinate = start_x_coordinate + bit_cell_width
-
-            start_y_coordinate = row * bit_cell_height
-            end_y_coordinate = start_y_coordinate + bit_cell_height
-
-            stripe_width = bit_cell_width // num_stripes
-
-            for i, color in enumerate(colors):
-
-                sx = start_x_coordinate + i * stripe_width
-
-                if i != num_stripes - 1:
-                    ex = start_x_coordinate + (i + 1) * stripe_width
-                else:
-                    ex = end_x_coordinate  # last stripe fills remaining rounding
-
-                image[start_y_coordinate:end_y_coordinate, sx:ex] = color
-            
-    return image

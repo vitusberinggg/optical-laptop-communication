@@ -1,11 +1,13 @@
+
 # --- Imports ---
+
 import cv2
 import time
 import numpy as np
 
-from recievers.webCamSim import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color, tracker
-from utilities import detection_functions, screen_alignment_functions, decoding_functions
+from utilities import screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
