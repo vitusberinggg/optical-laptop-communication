@@ -50,8 +50,6 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
         if len(bitgrids) == 0:
             print("No bitgrids collected yet.")
             return None
-        
-        print(f"[DEBUG] bitgrids combined: {bitgrids}")
 
         # Combine all bitgrids horizontally
         combined = np.hstack(bitgrids)     # shape becomes (8, N)
@@ -62,11 +60,14 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
         # Split into 8-bit chunks
         byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
 
+        
+        print(f"[DEBUG] bitgrids combined: {byte_matrix}")
+
         print(f"Decoded {len(byte_matrix)} bytes:")
 
         for i, byte_bits in enumerate(byte_matrix):
             # Convert booleans to '0'/'1'
-            s = "".join(['1' if b else '0' for b in byte_bits])
+            s = "".join([ b for b in byte_bits])
             try:
                 char = chr(int(s, 2))
             except ValueError:
@@ -94,7 +95,7 @@ def bits_to_message(byte_matrix):
 
     for byte_bits in byte_matrix:
 
-        s = "".join(['1' if b else '0' for b in byte_bits])
+        s = "".join([ b for b in byte_bits])
 
         try:
             characters.append(chr(int(s, 2)))

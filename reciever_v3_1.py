@@ -318,7 +318,7 @@ def receive_message():
 
         if syncing:
             color = dominant_color(small_roi)
-            interval, syncing = decoding_functions_v3_1.sync_interval_detector(small_roi, True)
+            interval, syncing = decoding_functions_v3_1.sync_interval_detector(color, True)
             if not syncing:
                 decoding = True
                 watchdog_on = True
@@ -339,19 +339,13 @@ def receive_message():
                 end_frame = True
                 add_frame = True
 
-                #print("sees blue")
-
             elif color in ["white", "black"]:
                 
                 # add_frame → add frame to array
 
                 add_frame = True
 
-                #print("sees black/white")
-
             elif color == "red" and last_color != "red":
-
-                print("sees red")
 
                 recall = True
                 time_since_red = time.time()  
