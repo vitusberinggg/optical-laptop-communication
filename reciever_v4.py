@@ -11,7 +11,8 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color
 from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions_v3_1 import decode_bitgrid, sync_interval_detector
+from utilities.decoding_functions_v3_1 import sync_interval_detector
+from utilities.decoding_functions import decode_bitgrid
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
