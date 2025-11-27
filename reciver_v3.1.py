@@ -107,8 +107,10 @@ def decoding_worker():
 decode_thread = threading.Thread(target=decoding_worker, daemon=True)
 decode_thread.start()
 
+watchdog_on = False
+
 def watchdog():
-    while True:
+    while watchdog_on:
         if time.time() - decode_last_time > 1.0:
             print("[WARNING] Decode thread is stalled or starving (no frames processed)!")
         time.sleep(0.2)
@@ -131,6 +133,8 @@ def receive_message():
         None
     
     """
+
+    global watchdog_on
 
     message = ""
     arucos_found = False
@@ -306,9 +310,11 @@ def receive_message():
         # --- Sync ---
 
         if syncing:
-            interval, syncing = decoding_functions_v3.sync_receiver(small_roi, True)
+            interval, syncing = decoding_functions_v3.sync_interval_detector(small_roi, True)
             if not syncing:
                 decoding = True
+                watchdog_on = True
+                print("[DEBUG] Watchdog on")
 
         # --- Decode ---
 
@@ -347,7 +353,7 @@ def receive_message():
             last_color = color
 
 
-        key = cv2.pollKey() & 0xFF
+        key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
 
