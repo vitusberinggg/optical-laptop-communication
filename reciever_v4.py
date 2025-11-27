@@ -9,9 +9,9 @@ import numpy as np
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
 from utilities.color_functions import dominant_color
-from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT
-from utilities.screen_alignment_functions import roi_alignment2
-from utilities.decoding_functions_v3 import decode_bitgrid, sync_interval_detector
+from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT
+from utilities.screen_alignment_functions import roi_alignment_for_large_markers
+from utilities.decoding_functions_v3_1 import decode_bitgrid, sync_interval_detector
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -165,7 +165,7 @@ def receive_message():
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment2(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
+                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                         print("\n[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                 except Exception:

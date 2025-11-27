@@ -4,8 +4,8 @@
 import numpy as np
 import time
 
-from utilities import color_functions_v3
-from utilities.color_functions_v3 import dominant_color
+from utilities import color_functions_v3_1
+from utilities.color_functions_v3_1 import dominant_color
 from utilities.global_definitions import number_of_sync_frames
 
 # --- Definitions ---
@@ -34,15 +34,15 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
     if add_frame:
         if end_frame:
             # Retrieve completed bitgrid from tracker
-            bitgrid = color_functions_v3.tracker.end_bit()   # e.g. shape (8, 16)
+            bitgrid = color_functions_v3_1.tracker.end_bit()   # e.g. shape (8, 16)
 
             if bitgrid is not None:
                 bitgrids.append(bitgrid)   # Store safely as a separate frame
                 print(f"[DEBUG] bitgrid: {bitgrid}")
 
-            color_functions_v3.tracker.reset()
+            color_functions_v3_1.tracker.reset()
         else:
-            color_functions_v3.tracker.add_frame(hsv_frame)
+            color_functions_v3_1.tracker.add_frame(hsv_frame)
 
         return None
 

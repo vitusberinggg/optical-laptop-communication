@@ -15,8 +15,8 @@ import time
 import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
-from utilities.color_functions_v3 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
-from utilities import detection_functions, screen_alignment_functions, decoding_functions_v3
+from utilities.color_functions_v3_1 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
+from utilities import decoding_functions_v3_1, screen_alignment_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
@@ -25,7 +25,7 @@ from utilities.global_definitions import (
 
 # function that pre-compiles the numba functions to prevent lag on initial launch with them
 def warmup_all():
-    from utilities.color_functions_v3 import bitgrid_majority_calc, dominant_color_numba
+    from utilities.color_functions_v3_1 import bitgrid_majority_calc, dominant_color_numba
 
     # Warm up bitgrid majority calc
     dummy_merged = np.zeros((2, 8, 16, 10), dtype=np.uint8)
@@ -88,11 +88,11 @@ def decoding_worker():
         
         t0 = time.time()
         if recall:
-            decoded_message = decoding_functions_v3.decode_bitgrid(
+            decoded_message = decoding_functions_v3_1.decode_bitgrid(
                 hsv_roi, add_frame, recall, end_frame
             )
         else:
-            decoding_functions_v3.decode_bitgrid(
+            decoding_functions_v3_1.decode_bitgrid(
                 hsv_roi, add_frame, recall, end_frame
             )
 
@@ -312,7 +312,7 @@ def receive_message():
         # --- Sync ---
 
         if syncing:
-            interval, syncing = decoding_functions_v3.sync_interval_detector(small_roi, True)
+            interval, syncing = decoding_functions_v3_1.sync_interval_detector(small_roi, True)
             if not syncing:
                 decoding = True
                 watchdog_on = True

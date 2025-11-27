@@ -10,9 +10,9 @@ import numpy as np
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
 from utilities.color_functions import dominant_color
-from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT
+from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment2
-from utilities.decoding_functions_v3 import decode_bitgrid, sync_receiver
+from utilities.decoding_functions_v3_1 import decode_bitgrid, sync_receiver
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
