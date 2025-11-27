@@ -247,7 +247,6 @@ def receive_message():
                 color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
 
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
 
                 print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
