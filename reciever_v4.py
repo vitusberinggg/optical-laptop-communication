@@ -82,6 +82,8 @@ def receive_message():
 
     last_color = None
 
+    last_frame_time = None 
+
     interval = 0 # Interval between frames in seconds
 
     current_bit_colors = [] # Colors collected for the current bit
@@ -300,6 +302,17 @@ def receive_message():
                     recall = False # Initialize recall flag as False
                     end_frame = False # Initialize end_frame flag as False
                     add_frame = False # Initialize add_frame flag as False
+
+                    if last_frame_time is None:
+                        last_frame_time = time.time()
+
+                    current_time = time.time()
+                    frame_time = current_time - last_frame_time 
+
+                    if frame_time >= interval:
+                        end_frame = True
+                        add_frame = True 
+                        last_frame_time = current_time 
 
                     if color in ["white", "black"]: # If the color is white or black:
 
