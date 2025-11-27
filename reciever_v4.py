@@ -247,11 +247,10 @@ def receive_message():
                 color = dominant_color(minimized_roi) # Get the dominant color in the minimized ROI
 
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
 
                 print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
-                if color == "blue" and roi_coordinates is not None and current_state == "aruco_marker_detection":
+                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
@@ -280,7 +279,7 @@ def receive_message():
                     print("\n[INFO] Trying to sync and get the interval...")
 
                     try:
-                        interval, syncing = sync_interval_detector(minimized_roi_hsv, True) # Try to sync and get the interval
+                        interval, syncing = sync_interval_detector(color, True) # Try to sync and get the interval
                         print(f"\n[INFO] Interval: {interval} s")
 
                     except Exception as e:

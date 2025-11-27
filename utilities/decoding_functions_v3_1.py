@@ -104,13 +104,13 @@ def bits_to_message(byte_matrix):
             
     return "".join(characters)
 
-def sync_interval_detector(roi, printing = True, sync_state_dictionary = {}):
+def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
 
     """
     Syncs timing by detecting black/white transitions.
 
     Args:
-        "roi" (np.ndarray): The ROI frame.
+        "color" (str):
         "detect_color_fn": Function that returns "black" or "white".
         "transitions_needed" (int): How many transitions we need to detect.
         "printing" (bool): Print debug info.
@@ -130,8 +130,6 @@ def sync_interval_detector(roi, printing = True, sync_state_dictionary = {}):
 
         if printing:
             print("[SYNC] Initialized sync state dictionary, waiting for first stable color...")
-
-    color = dominant_color(roi) # Gets the dominant color in the current ROI
 
     # First function call
 
