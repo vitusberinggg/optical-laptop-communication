@@ -163,12 +163,12 @@ def receive_message():
     # also prevents exceptions caused by LUT or color_names not having any values
 
     corrected_ranges = {
-        "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
-        "red2":   (np.array([160, 100, 100]), np.array([179, 255, 255])),  # hue 160–179
-        "green":  (np.array([45, 80, 80]), np.array([75, 255, 255])),
-        "blue":   (np.array([95, 120, 70]), np.array([130, 255, 255])),
-        "white":  (np.array([0, 0, 220]), np.array([180, 25, 255])),
-        "black":  (np.array([0, 0, 0]), np.array([180, 255, 35]))
+        "red1":  ([0, 100, 100], [10, 255, 255]),
+        "red2":  ([160, 100, 100], [179, 255, 255]),
+        "white": ([0, 0, 200], [179, 30, 255]),
+        "black": ([0, 0, 0], [179, 255, 50]),
+        "green": ([40, 50, 50], [80, 255, 255]),
+        "blue":  ([100, 150, 0], [140, 255, 255])
     }
 
     LUT, color_names = build_color_LUT(corrected_ranges)
@@ -314,7 +314,7 @@ def receive_message():
             if not syncing:
                 decoding = True
                 watchdog_on = True
-                print("[DEBUG] Watchdog on")
+                print("\n[DEBUG] Watchdog initialized\n")
 
         # --- Decode ---
 
@@ -345,9 +345,6 @@ def receive_message():
                 frame_queue.put_nowait((hsv_roi.copy(), recall, add_frame, end_frame))
             except queue.Full:
                 pass  # skip if queue is full
-                
-            if frame_queue.empty():
-                print("queue empty")
 
         if color is not None:
             last_color = color
