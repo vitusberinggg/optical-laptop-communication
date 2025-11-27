@@ -104,6 +104,8 @@ def receive_message():
 
     last_frame_time = None 
 
+    frame_bit = 0 
+
     interval = 0 # Interval between frames in seconds
 
     current_bit_colors = [] # Colors collected for the current bit
@@ -346,10 +348,13 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(roi_hsv, add_frame, recall, end_frame)
+                        decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame)
+
+                    if end_frame:
+                        frame_bit += 1 
 
                 last_color = color # Update the last color
 
