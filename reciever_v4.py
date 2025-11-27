@@ -331,10 +331,11 @@ def receive_message():
                     current_time = time.time()
                     frame_time = current_time - last_frame_time 
 
-                    if frame_time >= interval:
-                        end_frame = True
-                        add_frame = True 
-                        last_frame_time = current_time 
+                    if interval > 0:
+                        if frame_time >= interval:
+                            end_frame = True
+                            add_frame = True 
+                            last_frame_time = current_time 
 
                     if color in ["white", "black"]: # If the color is white or black:
 
