@@ -1,10 +1,13 @@
-# color_utils.py
+
+# --- Imports ---
+
 import cv2
 import numpy as np
 from collections import Counter
 from numba import njit, prange
 from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
 
+# --- Functions ---
 
 class BitColorTracker:
     def __init__(self):
@@ -95,14 +98,12 @@ class BitColorTracker:
 
         return bitgrid_str
 
-
     def reset(self):
         self.hsv_frames = []
 
     def colors(self, LUT, color_names):
         self.LUT = LUT
         self.color_names = color_names
-
 
 # --- Numba helper for majority vote ---
 @njit(parallel=True)
@@ -141,7 +142,6 @@ def bitgrid_majority_calc(merged, num_classes):
 
     # returns an 2-D array of color ids
     return out
-
 
 colorTracker = BitColorTracker()
 
@@ -194,24 +194,6 @@ def build_color_LUT(corrected_ranges):
         LUT[mask] = idx
 
     return LUT, color_names
-
-# --- Classifies the majority of the colors with help of LUT ---
-
-def classify_frame_LUT(hsv):
-    LUT=tracker.LUT
-
-    H = hsv[:, :, 0]
-    S = hsv[:, :, 1]
-    V = hsv[:, :, 2]
-
-    # O(1) lookup for every pixel
-    classes = LUT[H, S, V]
-
-    # majority vote
-    values, counts = np.unique(classes, return_counts=True)
-    return int(values[counts.argmax()])
-
-
 
 @njit
 def dominant_color_numba(classes, num_colors):
@@ -349,28 +331,3 @@ def color_offset_calculation(roi):
         corrected_ranges[color] = (lower_corrected, upper_corrected)
         
     return original_hsv_ranges
-
-def dominant_color_with_offsets(roi, corrected_ranges):
-
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-
-    masks = {}
-    for color, (lower, upper) in corrected_ranges.items():
-        lh = int(lower[0]); uh = int(upper[0])
-        lower_arr = np.array(lower, dtype=np.int32)
-        upper_arr = np.array(upper, dtype=np.int32)
-        if lh <= uh:
-            mask = cv2.inRange(hsv, lower_arr, upper_arr)
-        else:
-            # wrap: [lh..179] OR [0..uh]
-            part1 = cv2.inRange(hsv, np.array([lh, lower_arr[1], lower_arr[2]]), np.array([179, upper_arr[1], upper_arr[2]]))
-            part2 = cv2.inRange(hsv, np.array([0, lower_arr[1], lower_arr[2]]), np.array([uh, upper_arr[1], upper_arr[2]]))
-            mask = part1 | part2
-        masks[color] = mask
-
-    counts = {c: int(cv2.countNonZero(m)) for c,m in masks.items()}
-    if not counts:
-        return None
-    return max(counts, key=counts.get)
-
-    

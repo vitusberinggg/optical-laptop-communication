@@ -1,8 +1,11 @@
-# color_utils.py
+
+# ---- Imports ---
+
 import cv2
-import numpy as np
 from collections import Counter
 from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
+
+# --- Functions ---
 
 class BitColorTracker:
     def __init__(self):
@@ -51,9 +54,10 @@ class BitColorTracker:
     def reset(self):
         self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
-# For backward compatibility
 tracker = BitColorTracker()
+
 def dominant_color(roi):
+
     """
     Computes the dominant color in the given ROI using HSV color space.
 
@@ -80,4 +84,5 @@ def dominant_color(roi):
         "green": int(cv2.countNonZero(green_mask)),
         "blue": int(cv2.countNonZero(blue_mask)),
     }
-    return max(counts, key=counts.get)
+
+    return max(counts, key = counts.get)

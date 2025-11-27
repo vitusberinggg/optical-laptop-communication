@@ -1,4 +1,6 @@
+
 # --- Imports ---
+
 import cProfile
 import pstats
 
@@ -12,7 +14,7 @@ import cv2
 import time
 import numpy as np
 
-from recievers.webCamSim import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_v3 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
 from utilities import detection_functions, screen_alignment_functions, decoding_functions_v3
 from utilities.global_definitions import (

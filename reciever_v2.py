@@ -3,16 +3,12 @@ import cv2
 import time
 import numpy as np
 
-from recievers.webCamSim import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color, tracker
-from utilities import detection_functions, screen_alignment_functions
-from utilities.global_definitions import (
-    sender_output_height, sender_output_width,
-    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary,
-)
+from utilities import screen_alignment_functions
 
 # --- Definitions ---
+
 delimiter_duration = 0.5  # red duration
 binary_duration = 0.3     # unused, just for reference
 
@@ -46,10 +42,10 @@ while True:
     time.sleep(0.01)
 
 # --- ArUco setup (match sender) ---
+
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 aruco_params = cv2.aruco.DetectorParameters()
 aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
-
 
 # --- Main function ---
 
@@ -92,8 +88,6 @@ def receive_message():
 
         #rejected_count = 0 if rejected is None else len(rejected)
         #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
-
-
 
         # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
 
@@ -222,4 +216,5 @@ def receive_message():
     cv2.destroyAllWindows()
 
 # --- Run ---
+
 receive_message()

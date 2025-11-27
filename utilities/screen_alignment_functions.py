@@ -4,13 +4,27 @@
 import cv2
 import numpy as np
 
-from utilities.global_definitions import (
-    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    sender_output_height, sender_output_width,
-    ecc_allignment_criteria
-)
-
 # --- Functions ---
+
+def detect_screen(frame):
+
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+
+    if hasattr(cv2.aruco, "ArucoDetector"):
+        params = cv2.aruco.DetectorParameters()
+        detector = cv2.aruco.ArucoDetector(aruco_dict, params)
+        corners, ids, _ = detector.detectMarkers(frame)
+
+    else:
+        params = cv2.aruco.DetectorParameters_create()
+        corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=params)
+
+    display = frame.copy()
+
+    if corners is not None and ids is not None and len(ids) > 0:
+        cv2.aruco.drawDetectedMarkers(display, corners, ids)
+
+    return display, corners, ids
 
 def roi_alignment(frame, inset_px = 0):
 
@@ -18,7 +32,8 @@ def roi_alignment(frame, inset_px = 0):
     w_px = 0
     h_px = 0
     roi_coordinates = None
-    display, corners, ids = detect_screen(frame)
+    _, corners, ids = detect_screen(frame)
+
     if corners is not None and ids is not None and len(ids) > 0:
         ids_flat = ids.flatten() if hasattr(ids, "flatten") else np.array(ids).flatten()
         id_to_corners = {int(marker_id): corners[idx][0] for idx, marker_id in enumerate(ids_flat)}
@@ -43,11 +58,12 @@ def roi_alignment(frame, inset_px = 0):
             if x1 - x0 > 5 and y1 - y0 > 5:
                 roi_coordinates = (x0, x1, y0, y1)
                 print("ROI set around outer corners of markers.")
+
     return roi_coordinates, w_px, h_px
 
 saved_corners = {0: None, 1: None} 
 
-def roi_alignment2(corners, marker_ids, frame):
+def roi_alignment_for_large_markers(corners, marker_ids, frame):
 
     """
     Creates a ROI around the outer corners of the ArUco markers.
@@ -106,79 +122,3 @@ def roi_alignment2(corners, marker_ids, frame):
             print("\n[INFO] ROI set around outer corners of markers.")
 
     return roi_coordinates, w_px, h_px
-
-def detect_screen(frame):
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-
-    if hasattr(cv2.aruco, "ArucoDetector"):
-        params = cv2.aruco.DetectorParameters()
-        detector = cv2.aruco.ArucoDetector(aruco_dict, params)
-        corners, ids, _ = detector.detectMarkers(frame)
-    else:
-        params = cv2.aruco.DetectorParameters_create()
-        corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=params)
-
-    display = frame.copy()
-    if corners is not None and ids is not None and len(ids) > 0:
-        cv2.aruco.drawDetectedMarkers(display, corners, ids)
-    return display, corners, ids
-
-def create_mask(homography_matrix):
-
-    """
-    Creates a binary mask using a homography matrix.
-
-    Arguments:
-        "homography_matrix"
-
-    Returns:
-        "mask"
-
-    """
-
-    sender_mask = np.full((sender_output_height, sender_output_width), 255, np.uint8)
-
-    inverse_homography_matrix = np.linalg.inv(homography_matrix)
-
-    webcam_mask = cv2.warpPerspective(
-        sender_mask,
-        inverse_homography_matrix,
-        (laptop_webcam_pixel_width, laptop_webcam_pixel_height),
-        flags = cv2.INTER_NEAREST
-    )
-
-    return webcam_mask
-
-def compute_ecc_transform(reference_image, captured_image):
-    
-    """
-    Alligns the captured reference image to the reference image using ECC (Enhanced Correlation Coefficient).
-
-    Arguments:
-        "reference_image": The reference image.
-        "captured_image": The image to allign.
-
-    Returns:
-        "ecc_warp_matrix": The warp matrix.
-
-    """
-
-    captured_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
-
-    ecc_warp_matrix = np.eye(2, 3, dtype = np.float32) # Initial warp matrix guess
-
-    try:
-        cc, ecc_warp_matrix = cv2.findTransformECC(
-            reference_image,
-            captured_image,
-            ecc_warp_matrix,
-            cv2.MOTION_AFFINE,
-            ecc_allignment_criteria
-        )        
-
-    except cv2.error:
-
-        print("[WARNING] ECC allignment failed.")
-        return None
-    
-    return ecc_warp_matrix

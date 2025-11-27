@@ -7,7 +7,7 @@ import cv2
 import time
 import numpy as np
 
-from recievers.webCamSim import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
 from utilities.color_functions import dominant_color
 from utilities.color_functions_v3 import color_offset_calculation, tracker, build_color_LUT

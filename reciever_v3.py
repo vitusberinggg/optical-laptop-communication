@@ -1,9 +1,11 @@
+
 # --- Imports ---
+
 import cv2
 import time
 import numpy as np
 
-from recievers.webCamSim import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color, tracker
 from utilities import screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
@@ -11,6 +13,7 @@ from utilities.global_definitions import (
 )
 
 # --- Setup capture ---
+
 #cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\dumbledore_part2.0.mp4")
 # For live webcam test instead of video, use:
 cap = VideoThreadedCapture(0)
@@ -40,7 +43,6 @@ aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 aruco_params = cv2.aruco.DetectorParameters()
 aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 
-
 # --- Main function ---
 
 def receive_message():
@@ -65,7 +67,6 @@ def receive_message():
     roi_coords = None
     frame_bit = 0
 
-
     print("Receiver started — waiting for GREEN to sync...")
 
     while True:
@@ -84,10 +85,6 @@ def receive_message():
 
         #rejected_count = 0 if rejected is None else len(rejected)
         #print("ids:", None if ids is None else ids.flatten(), "rejected:", rejected_count)
-
-
-
-        # ---- DRAW ARUCO INFO ON THE SAME FRAME ----
 
         display = frame.copy()
 
