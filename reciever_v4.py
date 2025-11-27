@@ -33,17 +33,17 @@ videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
-# Exposure
-
-videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
-videoCapture.set(cv2.CAP_PROP_EXPOSURE, -6) # Lower value = Darker exposure
-print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
-
 # White balance
 
 videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
-videoCapture.set(cv2.CAP_PROP_WB_TEMPERATURE, 4500)
+videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
 print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+
+# Exposure
+
+videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
+print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
 
 # Gain
 
