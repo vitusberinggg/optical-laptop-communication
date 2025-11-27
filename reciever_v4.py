@@ -26,10 +26,29 @@ from utilities.global_definitions import (
 # --- Video capture setup ---
 
 # videoCapture = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
-videoCapture = cv2.VideoCapture(0) # For live webcam
+videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+
+# Resolution
 
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+
+# Exposure
+
+videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+videoCapture.set(cv2.CAP_PROP_EXPOSURE, -6) # Lower value = Darker exposure
+print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+
+# White balance
+
+videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+videoCapture.set(cv2.CAP_PROP_WB_TEMPERATURE, 4500)
+print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+
+# Gain
+
+videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
