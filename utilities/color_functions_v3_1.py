@@ -150,6 +150,7 @@ colorTracker = BitColorTracker()
 tracker = BitColorTracker()
 
 # --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
+# corrected ranges need to be in np.array for it to classify color ids properly
 
 def build_color_LUT(corrected_ranges):
     """
