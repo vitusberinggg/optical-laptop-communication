@@ -38,7 +38,7 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
 
             if bitgrid is not None:
                 bitgrids.append(bitgrid)   # Store safely as a separate frame
-                print(f"bitgrids: {bitgrids}")
+                print(f"[DEBUG] bitgrid: {bitgrid}")
 
             color_functions_v3.tracker.reset()
         else:
@@ -50,6 +50,8 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
         if len(bitgrids) == 0:
             print("No bitgrids collected yet.")
             return None
+        
+        print(f"[DEBUG] bitgrids combined: {bitgrids}")
 
         # Combine all bitgrids horizontally
         combined = np.hstack(bitgrids)     # shape becomes (8, N)
