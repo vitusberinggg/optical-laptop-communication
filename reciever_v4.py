@@ -190,7 +190,6 @@ def receive_message():
 
                     if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
-                        print("\n[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
