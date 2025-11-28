@@ -57,11 +57,11 @@ class BitColorTracker:
 
         self.current_bit_roi[row][col] = []
 
-        if majority == "white":
-            return "1"
+        if majority == "black":
+            return "0"
         
         else:
-            return "0"
+            return "1"
 
     def reset(self):
 
