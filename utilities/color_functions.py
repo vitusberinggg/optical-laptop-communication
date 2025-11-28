@@ -3,56 +3,73 @@
 
 import cv2
 from collections import Counter
-from utilities.global_definitions import number_of_rows as rows, number_of_columns as cols
+
+from utilities.global_definitions import (
+    number_of_rows, number_of_columns,
+    red_lower_hsv_limit_1, red_upper_hsv_limit_1,
+    red_lower_hsv_limit_2, red_upper_hsv_limit_2,
+    white_lower_hsv_limit, white_upper_hsv_limit,
+    black_lower_hsv_limit, black_upper_hsv_limit,
+    green_lower_hsv_limit, green_upper_hsv_limit,
+    blue_lower_hsv_limit, blue_upper_hsv_limit
+)
 
 # --- Functions ---
 
 class BitColorTracker:
+
     def __init__(self):
-        # frame buffer for each bit (2D array)
-        self.rows = rows
-        self.cols = cols
-        self.current_bit_roi = [[[] for _ in range(cols)] for _ in range(rows)]
+
+        """
+
+        """
+
+        self.number_of_rows = number_of_rows
+        self.number_of_columns = number_of_columns
+        self.current_bit_roi = [[[] for _ in range(number_of_columns)] for _ in range(number_of_rows)]
 
     def add_frame(self, roi, row, col):
+        
+        """
+        
+        """
+
         self.current_bit_roi[row][col].append(roi)
 
     def end_bit(self, row, col):
+        
+        """
+        
+        """
+
         frames = self.current_bit_roi[row][col]
+
         if len(frames) == 0:
             return None
 
         frame_colors = []
+
         for frame in frames:
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-            red_mask = cv2.inRange(hsv, (0,120,120), (10,255,255)) | \
-                       cv2.inRange(hsv, (160,120,120), (179,255,255))
-            white_mask = cv2.inRange(hsv, (0,0,220), (180,25,255))
-            black_mask = cv2.inRange(hsv, (0,0,0), (180,255,35))
-            green_mask = cv2.inRange(hsv, (45,80,80), (75,255,255))
-            blue_mask  = cv2.inRange(hsv, (95,120,70), (130,255,255))
-
-            counts = {
-                "red": int(cv2.countNonZero(red_mask)),
-                "white": int(cv2.countNonZero(white_mask)),
-                "black": int(cv2.countNonZero(black_mask)),
-                "green": int(cv2.countNonZero(green_mask)),
-                "blue": int(cv2.countNonZero(blue_mask)),
-            }
-
-            frame_colors.append(max(counts, key=counts.get))
+            color = dominant_color(frame)
+            frame_colors.append(color)
 
         majority = Counter(frame_colors).most_common(1)[0][0]
 
-        # reset ONLY this one bit
         self.current_bit_roi[row][col] = []
 
-        # return integer bit
-        return "1" if majority == "white" else "0"
+        if majority == "white":
+            return "1"
+        
+        else:
+            return "0"
 
     def reset(self):
-        self.current_bit_roi = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
+
+        """
+        
+        """
+
+        self.current_bit_roi = [[[] for _ in range(self.number_of_columns)] for _ in range(self.number_of_rows)]
 
 tracker = BitColorTracker()
 
@@ -68,14 +85,18 @@ def dominant_color(roi):
         The dominant color as a string (e.g., "red", "white", etc.).
     
     """
+
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-    red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \
-               cv2.inRange(hsv,(160,100,100),(179,255,255))
-    white_mask = cv2.inRange(hsv, (0,0,200), (180,60,255))
-    black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
-    green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
-    blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))
+    red_mask = cv2.inRange(hsv, red_lower_hsv_limit_1, red_upper_hsv_limit_1) | cv2.inRange(hsv, red_lower_hsv_limit_2, red_upper_hsv_limit_2)
+
+    white_mask = cv2.inRange(hsv, white_lower_hsv_limit, white_upper_hsv_limit)
+
+    black_mask = cv2.inRange(hsv, black_lower_hsv_limit, black_upper_hsv_limit)
+
+    green_mask = cv2.inRange(hsv, green_lower_hsv_limit, green_upper_hsv_limit)
+
+    blue_mask  = cv2.inRange(hsv, blue_lower_hsv_limit, blue_upper_hsv_limit)
 
     counts = {
         "red": int(cv2.countNonZero(red_mask)),
