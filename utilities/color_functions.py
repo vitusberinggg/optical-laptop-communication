@@ -51,13 +51,13 @@ class BitColorTracker:
 
         for frame in frames:
             color = dominant_color(frame)
-            frame_colors.append(color)
+            #frame_colors.append(color)
 
-        majority = Counter(frame_colors).most_common(1)[0][0]
+        #majority = Counter(frame_colors).most_common(1)[0][0]
 
         self.current_bit_roi[row][col] = []
 
-        if majority == "black":
+        if color == "black":
             return "0"
         
         else:
