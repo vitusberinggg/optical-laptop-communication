@@ -1,6 +1,7 @@
 
 # --- Imports ---
 
+import time
 import cv2
 import numpy as np
 from collections import Counter
@@ -11,12 +12,29 @@ from utilities.global_definitions import number_of_rows as rows, number_of_colum
 
 class BitColorTracker:
     def __init__(self):
+        self.time_in = 0
         self.rows = rows
         self.cols = cols
         self.hsv_frames = []
 
     def add_frame(self, hsv_roi):
         self.hsv_frames.append(hsv_roi)
+        if not hasattr(BitColorTracker.add_frame, "time"):
+            self.time_in = time.time()
+            BitColorTracker.add_frame.time = ("chingchong")
+
+        if not hasattr(BitColorTracker.add_frame, "walla") and (time.time() - self.time_in > 0.15) and self.time_in != 0:
+            # debug dump
+            #cv2.imwrite("debug_roi_bgr.png", roi)  # BGR image of the ROI
+            np.save("debug_hsv_roi.npy", hsv_roi)  # exact HSV array
+            # quick stats
+            H = hsv_roi[:,:,0]; S = hsv_roi[:,:,1]; V = hsv_roi[:,:,2]
+            print("HSV roi shape:", hsv_roi.shape, "dtype:", hsv_roi.dtype)
+            print("H min/max:", int(H.min()), int(H.max()))
+            print("S min/max:", int(S.min()), int(S.max()))
+            print("V min/max:", int(V.min()), int(V.max()))
+            BitColorTracker.add_frame.walla = ("bingbing")
+
 
     def _pad_frames(self, frames):
         # H = frame height, W = frame width
