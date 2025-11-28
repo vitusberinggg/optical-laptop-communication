@@ -14,7 +14,7 @@ import cv2
 import time
 import numpy as np
 
-from webcam_simulation.webcamSimulator import VideoThreadedCapture
+from webcam_simulation.webcamSimulator import VideoThreadedCapture, VideoCaptureSingle
 from utilities.color_functions_v3_1 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
 from utilities import decoding_functions_v3_1, screen_alignment_functions
 from utilities.global_definitions import (
@@ -35,31 +35,6 @@ def warmup_all():
     dummy_classes = np.zeros((100,), dtype=np.uint8)
     dominant_color_numba(dummy_classes, 5)
 
-
-# --- Setup capture ---
-#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
-# For live webcam test instead of video, use:
-cap = cv2.VideoCapture(0)
-
-if not cap.isOpened():
-
-    print("Error: Could not open camera/video.")
-    exit()
-
-cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Webcam Receiver", 1920, 1200)
-
-cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("ROI", 192, 120)
-
-# Grab one initial frame so cap is "warmed up"
-while True:
-
-    ret, frame = cap.read()
-
-    if ret:
-        break
-    time.sleep(0.01)
 
 # --- ArUco setup (match sender) ---
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -182,6 +157,31 @@ def receive_message():
     tracker.colors(LUT, color_names)
 
     warmup_all()
+
+    # --- Setup capture ---
+    cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
+    # For live webcam test instead of video, use:
+    #cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+
+        print("Error: Could not open camera/video.")
+        exit()
+
+    cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Webcam Receiver", 1920, 1200)
+
+    cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("ROI", 192, 120)
+
+    # Grab one initial frame so cap is "warmed up"
+    while True:
+
+        ret, frame = cap.read()
+
+        if ret:
+            break
+        time.sleep(0.01)
 
     print("Receiver started — waiting for Arucos...")
 
