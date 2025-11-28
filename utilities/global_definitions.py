@@ -3,7 +3,7 @@
 
 import cv2
 
-# --- Color definitions ---
+# --- BGR definitions ---
 
 red_bgr = (0, 0, 255)
 green_bgr = (0, 255, 0)
@@ -11,6 +11,25 @@ blue_bgr = (255, 0, 0)
 black_bgr = (0, 0, 0)
 white_bgr = (255, 255, 255)
 yellow_bgr = (0, 255, 255)
+
+# --- HSV definitions ---
+
+red_lower_hsv_limit_1 = (0, 100, 100)
+red_upper_hsv_limit_1 = (10, 255, 255)
+red_lower_hsv_limit_2 = (160, 100, 100)
+red_upper_hsv_limit_2 = (179, 255, 255)
+
+white_lower_hsv_limit = (0, 0, 200)
+white_upper_hsv_limit = (180, 50, 255)
+
+black_lower_hsv_limit = (0, 0, 0)
+black_upper_hsv_limit = (180, 255, 50)
+
+green_lower_hsv_limit = (40, 50, 50)
+green_upper_hsv_limit = (80, 255, 255)
+
+blue_lower_hsv_limit = (100, 150, 0)
+blue_upper_hsv_limit = (140, 255, 255)
 
 # --- Sender output definitions ---
 

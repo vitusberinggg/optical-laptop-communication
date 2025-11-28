@@ -34,11 +34,11 @@ videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
 # White balance
-
+"""
 videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
 videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
 print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
-
+"""
 # Exposure
 
 videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
@@ -271,8 +271,7 @@ def receive_message():
 
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-                if last_color is not None and color != last_color:
-                    print(f"\n[INFO] Dominant color in minimized ROI: {color}")
+                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("[INFO] Starting color calibration...")
@@ -349,10 +348,10 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
 
                     if end_frame:
                         frame_bit += 1 
