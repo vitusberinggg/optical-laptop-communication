@@ -85,3 +85,74 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
         return bits_to_message(collected_bytes)
 
     return None
+
+def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
+
+    """
+    Syncs timing by detecting black/white transitions.
+
+    Args:
+        "color" (str):
+        "detect_color_fn": Function that returns "black" or "white".
+        "transitions_needed" (int): How many transitions we need to detect.
+        "printing" (bool): Print debug info.
+        "sync_state_dictionary" (dict): Internal persistent state across calls.
+
+    Returns:
+        "frame_interval" (float):
+
+    """
+
+    # Sync state dictionary initialization
+
+    if "last_color" not in sync_state_dictionary:
+
+        sync_state_dictionary["last_color"] = None
+        sync_state_dictionary["transition_timestamps"] = []
+
+        if printing:
+            print("[SYNC] Initialized sync state dictionary, waiting for first stable color...")
+
+    # First function call
+
+    if sync_state_dictionary["last_color"] is None: # If this is the first function call:
+        sync_state_dictionary["last_color"] = color # Store the current color in "last_color"
+
+        if printing:
+            print(f"[SYNC] Initial color = {color}")
+
+        return 0, True # Quit the function early (no transition has occured yet)
+
+    # Transition detection
+
+    if color != sync_state_dictionary["last_color"]: # If the current color isn't the same as the last color:
+
+        timestamp = time.time() # Capture the time
+        sync_state_dictionary["transition_timestamps"].append(timestamp) # Save the timestamp in the sync state dictionary
+        amount_of_timestamps = len(sync_state_dictionary["transition_timestamps"])
+
+        if printing:
+            print(f"[SYNC] Transition {amount_of_timestamps}: {sync_state_dictionary['last_color']} → {color}")
+
+        sync_state_dictionary["last_color"] = color # Update "last_color"
+
+        # Interval calculation
+
+        if amount_of_timestamps >= (number_of_sync_frames - 1): # If the amount of timestamps is equal to or more than the amount of sync frames - 1 (the amount of transitions):
+
+            timestamps = sync_state_dictionary["transition_timestamps"] # Get the list of timestamps
+
+            frame_intervals = [] # Create an empty list for timestamp differences
+
+            for timestamp_index in range (len(timestamps) - 1): # For each timestamp index in the list of timestamps:
+                frame_intervals.append(timestamps[timestamp_index + 1] - timestamps[timestamp_index]) # Add the difference between that timestamp and the next one to the timestamp differences list
+
+            #average_frame_interval = sum(frame_intervals) / len(frame_intervals) # Calculate the average frame interval
+            median_interval = float(np.median(frame_intervals))
+
+            if printing:
+                print(f"[SYNC] Estimated frame interval: {median_interval:.4f} seconds")
+
+            return median_interval, False
+
+    return 0, True # If "color" = "last_color", quit (no transition detected yet)
