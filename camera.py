@@ -14,8 +14,8 @@ def main():
         return
 
     # Optional: set a desired resolution (comment out if undesired)
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
 
     print("Press 'q' in the video window to quit.")
     prev = time.time()
