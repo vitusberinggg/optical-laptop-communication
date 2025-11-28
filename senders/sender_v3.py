@@ -53,7 +53,7 @@ def send_message(message):
 
     aruco_marker_frame_start_time = time.time()
 
-    while time.time() - aruco_marker_frame_start_time < aruco_marker_frame_duration * 2:
+    while time.time() - aruco_marker_frame_start_time < aruco_marker_frame_duration * 3:
         cv2.imshow(window, aruco_marker_frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
