@@ -72,7 +72,7 @@ def dominant_color(roi):
 
     red_mask = cv2.inRange(hsv, (0,100,100), (10,255,255)) | \
                cv2.inRange(hsv,(160,100,100),(179,255,255))
-    white_mask = cv2.inRange(hsv, (0,0,200), (180,30,255))
+    white_mask = cv2.inRange(hsv, (0,0,200), (180,60,255))
     black_mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
     green_mask = cv2.inRange(hsv, (40,50,50), (80,255,255))
     blue_mask  = cv2.inRange(hsv, (100,150,0), (140,255,255))

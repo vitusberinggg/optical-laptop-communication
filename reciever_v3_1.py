@@ -37,9 +37,9 @@ def warmup_all():
 
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\intervals_test2.0.mp4")
+#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
 # For live webcam test instead of video, use:
-#cap = VideoThreadedCapture(0)
+cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
 
@@ -149,6 +149,7 @@ def receive_message():
     syncing = False
     color_calibration = False
     interval = 0
+    time_since_red = 0
 
     decoding = False
     roi_coords = None
@@ -163,15 +164,19 @@ def receive_message():
 
     # --- To help pre-compile the numba functions ---
     # also prevents exceptions caused by LUT or color_names not having any values
-
+    
+    
     corrected_ranges = {
-        "red1":  ([0, 100, 100], [10, 255, 255]),
-        "red2":  ([160, 100, 100], [179, 255, 255]),
-        "white": ([0, 0, 200], [179, 30, 255]),
-        "black": ([0, 0, 0], [179, 255, 50]),
-        "green": ([40, 50, 50], [80, 255, 255]),
-        "blue":  ([100, 150, 0], [140, 255, 255])
-    }
+            "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10
+            "red2":   (np.array([160, 100, 100]), np.array([179, 255, 255])),  # hue 160–179
+            "white":  (np.array([0, 0, 220]), np.array([180, 25, 255])),
+            "black":  (np.array([0, 0, 0]), np.array([180, 255, 35])),
+            "green":  (np.array([45, 80, 80]), np.array([75, 255, 255])),
+            "blue":   (np.array([95, 120, 70]), np.array([130, 255, 255]))
+
+            
+        }
+    
 
     LUT, color_names = build_color_LUT(corrected_ranges)
     tracker.colors(LUT, color_names)
@@ -312,7 +317,8 @@ def receive_message():
         # --- Sync ---
 
         if syncing:
-            interval, syncing = decoding_functions_v3_1.sync_interval_detector(small_roi, True)
+            color = dominant_color(small_roi)
+            interval, syncing = decoding_functions_v3_1.sync_interval_detector(color, True)
             if not syncing:
                 decoding = True
                 watchdog_on = True
@@ -341,7 +347,8 @@ def receive_message():
 
             elif color == "red" and last_color != "red":
 
-                recall = True    
+                recall = True
+                time_since_red = time.time()  
 
             try:
                 frame_queue.put_nowait((hsv_roi.copy(), recall, add_frame, end_frame))
@@ -351,6 +358,8 @@ def receive_message():
         if color is not None:
             last_color = color
 
+        if (time.time() - time_since_red > 1.0) and time_since_red != 0:
+            break
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):

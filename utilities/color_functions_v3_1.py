@@ -82,7 +82,7 @@ class BitColorTracker:
         # for each frame n, row r, col c, collect all sample values
         N, R, Sh, C, Sw = classes.shape
         num_samples = Sh * Sw
-        # num_samples basically means all the pixels inside the sample in each cell
+        # num_samples basically means all the pixels inside the sample rectangle in each cell
 
         merged = classes.reshape(N, R, C, num_samples)
         # merged.shape = (frames, rows, cols, samples_per_cell)
@@ -145,11 +145,10 @@ def bitgrid_majority_calc(merged, num_classes):
     # returns an 2-D array of color ids
     return out
 
-colorTracker = BitColorTracker()
-
 tracker = BitColorTracker()
 
 # --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
+# corrected ranges need to be in np.array for it to classify color ids properly
 
 def build_color_LUT(corrected_ranges):
     """
