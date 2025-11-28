@@ -37,9 +37,9 @@ def warmup_all():
 
 
 # --- Setup capture ---
-cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
+#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
 # For live webcam test instead of video, use:
-#cap = VideoThreadedCapture(0)
+cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
 

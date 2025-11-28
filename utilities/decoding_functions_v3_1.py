@@ -38,7 +38,6 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
 
             if bitgrid is not None:
                 bitgrids.append(bitgrid)   # Store safely as a separate frame
-                print(f"[DEBUG] bitgrid: {bitgrid}")
 
             color_functions_v3_1.tracker.reset()
         else:
@@ -59,9 +58,6 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
 
         # Split into 8-bit chunks
         byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
-
-        
-        print(f"[DEBUG] bitgrids combined: {byte_matrix}")
 
         print(f"Decoded {len(byte_matrix)} bytes:")
 
