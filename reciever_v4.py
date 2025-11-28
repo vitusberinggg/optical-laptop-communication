@@ -348,10 +348,10 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
 
                     if end_frame:
                         frame_bit += 1 
