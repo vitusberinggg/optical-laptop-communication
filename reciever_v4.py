@@ -11,7 +11,8 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color
 from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions_v3_1 import decode_bitgrid, sync_interval_detector
+from utilities.decoding_functions_v3_1 import sync_interval_detector
+from utilities.decoding_functions import decode_bitgrid
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -25,10 +26,29 @@ from utilities.global_definitions import (
 # --- Video capture setup ---
 
 # videoCapture = VideoThreadedCapture(r"C:\my_projects\optical-laptop-communication\recievers\intervals_test.mp4") # For video test
-videoCapture = cv2.VideoCapture(0) # For live webcam
+videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+
+# Resolution
 
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+
+# White balance
+
+videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
+print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+
+# Exposure
+
+videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
+print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+
+# Gain
+
+videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -83,6 +103,8 @@ def receive_message():
     last_color = None
 
     last_frame_time = None 
+
+    frame_bit = 0 
 
     interval = 0 # Interval between frames in seconds
 
@@ -168,7 +190,6 @@ def receive_message():
 
                     if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
                         roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
-                        print("\n[INFO] ArUco markers detected, calculating ROI coordinates...")
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
@@ -250,7 +271,8 @@ def receive_message():
 
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
+                if last_color is not None and color != last_color:
+                    print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("[INFO] Starting color calibration...")
@@ -309,10 +331,11 @@ def receive_message():
                     current_time = time.time()
                     frame_time = current_time - last_frame_time 
 
-                    if frame_time >= interval:
-                        end_frame = True
-                        add_frame = True 
-                        last_frame_time = current_time 
+                    if interval > 0:
+                        if frame_time >= interval:
+                            end_frame = True
+                            add_frame = True 
+                            last_frame_time = current_time 
 
                     if color in ["white", "black"]: # If the color is white or black:
 
@@ -326,10 +349,13 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(roi_hsv, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(roi_hsv, add_frame, recall, end_frame)
+                        decode_bitgrid(roi_hsv, frame_bit, add_frame, recall, end_frame)
+
+                    if end_frame:
+                        frame_bit += 1 
 
                 last_color = color # Update the last color
 

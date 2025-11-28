@@ -287,8 +287,8 @@ def color_offset_calculation(roi):
         observed_hsv_dictionary[color] = np.median(roi_stripe.reshape(-1,3), axis = 0)
     
     hue_differences = []
-    saturation_differences = []
-    value_differences = []
+    saturation_scales = []
+    value_scales = []
     
     for color in ["blue", "green", "red"]:
         
@@ -296,17 +296,18 @@ def color_offset_calculation(roi):
         observed_hsv = observed_hsv_dictionary[color].astype(float)
 
         hue_differences.append(calculate_hue_difference(float(expected_hsv_range[0]), float(observed_hsv[0])))  
-        saturation_differences.append(float(expected_hsv_range[1]) - float(observed_hsv[1]))
-        value_differences.append(float(expected_hsv_range[2]) - float(observed_hsv[2]))
+        saturation_scales.append(expected_hsv_range[1] / max(1.0, observed_hsv[1]))
+        value_scales.append(expected_hsv_range[2] / max(1.0, observed_hsv[2]))
     
     average_hue_offset = np.mean(hue_differences)
-    average_saturation_offset = np.mean(saturation_differences)
-    average_value_offset = np.mean(value_differences)
 
+    saturation_scale = np.median(saturation_scales)
+    value_scale = np.median(value_scales)
+    
     print("\n=== Average HSV offsets applied ===")
     print(f"Average H offset: {average_hue_offset:.2f}")
-    print(f"Average S offset: {average_saturation_offset:.2f}")
-    print(f"Average V offset: {average_value_offset:.2f}\n")
+    print(f"S scale: {saturation_scale:.2f}")
+    print(f"V scale: {value_scale:.2f}\n")
     
     corrected_ranges = {}
 
@@ -318,10 +319,8 @@ def color_offset_calculation(roi):
         lower_h = (lower[0] + average_hue_offset) % 180
         upper_h = (upper[0] + average_hue_offset) % 180
 
-        sv_offset = np.array([average_saturation_offset, average_value_offset])
-
-        lower_sv = np.clip(lower[1:] + sv_offset, 0, 255)
-        upper_sv = np.clip(upper[1:] + sv_offset, 0, 255)
+        lower_sv = np.clip(lower[1:] * np.array([saturation_scale, value_scale]), 0, 255)
+        upper_sv = np.clip(upper[1:] * np.array([saturation_scale, value_scale]), 0, 255)
 
         lower_corrected = np.array([lower_h, lower_sv[0], lower_sv[1]])
         upper_corrected = np.array([upper_h, upper_sv[0], upper_sv[1]])
