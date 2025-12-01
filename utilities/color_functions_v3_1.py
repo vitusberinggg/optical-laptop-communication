@@ -214,31 +214,20 @@ def build_color_LUT(corrected_ranges):
 
     return LUT, color_names
 
-@njit
-def dominant_color_numba(classes, num_colors):
-    hist = np.zeros(num_colors, dtype=np.int32)
-    for i in range(classes.size):
-        hist[classes.ravel()[i]] += 1
-    return np.argmax(hist)
 
+def dominant_color(hsv):
 
-def dominant_color(hsv, sample_step=4):
-    """
-    Computes the dominant color in an HSV frame by sampling every `sample_step` pixel.
-    """
     LUT = tracker.LUT
     names = tracker.color_names
 
-    # Sample every `sample_step` pixel in height and width
-    H = hsv[::sample_step, ::sample_step, 0]
-    S = hsv[::sample_step, ::sample_step, 1]
-    V = hsv[::sample_step, ::sample_step, 2]
+    H = hsv[:, :, 0]
+    S = hsv[:, :, 1]
+    V = hsv[:, :, 2]
 
-    # LUT lookup for sampled pixels
     classes = LUT[H, S, V]
 
-    # Majority vote
     hist = np.bincount(classes.ravel(), minlength=len(names))
+
     return names[int(hist.argmax())]
 
 def color_offset_calculation(roi):

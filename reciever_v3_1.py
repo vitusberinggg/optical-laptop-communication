@@ -15,7 +15,7 @@ import time
 import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture, VideoCaptureSingle
-from utilities.color_functions_v3_1 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc, dominant_color_numba
+from utilities.color_functions_v3_1 import dominant_color, tracker, build_color_LUT, bitgrid_majority_calc
 from utilities import decoding_functions_v3_1, screen_alignment_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
@@ -25,15 +25,11 @@ from utilities.global_definitions import (
 
 # function that pre-compiles the numba functions to prevent lag on initial launch with them
 def warmup_all():
-    from utilities.color_functions_v3_1 import bitgrid_majority_calc, dominant_color_numba
+    from utilities.color_functions_v3_1 import bitgrid_majority_calc
 
     # Warm up bitgrid majority calc
     dummy_merged = np.zeros((2, 8, 16, 10), dtype=np.uint8)
     bitgrid_majority_calc(dummy_merged, 5)
-
-    # Warm up dominant color analyzer
-    dummy_classes = np.zeros((100,), dtype=np.uint8)
-    dominant_color_numba(dummy_classes, 5)
 
 
 # --- ArUco setup (match sender) ---
@@ -148,8 +144,6 @@ def receive_message():
             "black":  (np.array([0, 0, 0]), np.array([180, 255, 35])),
             "green":  (np.array([45, 80, 80]), np.array([75, 255, 255])),
             "blue":   (np.array([95, 120, 70]), np.array([130, 255, 255]))
-
-            
         }
     
 
