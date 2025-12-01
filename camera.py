@@ -17,6 +17,11 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
 
+    # ---- FULLSCREEN WINDOW ----
+    cv2.namedWindow("Camera View", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Camera View", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # ---------------------------
+
     print("Press 'q' in the video window to quit.")
     prev = time.time()
     frames = 0
