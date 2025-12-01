@@ -27,7 +27,7 @@ class BitColorTracker:
         self.number_of_rows = number_of_rows
         self.number_of_columns = number_of_columns
         self.current_bit_roi = [[[] for _ in range(number_of_columns)] for _ in range(number_of_rows)]
-        self.patch_fraction = 0.5
+        #self.patch_fraction = 0.5
 
     def add_frame(self, roi, row, col):
         
@@ -35,7 +35,8 @@ class BitColorTracker:
         
         """
 
-        #self.current_bit_roi[row][col].append(roi)
+        self.current_bit_roi[row][col].append(roi)
+        """
         h, w = roi.shape[:2]
         patch_h = int(h * self.patch_fraction)
         patch_w = int(w * self.patch_fraction)
@@ -45,6 +46,7 @@ class BitColorTracker:
 
         patch = roi[start_y:start_y+patch_h, start_x:start_x+patch_w]
         self.current_bit_roi[row][col].append(patch)
+        """
 
     def end_bit(self, row, col):
         
