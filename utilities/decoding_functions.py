@@ -1,5 +1,6 @@
 
 # --- Imports ---
+import numpy as np
 import time
 from utilities import color_functions
 
