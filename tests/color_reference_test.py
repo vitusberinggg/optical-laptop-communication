@@ -26,7 +26,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec2.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec3.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 """
 # Resolution
