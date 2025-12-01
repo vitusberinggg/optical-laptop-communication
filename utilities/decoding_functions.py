@@ -1,6 +1,6 @@
 
 # --- Imports ---
-
+import time
 from utilities import color_functions
 
 from utilities.global_definitions import number_of_rows, number_of_columns
