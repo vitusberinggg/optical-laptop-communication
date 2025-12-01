@@ -42,7 +42,7 @@ number_of_rows = 4 # Number of rows in the frame
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
 
-frame_duration = 0.2  # Duration for each frame in seconds
+frame_duration = 0.1  # Duration for each frame in seconds
 
 # --- Reciever input definitions ---
 
@@ -66,7 +66,7 @@ number_of_sync_frames = 6
 
 sync_colors = [black_bgr, white_bgr]
 
-sync_frame_duration = 0.2
+sync_frame_duration = 0.1
 
 # --- Display definitions ---
 
