@@ -26,7 +26,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec4.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 """
 # Resolution
@@ -35,11 +35,11 @@ videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
 # White balance
-"""
+
 videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
 videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
 print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
-"""
+
 # Exposure
 
 videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
@@ -157,26 +157,9 @@ def receive_message():
                break
 
 
-            # --- Debugging ---
-
-            """
-
-            frame_count += 1
-
-            current_time = time.time()
-
-            if current_time - previous_time >= 1.0:
-                print(f"[INFO] Loops per second: {frame_count}")
-                frame_count = 0
-                previous_time = current_time
-
-            """
-
-            # --- End of debugging ---
-
             # ArUco marker detection
 
-            if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
+           if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
 
                 try:
                     
@@ -197,9 +180,9 @@ def receive_message():
 
             # Display drawings
             
-            display = frame.copy() # Create a copy of the frame for display purposes
+           display = frame.copy() # Create a copy of the frame for display purposes
 
-            if marker_ids is not None and len(marker_ids) > 0:
+           if marker_ids is not None and len(marker_ids) > 0:
 
                 cv2.aruco.drawDetectedMarkers(display, corners, marker_ids) # Draw the detected markers on the display frame
 
@@ -207,12 +190,12 @@ def receive_message():
             
                 # marker_ids = None # Reset marker IDs to avoid repeated processing
                 
-            else:
+           else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-            cv2.imshow("Webcam Receiver", display)
+           cv2.imshow("Webcam Receiver", display)
 
-            if roi_coordinates is not None: # If there are ROI coordinates:
+           if roi_coordinates is not None: # If there are ROI coordinates:
                 
                 if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
 
@@ -360,7 +343,7 @@ def receive_message():
 
                 cv2.imshow("ROI", roi)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+           if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:

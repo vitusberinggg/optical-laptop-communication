@@ -1,9 +1,10 @@
 
 # --- Imports ---
-
+import numpy as np
+import time
 from utilities import color_functions
 
-from utilities.global_definitions import number_of_rows, number_of_columns
+from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
 from utilities.decoding_functions_v3_1 import bits_to_message
 
 # --- Functions ---

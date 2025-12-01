@@ -66,7 +66,7 @@ number_of_sync_frames = 6
 
 sync_colors = [black_bgr, white_bgr]
 
-sync_frame_duration = 0.2
+sync_frame_duration = 0.3
 
 # --- Display definitions ---
 
