@@ -17,7 +17,7 @@ from utilities.global_definitions import (
 
 # ---- Definitions ----
 
-message = "HELLO, THIS IS A TEST MESSAGE!"
+message = "Hej, det är Ben. Jag har insett att jag gjorde fel när jag åt pickles den där kvällen för länge sedan, och vill be om ursäkt. Kan det bli du och jag igen? // Din Ben <3"
 
 # --- Main function ---
 
