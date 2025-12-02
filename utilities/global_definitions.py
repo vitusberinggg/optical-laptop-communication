@@ -56,6 +56,7 @@ aruco_detector_parameters = cv2.aruco.DetectorParameters()
 
 aruco_marker_size = min(sender_output_width, sender_output_height) // 2 - 50
 aruco_marker_margin = 15
+margin_size_relation = aruco_marker_margin // aruco_marker_size
 aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 1
