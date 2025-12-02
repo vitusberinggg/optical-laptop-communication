@@ -202,7 +202,7 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin * 0.5 # Calculate the padding in pixels
+                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin * 0.3 # Calculate the padding in pixels
 
                     except Exception:
                         roi_padding_px = 0
