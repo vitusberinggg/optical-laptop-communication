@@ -5,7 +5,6 @@ import numpy as np
 import time
 
 from utilities import color_functions_v3_1
-from utilities.color_functions_v3_1 import dominant_color
 from utilities.global_definitions import number_of_sync_frames
 
 # --- Definitions ---
