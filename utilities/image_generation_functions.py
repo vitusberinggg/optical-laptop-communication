@@ -98,7 +98,7 @@ def create_aruco_marker_frame():
 def create_large_aruco_marker_frame(position = "right"):
     
     """
-    Creates a green frame with a single large ArUco marker on the left or right.
+    Creates a gray frame with a single large ArUco marker on the left or right.
 
     Arguments:
         position (str): "right" or "left" side for the marker (default "right").
