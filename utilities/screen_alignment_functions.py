@@ -63,7 +63,7 @@ def roi_alignment(frame, inset_px = 0):
 
 saved_corners = {0: None, 1: None} 
 
-def roi_alignment_for_large_markers(corners, marker_ids, frame, margin):
+def roi_alignment_for_large_markers(corners, marker_ids, frame):
 
     """
     Creates a ROI around the outer corners of the ArUco markers.
@@ -111,8 +111,8 @@ def roi_alignment_for_large_markers(corners, marker_ids, frame, margin):
 
         all_corners = np.vstack([saved_corners[0], saved_corners[1]])
 
-        x0, y0 = np.min(all_corners, axis = 0) - margin
-        x1, y1 = np.max(all_corners, axis = 0) + margin
+        x0, y0 = np.min(all_corners, axis = 0) 
+        x1, y1 = np.max(all_corners, axis = 0) 
 
         x0, x1 = max(0, int(x0)), min(w, int(x1))
         y0, y1 = max(0, int(y0)), min(h, int(y1))
