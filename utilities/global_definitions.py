@@ -42,7 +42,7 @@ number_of_rows = 8 # Number of rows in the frame
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
 
-frame_duration = 0.3  # Duration for each frame in seconds
+frame_duration = 0.3 # Duration for each frame in seconds
 
 # --- Reciever input definitions ---
 
@@ -56,6 +56,7 @@ aruco_detector_parameters = cv2.aruco.DetectorParameters()
 
 aruco_marker_size = min(sender_output_width, sender_output_height) // 2 - 50
 aruco_marker_margin = 15
+margin_size_relation = aruco_marker_margin // aruco_marker_size
 aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 1
