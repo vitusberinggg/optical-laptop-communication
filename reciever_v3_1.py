@@ -4,8 +4,9 @@
 import cProfile
 import pstats
 
-profiler = cProfile.Profile()
-profiler.enable()
+if __name__ == '__main__':
+    profiler = cProfile.Profile()
+    profiler.enable()
 
 import threading
 import queue
@@ -311,7 +312,7 @@ def receive_message():
 
         # --- Sync ---
 
-        if syncing:
+        elif syncing:
             color = dominant_color(small_roi)
             interval, syncing = decoding_functions_v3_1.sync_interval_detector(color, True)
             if not syncing:
@@ -366,11 +367,13 @@ def receive_message():
     cv2.destroyAllWindows()
 
 # --- Run ---
-receive_message()
 
-profiler.disable()
+if __name__ == '__main__':
+    receive_message()
 
-stats = pstats.Stats(profiler)
-stats.strip_dirs()        # remove full paths
-stats.sort_stats("cumtime")  # sort by cumulative time
-stats.print_stats(20)      # print only top 20 functions
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+    stats.strip_dirs()        # remove full paths
+    stats.sort_stats("cumtime")  # sort by cumulative time
+    stats.print_stats(20)      # print only top 20 functions

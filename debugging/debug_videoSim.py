@@ -1,9 +1,12 @@
 import cv2
 import time
 import numpy as np
+import queue
+from utilities.decoding_functions_v3_1 import decode_bitgrid
 from utilities.color_functions_v3_1 import build_color_LUT, tracker
 from bitgrid_debugger import debug_bitgrid_realtime
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
+from reciever_v3_1 import decoding_worker
 
 # function that pre-compiles the numba functions to prevent lag on initial launch with them
 def warmup_all():
@@ -63,14 +66,32 @@ if not ret:
 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 #overlay = debug_bitgrid_realtime(hsv, LUT=LUT, color_names=color_names)
 
-for i in range(100):
-    tracker.add_frame(hsv)
-
 track = time.time()
-bitgrid = tracker.end_bit()
+for i in range(6):
+    from reciever_v3_1 import frame_queue
+
+    add_frame = False
+    end_frame = False
+    recall = False
+
+    if i < 4:
+        add_frame = True
+    elif i == 4:
+        add_frame = True
+        end_frame = True
+    else:
+        recall = True
+
+    try:
+        frame_queue.put_nowait((hsv.copy(), recall, add_frame, end_frame))
+    except queue.Full:
+        pass  # skip if queue is full
+
+from reciever_v3_1 import decoded_message
+message = decoded_message
 print(f"[DEBUG] Time taken to process bitgrid: {time.time() - track:.3f} seconds")
 
-print(f"[DEBUG] Final bitgrid:\n{bitgrid}")
+print(f"Decoded message: {message}")
 
 key = cv2.waitKey(1) & 0xFF
 #if key == ord('q'):

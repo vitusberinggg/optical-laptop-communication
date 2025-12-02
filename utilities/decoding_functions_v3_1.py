@@ -51,13 +51,15 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
             return None
 
         # Combine all bitgrids horizontally
-        combined = np.hstack(bitgrids)     # shape becomes (8, N)
+        combined = np.vstack(bitgrids)     # shape becomes (8, N)
 
         flat = combined.ravel()
         num_bytes = len(flat) // 8
 
         # Split into 8-bit chunks
         byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
+
+        print(f"Decoding bit matrix into bytes: \n{byte_matrix}\n")
 
         print(f"Decoded {len(byte_matrix)} bytes:")
 
