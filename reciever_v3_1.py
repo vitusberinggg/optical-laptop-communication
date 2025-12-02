@@ -28,7 +28,7 @@ def warmup_all():
     from utilities.color_functions_v3_1 import bitgrid_majority_calc
 
     # Warm up bitgrid majority calc
-    dummy_merged = np.zeros((2, 8, 16, 10), dtype=np.uint8)
+    dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype=np.uint8)
     bitgrid_majority_calc(dummy_merged, 5)
 
 
@@ -182,6 +182,7 @@ def receive_message():
     while True:
 
         ret, frame = cap.read()
+        frame = frame.copy()
 
         if not ret:
 

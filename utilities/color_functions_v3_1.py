@@ -38,7 +38,7 @@ class BitColorTracker:
 
     def _pad_frames(self, frames):
         # H = frame height, W = frame width
-        N, H, W, C = frames.shape
+        _, H, W, _ = frames.shape
 
         # dividing H/W into cell_H/-W
         # always rounds up, ex. 4.1 -> 5
@@ -60,63 +60,54 @@ class BitColorTracker:
             mode='edge'
         )
         return padded_frames, cell_h, cell_w
-
+  
     def end_bit(self):
-        # checks if hsv_frames has any elements in it, if so return None to prevent an exception
+
+
         if len(self.hsv_frames) == 0:
             return None
 
-        # hsv_frames = all hsv in an array
-        # if the given hsv is not divisible by the number of rows/cols in height/width it will padd the hsv
-        # hsv = frame but is read in hsv and not bgr
         hsv_frames = np.asarray(self.hsv_frames)
-        padded_frames, self.cell_h, self.cell_w = self._pad_frames(hsv_frames)
         self.hsv_frames = []
 
+        padded_frames, self.cell_h, self.cell_w = self._pad_frames(hsv_frames)
+
         N, H, W, _ = padded_frames.shape
-        # N = number frames, H = height of padded frame, W = width of the padded frame
 
-        # split padded frame into grid cells
-        cells = padded_frames.reshape(
-            N, self.rows, self.cell_h,
-            self.cols, self.cell_w, 3
-        )
+        # Split into cells
+        cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
 
-        # size of the smaller sample inside each cell
-        ds_h = max(self.cell_h // 4, 1)
-        ds_w = max(self.cell_w // 4, 1)
+        # --- Centered rectangle sampling inside each cell ---
+        patch_h = max(self.cell_h // 4, 1)
+        patch_w = max(self.cell_w // 4, 1)
 
-        # making the smaller sample with the given sizes
-        sampled_cells = cells[:, :, ::ds_h, :, ::ds_w, :]
+        h0 = (self.cell_h - patch_h) // 2
+        h1 = h0 + patch_h
+        w0 = (self.cell_w - patch_w) // 2
+        w1 = w0 + patch_w
 
-        # HSV → class IDs via LUT
+        sampled_cells = cells[:, :, h0:h1, :, w0:w1, :]  # shape: (N, rows, patch_h, cols, patch_w, 3)
+
+        # HSV → class IDs using LUT
         Hc = sampled_cells[..., 0].astype(np.uint16)
         Sc = sampled_cells[..., 1].astype(np.uint16)
         Vc = sampled_cells[..., 2].astype(np.uint16)
+        classes = self.LUT[Hc, Sc, Vc]  # shape: (N, rows, patch_h, cols, patch_w)
 
-        classes = self.LUT[Hc, Sc, Vc]    # shape: (N, rows, ds_h, cols, ds_w)
+        # Merge all samples per cell
+        merged = classes  # shape: (N, rows, patch_h, cols, patch_w)
 
-        # collapse all samples inside each cell to 1 dimension:
-        # for each frame n, row r, col c, collect all sample values
-        N, R, Sh, C, Sw = classes.shape
-        num_samples = Sh * Sw
-        # num_samples basically means all the pixels inside the sample rectangle in each cell
-
-        merged = classes.reshape(N, R, C, num_samples)
-        # merged.shape = (frames, rows, cols, samples_per_cell)
-
-        # makes a variable that has the value of the number of different colors in the Lookup Table
+        # Majority vote
         num_classes = int(self.LUT.max()) + 1
+        bitgrid = bitgrid_majority_calc(merged, num_classes)
 
-        bitgrid = bitgrid_majority_calc(merged, num_classes)  # bitgrid(rows, cols)
+        print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
-        print(f"[DEBUG] bitgrid with colors ids: {bitgrid}")
-
-        # checks if its white or not
         white_idx = 2
         bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
 
         return bitgrid_str
+
 
     def reset(self):
         self.hsv_frames = []
@@ -125,11 +116,11 @@ class BitColorTracker:
         self.LUT = LUT
         self.color_names = color_names
 
-# --- Numba helper for majority vote ---
+
 @njit(parallel=True)
 def bitgrid_majority_calc(merged, num_classes):
-    # merged shape: (N_frames, R_rows, C_cols, S_samples)
-    N, R, C, S = merged.shape
+    # merged shape: (N, rows, patch_h, cols, patch_w)
+    N, R, Ph, C, Pw = merged.shape
 
     out = np.empty((R, C), dtype=np.int32)
 
@@ -143,10 +134,11 @@ def bitgrid_majority_calc(merged, num_classes):
 
             # accumulate across all frames and samples inside the cell
             for n in range(N):
-                for s in range(S):
-                    cls = merged[n, r, c, s]
-                    if 0 <= cls < num_classes:
-                        counts[cls] += 1
+                for ph in range(Ph):
+                    for pw in range(Pw):
+                        cls = merged[n, r, ph, c, pw]
+                        if 0 <= cls < num_classes:
+                            counts[cls] += 1
 
             # find the average of this particular cell
             max_class = 0
@@ -162,6 +154,7 @@ def bitgrid_majority_calc(merged, num_classes):
 
     # returns an 2-D array of color ids
     return out
+
 
 tracker = BitColorTracker()
 
