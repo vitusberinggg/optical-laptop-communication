@@ -18,7 +18,7 @@ from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
-    aruco_marker_dictionary, aruco_detector_parameters, aruco_marker_size, aruco_marker_margin,
+    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
     roi_rectangle_thickness, minimized_roi_rectangle_thickness
@@ -26,7 +26,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_video.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_live.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 """
 # Resolution
@@ -203,7 +203,7 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin * 0.5# Calculate the padding in pixels
+                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
                     except Exception:
                         roi_padding_px = 0
 
