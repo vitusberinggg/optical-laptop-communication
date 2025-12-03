@@ -457,8 +457,6 @@ def receive_message():
                         add_frame = True
 
                     elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
-
-                        break
                         
                         print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
                         while not frame_queue.empty(): # Waits for the frame queue to be empty

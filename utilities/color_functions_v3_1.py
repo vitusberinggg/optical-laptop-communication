@@ -35,8 +35,7 @@ class BitColorTracker:
 
         if not hasattr(BitColorTracker.add_frame, "walla") and (time.time() - self.time_in > 0.15) and self.time_in != 0:
             # debug dump
-            #cv2.imwrite("debug_roi_bgr.png", roi)  # BGR image of the ROI
-            np.save("debug_hsv_roi.npy", hsv_roi)  # exact HSV array
+            
             # quick stats
             H = hsv_roi[:,:,0]; S = hsv_roi[:,:,1]; V = hsv_roi[:,:,2]
             print("HSV roi shape:", hsv_roi.shape, "dtype:", hsv_roi.dtype)
@@ -233,7 +232,12 @@ def dominant_color_hsv(hsv):
 
     hist = np.bincount(classes.ravel(), minlength=len(names))
 
-    return names[int(hist.argmax())]
+    names = names[int(hist.argmax())]
+
+    if names == "red1" or names == "red2":
+        return "red"
+    else:
+        return names
 
 def dominant_color_bgr(roi):
 
