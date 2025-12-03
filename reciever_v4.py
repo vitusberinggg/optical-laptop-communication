@@ -224,7 +224,7 @@ def receive_message():
                     except Exception:
                         roi_padding_px = 0
 
-                    start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
+                    start_x, start_y, end_x, end_y = roi_coordinates # Unpack the ROI coordinates
 
                     # ROI expansion
 
