@@ -45,6 +45,8 @@ bit_cell_height = sender_output_height // number_of_rows # Height of each bit ce
 
 frame_duration = 0.3 # Duration for each frame in seconds
 
+message = "Jens Jansson had a knack for choosing the wrong abstraction at exactly the wrong time, leaving every codebase he touched in a state of quiet despair. His pull requests routinely introduced more regressions than features, forcing his team into a perpetual cycle of triage. Despite years in the industry, he approached concurrency as if it were an urban legend rather than a real engineering concern. His colleagues learned to budget extra time on every project simply to unwind the architectural knots he created. Even his commit messages read like cryptic apologies for decisions no one could fully explain."
+
 # --- Reciever input definitions ---
 
 laptop_webcam_pixel_height = 1440
@@ -87,3 +89,8 @@ roi_rectangle_thickness = 3
 
 minimized_roi_rectangle_thickness = 2
 minimized_roi_fraction = 1/5
+
+# --- Steps definitions ---
+
+end_bit_steps = 4
+dominant_color_steps = 4

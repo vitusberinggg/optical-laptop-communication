@@ -13,7 +13,8 @@ from utilities.global_definitions import (
     white_lower_hsv_limit, white_upper_hsv_limit,
     black_lower_hsv_limit, black_upper_hsv_limit,
     green_lower_hsv_limit, green_upper_hsv_limit,
-    blue_lower_hsv_limit, blue_upper_hsv_limit
+    blue_lower_hsv_limit, blue_upper_hsv_limit,
+    end_bit_steps, dominant_color_steps
     )
 
 # --- Functions ---
@@ -35,8 +36,7 @@ class BitColorTracker:
 
         if not hasattr(BitColorTracker.add_frame, "walla") and (time.time() - self.time_in > 0.15) and self.time_in != 0:
             # debug dump
-            #cv2.imwrite("debug_roi_bgr.png", roi)  # BGR image of the ROI
-            np.save("debug_hsv_roi.npy", hsv_roi)  # exact HSV array
+            
             # quick stats
             H = hsv_roi[:,:,0]; S = hsv_roi[:,:,1]; V = hsv_roi[:,:,2]
             print("HSV roi shape:", hsv_roi.shape, "dtype:", hsv_roi.dtype)
@@ -88,8 +88,8 @@ class BitColorTracker:
         cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
 
         # --- Centered rectangle sampling inside each cell ---
-        patch_h = max(self.cell_h // 4, 1)
-        patch_w = max(self.cell_w // 4, 1)
+        patch_h = max(self.cell_h // 2, 1)
+        patch_w = max(self.cell_w // 2, 1)
 
         h0 = (self.cell_h - patch_h) // 2
         h1 = h0 + patch_h
@@ -97,6 +97,8 @@ class BitColorTracker:
         w1 = w0 + patch_w
 
         sampled_cells = cells[:, :, h0:h1, :, w0:w1, :]  # shape: (N, rows, patch_h, cols, patch_w, 3)
+        if patch_h > end_bit_steps and patch_w > end_bit_steps:
+            sampled_cells = sampled_cells[:, :, ::end_bit_steps, :, ::end_bit_steps, :] # adding pixel steps to prevent too many pixels  
 
         # HSV → class IDs using LUT
         Hc = sampled_cells[..., 0].astype(np.uint16)
@@ -111,12 +113,12 @@ class BitColorTracker:
         num_classes = int(self.LUT.max()) + 1
         bitgrid = bitgrid_majority_calc(merged, num_classes)
 
-        print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
+        #print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
         white_idx = 2
         bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
 
-        print(f"[DEBUG] bitgrid: \n{bitgrid_str}")
+        #print(f"[DEBUG] bitgrid: \n{bitgrid_str}")
 
         return bitgrid_str
 
@@ -224,6 +226,11 @@ def dominant_color_hsv(hsv):
 
     LUT = tracker.LUT
     names = tracker.color_names
+    
+    ph, pw, _ = hsv.shape
+    
+    if ph > dominant_color_steps and pw > dominant_color_steps: # adding pixel steps to prevent too many pixels
+        hsv = hsv [::dominant_color_steps, ::dominant_color_steps, :]
 
     H = hsv[:, :, 0]
     S = hsv[:, :, 1]
@@ -233,7 +240,12 @@ def dominant_color_hsv(hsv):
 
     hist = np.bincount(classes.ravel(), minlength=len(names))
 
-    return names[int(hist.argmax())]
+    names = names[int(hist.argmax())]
+
+    if names == "red1" or names == "red2":
+        return "red"
+    else:
+        return names
 
 def dominant_color_bgr(roi):
 

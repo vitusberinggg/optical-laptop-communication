@@ -2,6 +2,7 @@
 # --- Imports ---
 
 import cProfile
+import pstats
 
 # Enables profiling if run as main module
 if __name__ == '__main__':
@@ -19,23 +20,25 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions_v3_1 import sync_interval_detector, decode_bitgrid
+from utilities.accuracy_calculator import accuracy_calculator
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
+    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
-    roi_rectangle_thickness, minimized_roi_rectangle_thickness
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
-#videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+#videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
+videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 
 # Resolution
-'''
+
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
@@ -54,7 +57,7 @@ print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE
 # Gain
 
 videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
-'''
+
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -94,7 +97,7 @@ def warmup_all():
 frame_queue = queue.Queue(maxsize=100)
 last_queue_debug = 0
 decode_last_time = time.time()
-decoded_message = ""
+decoded_message = None
 stop_thread = False
 
 # --- Decoding worker thread ---
@@ -118,9 +121,14 @@ def decoding_worker():
 
         # Decode bitgrid
         if recall:
-            decoded_message = decode_bitgrid(
+            result = decode_bitgrid(
                 hsv_roi, add_frame, recall, end_frame
             )
+
+            # Only accept valid non-empty results
+            if isinstance(result, str) and result.strip() != "":
+                decoded_message = result
+
         else:
             decode_bitgrid(
                 hsv_roi, add_frame, recall, end_frame
@@ -179,9 +187,6 @@ def receive_message():
     # Variable initialization
 
     bits = ""
-    message = ""
-
-    minimized_roi_fraction = 1/5
 
     marker_ids = None
     corners = None
@@ -189,8 +194,6 @@ def receive_message():
     last_color = None
 
     last_frame_time = None 
-
-    frame_bit = 0 
 
     interval = 0 # Interval between frames in seconds
 
@@ -212,14 +215,14 @@ def receive_message():
     """
 
     # --- End of debugging ---
-    '''
+    
     print("\n[INFO] Receiver started")
 
     actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
     print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
-    '''
+    
     # --- Debugging ---
 
     """
@@ -307,8 +310,7 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        #roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
-                        roi_padding_px = 0
+                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
                     except Exception:
                         roi_padding_px = 0
 
@@ -455,16 +457,25 @@ def receive_message():
                         add_frame = True
 
                     elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
+                        
+                        print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
+                        while not frame_queue.empty(): # Waits for the frame queue to be empty
+                            time.sleep(0.005)
 
                         recall = True # Set recall to True
-
-                    elif color == "red" and last_color == "red":
-                        break
+                        print("\n[INFO] Frames finished — recalling message...")
 
                     try:
                         frame_queue.put_nowait((roi_hsv.copy(), recall, add_frame, end_frame))
                     except queue.Full:
                         pass  # [Failsafe] Skip if queue is full
+
+                    while recall and (decoded_message is None or decoded_message.strip() == ""):
+                        time.sleep(0.05)
+
+                    if decoded_message is not None:
+                        print("\n[INFO] Decoding finished.")
+                        break
 
                 # --- End of decoding ---
 
@@ -483,8 +494,12 @@ def receive_message():
         if bits: # If there are remaining bits not yet converted:
             print(f"[INFO] Bits not yet converted: {bits}")
 
-        print("\n[INFO] Final message:", message)
-    
+        print(f"\n[INFO] Final message: {decoded_message}")
+
+        accuracy_percentage = accuracy_calculator(decoded_message)
+
+        print(f"\n[INFO] Accuracy: {accuracy_percentage} %")
+
     finally:
         videoCapture.release()
         cv2.destroyAllWindows() 
@@ -493,3 +508,10 @@ def receive_message():
 
 if __name__ == "__main__":
     receive_message()
+
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+    stats.strip_dirs()        # remove full paths
+    stats.sort_stats("cumtime")  # sort by cumulative time
+    stats.print_stats(20)      # print only top 20 functions
