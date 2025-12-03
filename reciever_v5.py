@@ -20,6 +20,7 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions_v3_1 import sync_interval_detector, decode_bitgrid
+from utilities.accuracy_calculator import accuracy_calculator
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -496,7 +497,11 @@ def receive_message():
             print(f"[INFO] Bits not yet converted: {bits}")
 
         print(f"\n[INFO] Final message: {decoded_message}")
-    
+
+        accuracy_percentage = accuracy_calculator(decoded_message)
+
+        print(f"\n[INFO] Accuracy: {accuracy_percentage} %")
+
     finally:
         videoCapture.release()
         cv2.destroyAllWindows() 
