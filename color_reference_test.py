@@ -26,7 +26,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec4.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_video.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 """
 # Resolution
@@ -203,12 +203,11 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin # Calculate the padding in pixels
-
+                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin * 0.5# Calculate the padding in pixels
                     except Exception:
                         roi_padding_px = 0
 
-                    start_x, start_y, end_x, end_y = roi_coordinates # Unpack the ROI coordinates
+                    start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
 
                     # ROI expansion
 
