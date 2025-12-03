@@ -118,7 +118,7 @@ def roi_alignment_for_large_markers(corners, marker_ids, frame):
         y0, y1 = max(0, int(y0)), min(h, int(y1))
 
         if x1 - x0 > 5 and y1 - y0 > 5:
-            roi_coordinates = (x0, y0, x1, y1)
+            roi_coordinates = (x0, x1, y0, y1)
             print("\n[INFO] ROI set around outer corners of markers.")
 
     return roi_coordinates, w_px, h_px
