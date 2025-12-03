@@ -210,13 +210,13 @@ def receive_message():
                     start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
 
                     # ROI expansion
-
+                    """
                     start_x = int(start_x - roi_padding_px)
                     end_x = int(end_x + roi_padding_px)
 
                     start_y = int(start_y - roi_padding_px)
                     end_y = int(end_y + roi_padding_px)
-
+                    """
                     # Minimized ROI coordinates
 
                     print("\n[INFO] Calculating minimized ROI coordinates...")
