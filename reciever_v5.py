@@ -307,20 +307,26 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin # Calculate the padding in pixels
-
+                        #roi_padding_px = (aruco_marker_side_length / aruco_marker_size) * aruco_marker_margin # Calculate the padding in pixels
+                        roi_padding_px = 0
                     except Exception:
                         roi_padding_px = 0
+
+                        
 
                     start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
 
                     # ROI expansion
+
+                    print("\n[INFO] Calculating ROI coordinates...")
 
                     start_x = int(start_x - roi_padding_px)
                     end_x = int(end_x + roi_padding_px)
 
                     start_y = int(start_y - roi_padding_px)
                     end_y = int(end_y + roi_padding_px)
+
+                    print(f"\n[DEBUG] ROI coordinates: (start_x = {locals().get('start_x')}, end_x = {locals().get('end_x')}, start_y = {locals().get('start_y')}, end_y = {locals().get('end_y')})")
 
                     # Minimized ROI coordinates
 
