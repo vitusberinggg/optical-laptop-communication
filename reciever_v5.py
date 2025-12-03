@@ -2,6 +2,7 @@
 # --- Imports ---
 
 import cProfile
+import pstats
 
 # Enables profiling if run as main module
 if __name__ == '__main__':
@@ -504,3 +505,10 @@ def receive_message():
 
 if __name__ == "__main__":
     receive_message()
+
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+    stats.strip_dirs()        # remove full paths
+    stats.sort_stats("cumtime")  # sort by cumulative time
+    stats.print_stats(20)      # print only top 20 functions
