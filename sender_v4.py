@@ -10,14 +10,11 @@ from utilities.image_generation_functions import (
     create_color_reference_frame, create_large_aruco_marker_frame
 )
 from utilities.global_definitions import (
+    message,
     aruco_marker_frame_duration, frame_duration,
     red_bgr,
     sync_colors, number_of_sync_frames, sync_frame_duration
 )
-
-# ---- Definitions ----
-
-message = "Jens Jansson had a knack for choosing the wrong abstraction at exactly the wrong time, leaving every codebase he touched in a state of quiet despair. His pull requests routinely introduced more regressions than features, forcing his team into a perpetual cycle of triage. Despite years in the industry, he approached concurrency as if it were an urban legend rather than a real engineering concern. His colleagues learned to budget extra time on every project simply to unwind the architectural knots he created. Even his commit messages read like cryptic apologies for decisions no one could fully explain."
 
 # --- Main function ---
 
