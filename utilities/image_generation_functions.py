@@ -5,11 +5,11 @@ import numpy as np
 import cv2
 
 from utilities.global_definitions import (
-    red_bgr, green_bgr, blue_bgr,
+    red_bgr, green_bgr, blue_bgr, gray_bgr,
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
-    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin, aruco_marker_ids
+    aruco_marker_dictionary, small_aruco_marker_side_length, large_aruco_marker_side_length, aruco_marker_margin, aruco_marker_ids
 )
 
 # --- Functions ---
@@ -83,15 +83,15 @@ def create_aruco_marker_frame():
 
     aruco_marker_positions = [
         (aruco_marker_margin, aruco_marker_margin), # Top-left marker
-        (sender_output_width - aruco_marker_margin - aruco_marker_size, aruco_marker_margin), # Top-right marker
-        (aruco_marker_margin, sender_output_height - aruco_marker_margin - aruco_marker_size), # Bottom-left marker
-        (sender_output_width - aruco_marker_margin - aruco_marker_size, sender_output_height - aruco_marker_margin - aruco_marker_size) # Bottom-right marker
+        (sender_output_width - aruco_marker_margin - small_aruco_marker_side_length, aruco_marker_margin), # Top-right marker
+        (aruco_marker_margin, sender_output_height - aruco_marker_margin - small_aruco_marker_side_length), # Bottom-left marker
+        (sender_output_width - aruco_marker_margin - small_aruco_marker_side_length, sender_output_height - aruco_marker_margin - small_aruco_marker_side_length) # Bottom-right marker
     ]
 
     for (x_coordinate, y_coordinate), aruco_marker_id in zip(aruco_marker_positions, aruco_marker_ids):
-        marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, aruco_marker_size)
+        marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, small_aruco_marker_side_length)
         marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
-        frame[y_coordinate:y_coordinate + aruco_marker_size, x_coordinate:x_coordinate + aruco_marker_size] = marker_bgr
+        frame[y_coordinate:y_coordinate + small_aruco_marker_side_length, x_coordinate:x_coordinate + small_aruco_marker_side_length] = marker_bgr
 
     return frame
 
@@ -108,28 +108,29 @@ def create_large_aruco_marker_frame(position = "right"):
         
     """
 
-    frame = create_color_frame([128, 128, 128])
+    frame = create_color_frame(gray_bgr)
 
-    margin = aruco_marker_margin
-    marker_size = sender_output_height - 2 * margin
-
-    y_coordinate = margin
+    y_coordinate = aruco_marker_margin
 
     if position == "right":
-        x_coordinate = sender_output_width - margin - marker_size
+        x_coordinate = sender_output_width - aruco_marker_margin - large_aruco_marker_side_length
 
     elif position == "left":
-        x_coordinate = margin
+        x_coordinate = aruco_marker_margin
 
     else:
         raise ValueError("position must be 'left' or 'right'")
+    
+    if position == "right":
+        aruco_marker_id = aruco_marker_ids[0]
 
-    aruco_marker_id = aruco_marker_ids[0] if position == "right" else aruco_marker_ids[1]
+    else:
+       aruco_marker_id = aruco_marker_ids[1]
 
-    marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, marker_size)
+    marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, large_aruco_marker_side_length)
     marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
 
-    frame[y_coordinate:y_coordinate + marker_size, x_coordinate:x_coordinate + marker_size] = marker_bgr
+    frame[y_coordinate:y_coordinate + large_aruco_marker_side_length, x_coordinate:x_coordinate + large_aruco_marker_side_length] = marker_bgr
 
     return frame
 
