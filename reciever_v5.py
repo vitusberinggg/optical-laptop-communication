@@ -34,11 +34,11 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
-#videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+#videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
+videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 
 # Resolution
-'''
+
 videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
 videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
@@ -57,7 +57,7 @@ print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE
 # Gain
 
 videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
-'''
+
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -215,14 +215,14 @@ def receive_message():
     """
 
     # --- End of debugging ---
-    '''
+    
     print("\n[INFO] Receiver started")
 
     actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
     print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
-    '''
+    
     # --- Debugging ---
 
     """
