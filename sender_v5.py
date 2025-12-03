@@ -117,7 +117,7 @@ def send_message(message):
 
         end_of_sync_frame_start_time = time.monotonic()
 
-        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration * 0.5):
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
 
             cv2.imshow(window, blue_frame)
 
