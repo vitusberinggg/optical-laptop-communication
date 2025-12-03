@@ -3,7 +3,7 @@
 
 import difflib
 
-from global_definitions import message
+from utilities.global_definitions import message
 
 # --- Main function ---
 
