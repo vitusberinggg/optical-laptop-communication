@@ -187,7 +187,7 @@ def receive_message():
 
     bits = ""
 
-    minimized_roi_fraction = 1/5
+    minimized_roi_fraction = 1/10
 
     marker_ids = None
     corners = None

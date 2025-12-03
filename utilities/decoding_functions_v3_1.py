@@ -58,7 +58,7 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
         # Split into 8-bit chunks
         byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
 
-        print(f"Decoding bit matrix into bytes: \n{byte_matrix}\n")
+        #print(f"Decoding bit matrix into bytes: \n{byte_matrix}\n")
 
         print(f"Decoded {len(byte_matrix)} bytes:")
 
