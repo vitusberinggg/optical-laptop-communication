@@ -20,8 +20,14 @@ def accuracy_calculator(recieved_message):
 
     """
 
-    sequenceMatcher = difflib.SequenceMatcher(None, message, recieved_message)
+    if recieved_message:
 
-    accuracy_percentage = round(sequenceMatcher.ratio() * 100)
+        sequenceMatcher = difflib.SequenceMatcher(None, message, recieved_message)
 
-    return accuracy_percentage
+        accuracy_percentage = round(sequenceMatcher.ratio() * 100)
+
+        return accuracy_percentage
+    
+    else:
+
+        return 0
