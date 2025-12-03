@@ -9,7 +9,7 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions import dominant_color, tracker
 from utilities import screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
-    aruco_marker_size, aruco_marker_margin
+    small_aruco_marker_side_length, aruco_marker_margin
 )
 
 # --- Setup capture ---
@@ -115,10 +115,10 @@ def receive_message():
         if roi_coords is not None:
             x0, x1, y0, y1 = roi_coords
 
-            x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
-            x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+            x0 = int(x0 - (marker_w/small_aruco_marker_side_length) * aruco_marker_margin)
+            y0 = int(y0 - (marker_h/small_aruco_marker_side_length) * aruco_marker_margin)
+            x1 = int(x1 + (marker_w/small_aruco_marker_side_length) * aruco_marker_margin)
+            y1 = int(y1 + (marker_h/small_aruco_marker_side_length) * aruco_marker_margin)
 
             if x0 < x1 and y0 < y1:
                 cv2.rectangle(display, (x0, y0), (x1, y1), (0, 255, 255), 2)

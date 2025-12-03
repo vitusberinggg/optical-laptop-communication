@@ -21,7 +21,7 @@ from utilities import decoding_functions_v3_1, screen_alignment_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
-    aruco_marker_dictionary, aruco_marker_size, aruco_marker_margin
+    aruco_marker_dictionary, small_aruco_marker_side_length, aruco_marker_margin
 )
 
 # function that pre-compiles the numba functions to prevent lag on initial launch with them
@@ -244,10 +244,10 @@ def receive_message():
         if roi_coords is not None and not hasattr(receive_message, "roi_padded"):
             
             x0, x1, y0, y1 = roi_coords
-            x0 = int(x0 - (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y0 = int(y0 - (marker_h/aruco_marker_size) * aruco_marker_margin)
-            x1 = int(x1 + (marker_w/aruco_marker_size) * aruco_marker_margin)
-            y1 = int(y1 + (marker_h/aruco_marker_size) * aruco_marker_margin)
+            x0 = int(x0 - (marker_w/small_aruco_marker_side_length) * aruco_marker_margin)
+            y0 = int(y0 - (marker_h/small_aruco_marker_side_length) * aruco_marker_margin)
+            x1 = int(x1 + (marker_w/small_aruco_marker_side_length) * aruco_marker_margin)
+            y1 = int(y1 + (marker_h/small_aruco_marker_side_length) * aruco_marker_margin)
 
             dX = ((x1 - x0) * 2)/5
             dY = ((y1 - y0) * 2)/5

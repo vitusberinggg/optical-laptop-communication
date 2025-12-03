@@ -8,9 +8,10 @@ import cv2
 red_bgr = (0, 0, 255)
 green_bgr = (0, 255, 0)
 blue_bgr = (255, 0, 0)
+yellow_bgr = (0, 255, 255)
 black_bgr = (0, 0, 0)
 white_bgr = (255, 255, 255)
-yellow_bgr = (0, 255, 255)
+gray_bgr = (128, 128, 128)
 
 # --- HSV definitions ---
 
@@ -42,7 +43,7 @@ number_of_rows = 8 # Number of rows in the frame
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
 
-frame_duration = 0.3 # Duration for each frame in seconds
+frame_duration = 0.4 # Duration for each frame in seconds
 
 # --- Reciever input definitions ---
 
@@ -56,9 +57,9 @@ aruco_detector_parameters = cv2.aruco.DetectorParameters()
 
 aruco_marker_margin = 15
 
-aruco_marker_size = min(sender_output_width, sender_output_height) // 2 - 50
+small_aruco_marker_side_length = sender_output_height // 2 - 50
 large_aruco_marker_side_length = sender_output_height - 2 * aruco_marker_margin
-
+aruco_marker_size = 0
 aruco_marker_ids = [0, 1, 3, 2]
 
 aruco_marker_frame_duration = 1
@@ -69,7 +70,7 @@ number_of_sync_frames = 6
 
 sync_colors = [black_bgr, white_bgr]
 
-sync_frame_duration = 0.3
+sync_frame_duration = 0.4
 
 # --- Display definitions ---
 
