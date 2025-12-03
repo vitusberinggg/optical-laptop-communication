@@ -11,7 +11,7 @@ from utilities.image_generation_functions import (
 )
 from utilities.global_definitions import (
     aruco_marker_frame_duration, frame_duration,
-    red_bgr,
+    red_bgr, blue_bgr,
     sync_colors, number_of_sync_frames, sync_frame_duration
 )
 
@@ -43,6 +43,8 @@ def send_message(message):
         sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
     frame_bit_arrays = message_to_frame_bit_arrays(message) # Converts the message to frame bit arrays
+
+    blue_frame = create_color_frame(blue_bgr)
 
     data_frames = []
 
@@ -110,6 +112,19 @@ def send_message(message):
                 time.sleep(0.001)
 
     try:
+
+# End of sync
+
+        end_of_sync_frame_start_time = time.monotonic()
+
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration * 0.5):
+
+            cv2.imshow(window, blue_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                return
+            
+            time.sleep(0.001)
 
 #       Data transfer loop
 
