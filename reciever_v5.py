@@ -29,7 +29,7 @@ from utilities.global_definitions import (
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
-    roi_rectangle_thickness, minimized_roi_rectangle_thickness
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
 # --- Video capture setup ---
@@ -187,8 +187,6 @@ def receive_message():
     # Variable initialization
 
     bits = ""
-
-    minimized_roi_fraction = 1/10
 
     marker_ids = None
     corners = None
