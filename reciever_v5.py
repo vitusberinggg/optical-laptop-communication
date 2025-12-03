@@ -31,7 +31,7 @@ from utilities.global_definitions import (
 
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v4_long_color_reference.mp4") # For video test
+videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
 #videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 
 # Resolution
@@ -393,7 +393,7 @@ def receive_message():
                         except Exception as e:
                             print("\n[INFO] Color calibration error:", e)
 
-                    if color != "blue" and last_color == "blue" and hasattr(receive_message, "color_calibration"):
+                    if hasattr(receive_message, "color_calibration"):
                         current_state = "syncing"
                 
                 # --- Syncing ---
@@ -411,6 +411,13 @@ def receive_message():
                         syncing = False
                     
                     if syncing == False:
+                        current_state = "end of sync"
+                
+                # --- End of sync ---
+
+                elif current_state == "end of sync":
+                    # A frame between sync and decoding so that it doesn't decode during a sync frame
+                    if color != "blue" and last_color == "blue":
                         current_state = "decoding"
 
                 # --- Decoding ---
