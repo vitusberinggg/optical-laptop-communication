@@ -199,11 +199,11 @@ def receive_message():
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
+                        roi_coordinates, observed_aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
-                    aruco_marker_side_length = 0
+                    observed_aruco_marker_side_length = 0
 
             # Display drawings
             
@@ -229,7 +229,7 @@ def receive_message():
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+                        roi_padding_px = (observed_aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
 
                     except Exception:
                         roi_padding_px = 0
