@@ -89,3 +89,8 @@ roi_rectangle_thickness = 3
 
 minimized_roi_rectangle_thickness = 2
 minimized_roi_fraction = 1/5
+
+# --- Steps definitions ---
+
+end_bit_steps = 4
+dominant_color_steps = 4

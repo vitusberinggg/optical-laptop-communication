@@ -13,11 +13,9 @@ from utilities.global_definitions import (
     white_lower_hsv_limit, white_upper_hsv_limit,
     black_lower_hsv_limit, black_upper_hsv_limit,
     green_lower_hsv_limit, green_upper_hsv_limit,
-    blue_lower_hsv_limit, blue_upper_hsv_limit
+    blue_lower_hsv_limit, blue_upper_hsv_limit,
+    end_bit_steps, dominant_color_steps
     )
-
-end_bit_steps = 4
-dominant_color_steps = 4
 
 # --- Functions ---
 
