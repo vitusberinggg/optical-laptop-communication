@@ -34,7 +34,8 @@ from utilities.global_definitions import (
 
 # Defenitions 
 
-using_webcam = True
+using_webcam = False
+debug_bytes = False
  
 # --- Video capture setup ---
 
@@ -107,6 +108,9 @@ decode_last_time = time.time()
 decoded_message = None
 stop_thread = False
 
+debug_worker = False
+debug_watchdog = False
+
 # --- Decoding worker thread ---
 
 def decoding_worker():
@@ -119,17 +123,18 @@ def decoding_worker():
         except queue.Empty:
             continue
         
-        # [DEBUG] Print queue size every 0.5 seconds
-        now = time.time()
-        if now - last_queue_debug > 0.5:
-            print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
-            last_queue_debug = now
-        t0 = time.time()
+        if debug_worker:
+            # [DEBUG] Print queue size every 0.5 seconds
+            now = time.time()
+            if now - last_queue_debug > 0.5:
+                print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
+                last_queue_debug = now
+            t0 = time.time()
 
         # Decode bitgrid
         if recall:
             result = decode_bitgrid(
-                hsv_roi, add_frame, recall, end_frame
+                hsv_roi, add_frame, recall, end_frame, debug_bytes
             )
 
             # Only accept valid non-empty results
@@ -138,16 +143,18 @@ def decoding_worker():
 
         else:
             decode_bitgrid(
-                hsv_roi, add_frame, recall, end_frame
+                hsv_roi, add_frame, recall, end_frame, debug_bytes
             )
 
-        # [DEBUG] Helps watchdog to see if the decode works or not
-        decode_last_time = time.time()
+        if debug_watchdog:
+            # [DEBUG] Helps watchdog to see if the decode works or not
+            decode_last_time = time.time()
 
-        # [DEBUG] Print decode time every 0.5 seconds
-        t1 = time.time()
-        if t1 - last_queue_debug > 0.5:
-            print(f"[DEBUG] Decode time: {(t1 - t0)*1000:.2f} ms")
+        if debug_worker:
+            # [DEBUG] Print decode time every 0.5 seconds
+            t1 = time.time()
+            if t1 - last_queue_debug > 0.5:
+                print(f"[DEBUG] Decode time: {(t1 - t0)*1000:.2f} ms")
 
 # --- Start decoding thread ---
 
@@ -201,6 +208,7 @@ def receive_message():
     last_color = None
 
     last_frame_time = None 
+    last_color_time = None
 
     interval = 0 # Interval between frames in seconds
 
@@ -336,7 +344,7 @@ def receive_message():
                     start_y = int(start_y - roi_padding_px)
                     end_y = int(end_y + roi_padding_px)
 
-                    print(f"\n[DEBUG] ROI coordinates: (start_x = {locals().get('start_x')}, end_x = {locals().get('end_x')}, start_y = {locals().get('start_y')}, end_y = {locals().get('end_y')})")
+                    print(f"[INFO] ROI coordinates: (start_x = {locals().get('start_x')}, end_x = {locals().get('end_x')}, start_y = {locals().get('start_y')}, end_y = {locals().get('end_y')})")
 
                     # Minimized ROI coordinates
 
@@ -354,7 +362,7 @@ def receive_message():
                     minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
                     minimized_end_y = minimized_start_y + minimized_roi_height
 
-                    print(f"\n[DEBUG] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
+                    print(f"[INFO] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
 
                     receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
 
@@ -378,11 +386,18 @@ def receive_message():
                     color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
                 else:
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
+                
+                if not hasattr(receive_message, "first_color"):
+                    last_color_time = time.time()
+                    receive_message.first_color = ("Get first dominant color")
 
-                print(f"\n[INFO] Dominant color in minimized ROI: {color}")
+                if last_color != color and last_color_time is not None:
+                    last_color_time = time.time() - last_color_time
+                    print(f"\n[INFO] Dominant color in minimized ROI: {last_color}, lasted for: {last_color_time:.3f}")
+                    last_color_time = time.time()
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
-                    print("[INFO] Starting color calibration...")
+                    print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
                 cv2.imshow("Webcam Receiver", display)
@@ -390,8 +405,6 @@ def receive_message():
                 # --- Color calibration ---
 
                 if current_state == "color_calibration":
-
-                    print(f"\n[INFO] Dominant color in minimized ROI: {color}")
                     
                     # Checks if receive_message() has an attribute that is called "color_calibration"
                     if not hasattr(receive_message, "color_calibration"):
@@ -415,18 +428,24 @@ def receive_message():
                 # --- Syncing ---
 
                 if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
+                    
+                    if not hasattr(receive_message, "syncing"):
+                        print("\n[INFO] Trying to sync and get the interval...")
+                        receive_message.syncing = ("Initialized")
 
-                    print("\n[INFO] Trying to sync and get the interval...")
+                        if debug_watchdog:
+                            print("\n[DEBUG] Watchdog on\n")
+                            watchdog_on = True
 
                     try:
                         interval, syncing = sync_interval_detector(color, True) # Try to sync and get the interval
-                        print(f"\n[INFO] Interval: {interval} s")
 
                     except Exception as e:
                         print("\n[WARNING] Sync error:", e)
                         syncing = False
                     
                     if syncing == False:
+                        print(f"\n[INFO] Interval: {interval} s")
                         current_state = "end of sync"
                 
                 # --- End of sync ---
