@@ -32,32 +32,39 @@ from utilities.global_definitions import (
     roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
+# Defenitions 
+
+using_webcam = True
+ 
 # --- Video capture setup ---
 
-#videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
-videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+if using_webcam:
 
-# Resolution
+    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 
-videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
-videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+    # Resolution
 
-# White balance
-"""
-videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
-videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
-print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
-"""
-# Exposure
+    videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+    videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
-videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
-videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
-print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+    # White balance
+    """
+    videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+    videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
+    print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+    """
+    # Exposure
 
-# Gain
+    videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
+    print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
 
-videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+    # Gain
 
+    videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
+else:
+    videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -218,11 +225,12 @@ def receive_message():
     
     print("\n[INFO] Receiver started")
 
-    actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
-    actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    if using_webcam:
+        actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
-    
+        print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
+        
     # --- Debugging ---
 
     """
