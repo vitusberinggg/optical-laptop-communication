@@ -28,7 +28,7 @@ from utilities.global_definitions import (
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
-    green_bgr, red_bgr, yellow_bgr,
+    green_bgr, red_bgr, yellow_bgr, white_bgr,
     roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
@@ -395,6 +395,7 @@ def receive_message():
                     last_color_time = time.time() - last_color_time
                     print(f"\n[INFO] Dominant color in minimized ROI: {last_color}, lasted for: {last_color_time:.3f}")
                     last_color_time = time.time()
+                    cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, white_bgr, display_text_thickness)
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
