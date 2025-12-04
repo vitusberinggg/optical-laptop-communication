@@ -387,15 +387,19 @@ def receive_message():
                 else:
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
                 
+                # Initializes last_color_time
                 if not hasattr(receive_message, "first_color"):
                     last_color_time = time.time()
                     receive_message.first_color = ("Get first dominant color")
 
+                # Calculates the time of how long it has been the same color
                 if last_color != color and last_color_time is not None:
                     last_color_time = time.time() - last_color_time
                     print(f"\n[INFO] Dominant color in minimized ROI: {last_color}, lasted for: {last_color_time:.3f}")
                     last_color_time = time.time()
-                    cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, white_bgr, display_text_thickness)
+                
+                # Puts a text in the GUI of the current dominant color
+                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, white_bgr, display_text_thickness)
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
