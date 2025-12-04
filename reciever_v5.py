@@ -380,7 +380,7 @@ def receive_message():
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
 
                 print(f"\n[INFO] Dominant color in minimized ROI: {color}")
-                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (50, 50), display_text_font, display_text_size, white_bgr, display_text_thickness)
+                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, white_bgr, display_text_thickness)
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("[INFO] Starting color calibration...")
