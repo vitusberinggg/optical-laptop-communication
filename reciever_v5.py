@@ -64,7 +64,7 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
 else:
-    videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
+    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -373,12 +373,15 @@ def receive_message():
 
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
-
-                if tracker.LUT is not None:
-                    color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
+                
+                if using_webcam:
+                   color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
                 else:
-                    color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
-
+                    if tracker.LUT is not None:
+                        color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
+                    else:
+                        color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
+                
                 print(f"\n[INFO] Dominant color in minimized ROI: {color}")
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
