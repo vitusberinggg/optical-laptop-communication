@@ -35,7 +35,7 @@ from utilities.global_definitions import (
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
-    green_bgr, red_bgr, yellow_bgr, white_bgr,
+    green_bgr, red_bgr, yellow_bgr,
     roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
@@ -461,6 +461,8 @@ def receive_message():
                 
                 cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness) # Puts a text in the GUI of the current dominant color
 
+                cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
+
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
@@ -585,8 +587,6 @@ def receive_message():
                     last_state_time = time.time() - last_state_time
                     print(f"\n[INFO] State: {last_state}, lasted for: {last_state_time:.3f}")
                     last_state_time = time.time()
-
-                cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
                 # --- End of decoding ---
 
