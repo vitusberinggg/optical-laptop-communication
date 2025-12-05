@@ -1,26 +1,33 @@
 
 # --- Imports ---
 
-import cProfile
-import pstats
+# Library modules
 
-# Enables profiling if run as main module
-if __name__ == '__main__':
-    profiler = cProfile.Profile()
-    profiler.enable()
+import cProfile # Provides deterministic profiling (statistics that describes how often and for how long various parts of a program executes)
+import pstats # Module for formatting the profiling into reports
 
 import threading
 import queue
+
 import cv2
+
 import time
 import numpy as np
 
+# Profiling initialization
+
+profiler = cProfile.Profile()
+profiler.enable()
+
+# Non-library modules
+
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
-from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr
+from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr, bitgrid_majority_calc
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions_v3_1 import sync_interval_detector, decode_bitgrid
 from utilities.accuracy_calculator import accuracy_calculator
+
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -32,7 +39,7 @@ from utilities.global_definitions import (
     roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
 )
 
-# Defenitions 
+# --- Definitions --- 
 
 using_webcam = True
 debug_bytes = False
@@ -41,7 +48,7 @@ debug_bytes = False
 
 if using_webcam:
 
-    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
+    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
     # Resolution
 
@@ -49,15 +56,17 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
     # White balance
+
     """
     videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
     videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
     print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
     """
+
     # Exposure
 
     videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
-    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
+    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value --> darker
     print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
 
     # Gain
@@ -65,7 +74,7 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
 else:
-    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
+    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v5.mp4")
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
@@ -95,14 +104,17 @@ aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector
 # --- Pre-compile functions ---
 
 def warmup_all():
-    from utilities.color_functions_v3_1 import bitgrid_majority_calc
 
-    dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype=np.uint8)
+    """
+    
+    """
+
+    dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
     bitgrid_majority_calc(dummy_merged, 5)
 
 # --- Threading setup ---
 
-frame_queue = queue.Queue(maxsize=100)
+frame_queue = queue.Queue(maxsize = 100)
 last_queue_debug = 0
 decode_last_time = time.time()
 decoded_message = None
@@ -544,6 +556,8 @@ def receive_message():
 # --- Execution ---
 
 if __name__ == "__main__":
+
+
     receive_message()
 
     profiler.disable()
