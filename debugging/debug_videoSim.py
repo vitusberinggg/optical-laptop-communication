@@ -10,11 +10,11 @@ from reciever_v3_1 import decoding_worker
 
 # function that pre-compiles the numba functions to prevent lag on initial launch with them
 def warmup_all():
-    from utilities.color_functions_v3_1 import bitgrid_majority_calc
+    from utilities.color_functions_v3_1 import bitgrid_majority_calculator
 
     # Warm up bitgrid majority calc
     dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype=np.uint8)
-    bitgrid_majority_calc(dummy_merged, 5)
+    bitgrid_majority_calculator(dummy_merged, 5)
 
 corrected_ranges = {
     "red":    (np.array([0, 100, 100]), np.array([10, 255, 255])),  # hue 0–10

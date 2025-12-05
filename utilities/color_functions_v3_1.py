@@ -110,8 +110,8 @@ class BitColorTracker:
         merged = classes  # shape: (N, rows, patch_h, cols, patch_w)
 
         # Majority vote
-        num_classes = int(self.LUT.max()) + 1
-        bitgrid = bitgrid_majority_calc(merged, num_classes)
+        number_of_classes = int(self.LUT.max()) + 1
+        bitgrid = bitgrid_majority_calculator(merged, number_of_classes)
 
         #print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
@@ -130,43 +130,53 @@ class BitColorTracker:
         self.LUT = LUT
         self.color_names = color_names
 
+@njit(parallel = True)
+def bitgrid_majority_calculator(patch_class_array, number_of_classes):
 
-@njit(parallel=True)
-def bitgrid_majority_calc(merged, num_classes):
-    # merged shape: (N, rows, patch_h, cols, patch_w)
-    N, R, Ph, C, Pw = merged.shape
+    """
+    Aggregates patches of class labels for each cell in a grid and assigns the cell its most frequently occurring label.
 
-    out = np.empty((R, C), dtype=np.int32)
+    Arguments:
+        "patch_class_array": A 5-dimensional array (tensor).
+        "number_of_classes": The total number of distinct class labels that "patch_class_array" can contain.
+    
+    Returns:
+        "out": A grid of majority labels.
 
-    # parallell looping for speed
-    for r in prange(R):
-        for c in range(C):
+    """
 
-            # histogram will help us calc the dominant color
-            # histogram for this cell
-            counts = np.zeros(num_classes, dtype=np.int32)
+    number_of_frames, number_of_grid_rows, patch_heights, number_of_grid_columns, patch_widths = patch_class_array.shape # Extracts the five dimensions of "patch_class_array"
 
-            # accumulate across all frames and samples inside the cell
-            for n in range(N):
-                for ph in range(Ph):
-                    for pw in range(Pw):
-                        cls = merged[n, r, ph, c, pw]
-                        if 0 <= cls < num_classes:
-                            counts[cls] += 1
+    out = np.empty((number_of_grid_rows, number_of_grid_columns), dtype = np.int32) # Creates an empty integer array to store the majority class for each grid coordinate
 
-            # find the average of this particular cell
-            max_class = 0
-            max_val = counts[0]
-            for k in range(1, num_classes):
-                if counts[k] > max_val:
-                    max_class = k
-                    max_val = counts[k]
+    for row in prange(number_of_grid_rows): # For each row:
 
-            # gives the average of the cell to that particular position
-            # gives the value is the "id" of that particular color
-            out[r, c] = max_class
+        for column in range(number_of_grid_columns): # For each column:
 
-    # returns an 2-D array of color ids
+            counts = np.zeros(number_of_classes, dtype = np.int32) # Create a histogram array to accumulate how often each class appears in the cell region
+
+            for sample in range(number_of_frames): # For each frame:
+
+                for patch_height in range(patch_heights): # Loop over the patch height:
+
+                    for patch_width in range(patch_widths): # Loop over the patch width:
+
+                        class_id = patch_class_array[sample, row, patch_height, column, patch_width] # Extract the class ID at these coordinates
+
+                        if 0 <= class_id < number_of_classes: # If the class ID number is within the given class ID range
+                            counts[class_id] += 1 # Increase the counter for that class ID
+
+            majority_class_id = 0 # Initialize the majority class id as 0
+            majority_class_count = counts[majority_class_id] # Initializes the majority class value
+
+            for class_id_index in range(1, number_of_classes): # Argmax to find the class with the highest frequency
+
+                if counts[class_id_index] > majority_class_count:
+                    majority_class_id = class_id_index
+                    majority_class_count = counts[class_id_index]
+
+            out[row, column] = majority_class_id # Assign the majority class to the output grid
+
     return out
 
 
