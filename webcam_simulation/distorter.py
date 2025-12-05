@@ -9,43 +9,23 @@ import random
 PRESETS = {
     "light": {
         "severity": 0.2,
-        "effects": [
-            "noise",
-            "jitter_color"
-        ]
+        "light_level": 1.2,  # slightly bright
+        "effects": ["noise", "jitter_color", "white_balance_shift"]
     },
-
     "medium": {
         "severity": 0.5,
-        "effects": [
-            "noise",
-            "jitter_color",
-            "motion_blur",
-            "jpeg_compress"
-        ]
+        "light_level": 1.0,  # normal
+        "effects": ["noise", "jitter_color", "blur", "jpeg_compress", "white_balance_shift"]
     },
-
     "heavy": {
         "severity": 0.8,
-        "effects": [
-            "noise",
-            "jitter_color",
-            "motion_blur",
-            "warp",
-            "jpeg_compress",
-            "white_balance_shift"
-        ]
+        "light_level": 0.7,  # darker
+        "effects": ["noise", "jitter_color", "blur", "warp", "jpeg_compress", "white_balance_shift"]
     },
-
     "webcam_realistic": {
-        "severity": 0.6,
-        "effects": [
-            "noise",                 # low-light noise
-            "jitter_color",          # brightness/contrast auto-adjust
-            "white_balance_shift",   # color drift
-            "motion_blur",           # movement blur
-            "jpeg_compress"          # compression blocks
-        ]
+        "severity": 0.5,
+        "light_level": 0.8,  # slightly dim
+        "effects": ["noise", "jitter_color", "white_balance_shift", "blur", "jpeg_compress"]
     }
 }
 
@@ -56,52 +36,76 @@ class FrameDistorter:
     def __init__(self, preset="webcam_realistic"):
         config = PRESETS[preset]
         self.severity = config["severity"]
+        self.light_level = config.get("light_level", 1.0)
         self.effects = []
-        self.effect_names = config["effects"]
 
-    # add the wanted effects
-    def add_effect(self, effect_fn):
-        self.effects.append(effect_fn)
+        # Automatically map effect names to functions
+        for name in config["effects"]:
+            if hasattr(Effects, name):
+                self.effects.append(getattr(Effects, name))
+            else:
+                raise ValueError(f"Effect '{name}' not found in Effects class.")
 
-    # applying the effects in the given frame
+    # Apply all effects
     def apply(self, frame):
+        # Adjust global brightness first
+        frame = np.clip(frame.astype(np.float32) * self.light_level, 0, 255).astype(np.uint8)
+
         for effect in self.effects:
-            frame = effect(frame)
+            # Pass light_level only to effects that need it
+            if effect.__name__ in ["add_noise", "jitter_color"]:
+                frame = effect(frame, self.severity, self.light_level)
+            else:
+                frame = effect(frame, self.severity)
         return frame
 
 
-# --- Effects ---
 
+# --- Effects ---
 
 class Effects:
 
     # --- Sensor noise ---
 
     @staticmethod
-    def add_noise(frame, severity):
-        # amount of pixels to corrupt
-        amount = 0.005 + severity * 0.05   # 0.5% → 5%
-        noisy = frame.copy()
+    def add_noise(frame, severity, light_level):
+        """
+        Adds realistic sensor-like noise to a frame.
+        severity: 0.0 → minimal noise, 1.0 → strong noise
+        """
+        h, w, c = frame.shape
+        noisy = frame.copy().astype(np.float32)
 
-        h, w, _ = noisy.shape
+        # Determine % of pixels to corrupt based on severity
+        min_amount, max_amount = 0.005, 0.05  # 0.5% → 5%
+        amount = min_amount + (max_amount - min_amount) * severity
         n = int(amount * h * w)
 
+        # Randomly choose pixel coordinates
         ys = np.random.randint(0, h, n)
         xs = np.random.randint(0, w, n)
-        noisy[ys, xs] = np.random.randint(0, 256, (n, 3))
 
-        return noisy
+        # scale noise by light level
+        noise_intensity = int(20 * (1.0 / max(light_level, 0.1)))  # avoid division by zero
+        noise = np.random.randint(-noise_intensity, noise_intensity + 1, (n, 3))
+
+        # Apply noise
+        noisy[ys, xs] += noise
+
+        # Clip values to [0, 255] and convert back to uint8
+        return np.clip(noisy, 0, 255).astype(np.uint8)
 
 
     # --- Color jitter (brightness/contrast) ---
 
     @staticmethod
-    def jitter_color(frame, severity):
+    def jitter_color(frame, severity, light_level):
         brightness = int(severity * 40)     # ±40
         contrast = 1 + (severity * 0.4)     # ±40%
 
         # Random brightness shift
         b = random.randint(-brightness, brightness)
+        b = int(b * (1.0 / max(light_level, 0.1)))
         # Random contrast shift
         c = random.uniform(1 - severity * 0.4, 1 + severity * 0.4)
 
@@ -125,14 +129,34 @@ class Effects:
 
     @staticmethod
     def warp_frame(frame, severity):
-        strength = severity * 10  # warp intensity
+        """
+        Realistic warp/frame distortion for webcam-like artifacts.
+        severity: 0.0 → no effect, 1.0 → strong effect
+        """
         h, w, _ = frame.shape
 
-        # Random displacement maps
-        dx = (np.random.rand(h, w) - 0.5) * strength
-        dy = (np.random.rand(h, w) - 0.5) * strength
+        # Determine warp strength based on severity
+        max_strength = 5  # maximum displacement in pixels for strong effect
+        strength = severity * max_strength
 
-        # Original grid
+        # Determine scale of low-res displacement map (smaller = more local distortions)
+        min_scale, max_scale = 15, 40  # smaller scale → finer distortions
+        scale = int(max_scale - (max_scale - min_scale) * severity)
+
+        # Generate low-res random displacement maps
+        dx_small = (np.random.rand(h // scale + 1, w // scale + 1) - 0.5) * strength
+        dy_small = (np.random.rand(h // scale + 1, w // scale + 1) - 0.5) * strength
+
+        # Upscale to full frame
+        dx = cv2.resize(dx_small, (w, h), interpolation=cv2.INTER_CUBIC)
+        dy = cv2.resize(dy_small, (w, h), interpolation=cv2.INTER_CUBIC)
+
+        # Optional smoothing for realism
+        blur_sigma = max(1.0, 3.0 * (1 - severity))  # stronger effect = less blur
+        dx = cv2.GaussianBlur(dx, (0, 0), sigmaX=blur_sigma, sigmaY=blur_sigma)
+        dy = cv2.GaussianBlur(dy, (0, 0), sigmaX=blur_sigma, sigmaY=blur_sigma)
+
+        # Build remap grid
         x, y = np.meshgrid(np.arange(w), np.arange(h))
         map_x = (x + dx).astype(np.float32)
         map_y = (y + dy).astype(np.float32)
@@ -148,7 +172,6 @@ class Effects:
         # Convert back to CPU
         warped = warped_gpu.get()
         return warped
-
 
 
     # --- jpeg compression blocking ---
