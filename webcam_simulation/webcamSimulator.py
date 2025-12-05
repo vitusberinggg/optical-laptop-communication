@@ -5,6 +5,11 @@ import cv2
 import threading
 import time
 
+# --- Definitions ---
+
+sender_output_width = 1920 # Width of the sender output in pixels
+sender_output_height = 1200 # Height of the sender output in pixels
+
 # --- Main class ---
 
 class VideoThreadedCapture:
@@ -98,6 +103,8 @@ class VideoThreadedCapture:
                 break
 
             frame = frame.copy()
+
+            
 
             if self.write_buffer == 0:
                 self.buffer_a = frame
@@ -224,3 +231,40 @@ class VideoCaptureSingle:
 
         self.stopped = True
         self.cap.release()
+
+# --- Testing Web Cam Simulator ---
+
+if __name__ == "__main__":
+
+
+
+    video_path = r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4"
+    video_capture = VideoThreadedCapture(video_path)
+
+    if not video_capture.isOpened():
+        print("\n[WARNING] Couldn't start video capture.")
+        exit()
+
+    while True:
+
+        read_was_sucessful, frame = video_capture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
+
+        if read_was_sucessful:
+            break
+
+        time.sleep(0.01)
+
+    cv2.namedWindow("sjöbo", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("sjöbo", sender_output_width, sender_output_height)
+
+    while video_capture.isOpened():
+        ret, frame = video_capture.read()
+        if ret:
+            cv2.imshow("sjöbo", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
