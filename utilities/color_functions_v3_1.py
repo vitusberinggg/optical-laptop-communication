@@ -115,8 +115,8 @@ class BitColorTracker:
 
         #print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
-        white_idx = 2
-        bitgrid_str = np.where(bitgrid == white_idx, "1", "0")
+        black_idx = 3
+        bitgrid_str = np.where(bitgrid == black_idx, "0", "1")
 
         #print(f"[DEBUG] bitgrid: \n{bitgrid_str}")
 
