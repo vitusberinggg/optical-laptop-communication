@@ -111,7 +111,7 @@ class BitColorTracker:
 
         # Majority vote
         number_of_classes = int(self.LUT.max()) + 1
-        bitgrid = bitgrid_majority_calc(merged, number_of_classes)
+        bitgrid = bitgrid_majority_calculator(merged, number_of_classes)
 
         #print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
@@ -130,9 +130,8 @@ class BitColorTracker:
         self.LUT = LUT
         self.color_names = color_names
 
-
 @njit(parallel = True)
-def bitgrid_majority_calc(patch_class_array, number_of_classes):
+def bitgrid_majority_calculator(patch_class_array, number_of_classes):
 
     """
     Aggregates patches of class labels for each cell in a grid and assigns the cell its most frequently occurring label.
