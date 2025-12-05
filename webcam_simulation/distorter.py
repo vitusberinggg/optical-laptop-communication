@@ -7,6 +7,16 @@ import random
 # --- Presets of the amount effects and severity ---
 
 PRESETS = {
+    "custom preset": {
+        "severity": 0.5,
+        "light_level": 1.0,  # normal light
+        "effects": ["noise", "jitter_color", "blur", "jpeg_compress", "white_balance_shift"]
+    },
+    "none": {
+        "severity": 0.0,
+        "light_level": 1.0,  # normal light
+        "effects": []
+    },
     "light": {
         "severity": 0.2,
         "light_level": 1.2,  # slightly bright
