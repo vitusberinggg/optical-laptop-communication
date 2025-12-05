@@ -13,7 +13,7 @@ bitgrids = []
 
 # --- Functions ---
 
-def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
+def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False, debug_bytes=False):
 
     """
     Handles bitgrid collection and decoding.
@@ -69,7 +69,9 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False):
                 char = chr(int(s, 2))
             except ValueError:
                 char = '?'
-            print(f"Byte {i}: {s} (char: '{char}')")
+
+            if debug_bytes:
+                print(f"Byte {i}: {s} (char: '{char}')")
 
         return bits_to_message(byte_matrix)
 
