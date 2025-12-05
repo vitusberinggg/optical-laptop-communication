@@ -65,7 +65,7 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
 else:
-    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
+    videoCapture = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4") # For video test
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
