@@ -42,6 +42,11 @@ from utilities.global_definitions import (
 # --- Definitions --- 
 
 using_webcam = True
+
+watchdog_on = False
+
+# Debugging
+
 debug_bytes = False
  
 # --- Video capture setup ---
@@ -101,94 +106,126 @@ cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
 
 aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
-# --- Pre-compile functions ---
+# --- Helper functions ---
 
 def warmup_all():
 
     """
-    
+    Performs a one-time warm-up for "bitgrid_majority_calculator" by calling it with a dummy input.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
     """
 
-    dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
-    bitgrid_majority_calculator(dummy_merged, 5)
+    dummy_array = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
+    bitgrid_majority_calculator(dummy_array, 5)
 
-# --- Threading setup ---
+# Threading setup
 
-frame_queue = queue.Queue(maxsize = 100)
-last_queue_debug = 0
-decode_last_time = time.time()
+frame_queue = queue.Queue(maxsize = 100) # Initializes a buffered queue for incoming frames
+last_queue_debug_print = 0 # Timestamp that tracks the last time debugging info about queue size was printed
+
+last_decode_timestamp = time.time() # Timestamp of the most recent completed decode
 decoded_message = None
-stop_thread = False
+
+stop_thread = False # Signal to terminate cleanly
 
 debug_worker = False
 debug_watchdog = False
 
-# --- Decoding worker thread ---
-
 def decoding_worker():
-    global decoded_message, last_queue_debug, decode_last_time
-    while not stop_thread or not frame_queue.empty():
 
-        # [Failsafe] Skip if no frames are available
+    """
+    Processes the frames from the queue, decodes the data and updates the decoded message.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
+    """
+    
+    global decoded_message, last_queue_debug_print, last_decode_timestamp
+
+    while not stop_thread or not frame_queue.empty(): # While "stop_thread" is False or the frame queue isn't empty:
+
         try:
-            hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout=0.1)
+            hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
+
         except queue.Empty:
             continue
         
-        if debug_worker:
-            # [DEBUG] Print queue size every 0.5 seconds
-            now = time.time()
-            if now - last_queue_debug > 0.5:
+        # --- Debugging ---
+
+        if debug_worker: # If we're debugging the worker:
+
+            current_time = time.time()
+
+            if current_time - last_queue_debug_print > 0.5:
                 print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
-                last_queue_debug = now
-            t0 = time.time()
+                last_queue_debug_print = current_time
 
-        # Decode bitgrid
-        if recall:
-            result = decode_bitgrid(
-                hsv_roi, add_frame, recall, end_frame, debug_bytes
-            )
+            decoding_start_time = time.time()
+        
+        # --- End of debugging ---
 
-            # Only accept valid non-empty results
-            if isinstance(result, str) and result.strip() != "":
+        if recall: # If it's a recall frame:
+
+            result = decode_bitgrid(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
+
+            if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
                 decoded_message = result
 
         else:
-            decode_bitgrid(
-                hsv_roi, add_frame, recall, end_frame, debug_bytes
-            )
+            decode_bitgrid(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
+
+        # --- Debugging ---
 
         if debug_watchdog:
-            # [DEBUG] Helps watchdog to see if the decode works or not
-            decode_last_time = time.time()
+            last_decode_timestamp = time.time()
 
         if debug_worker:
-            # [DEBUG] Print decode time every 0.5 seconds
-            t1 = time.time()
-            if t1 - last_queue_debug > 0.5:
-                print(f"[DEBUG] Decode time: {(t1 - t0)*1000:.2f} ms")
 
-# --- Start decoding thread ---
+            decoding_end_time = time.time()
 
-decode_thread = threading.Thread(target=decoding_worker, daemon=True)
-decode_thread.start()
+            if decoding_end_time - last_queue_debug_print > 0.5:
+                print(f"[DEBUG] Decode time: {(decoding_end_time - decoding_start_time) * 1000:.2f} ms")
+            
+        # --- End of debugging ---
 
-# --- Watchdog setup ---
+# Decoding thread initialization
 
-watchdog_on = False
-
-# --- Watchdog function ---
+decoding_thread = threading.Thread(target = decoding_worker, daemon = True)
+decoding_thread.start()
 
 def watchdog():
+
+    """
+    Detects decoding pipeline stalls. Any gap larger than a second triggers an alert.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
+    """
+    
     while watchdog_on:
-        # [WARNING] Check if decode thread is stalled or starved
-        if time.time() - decode_last_time > 1.0:
-            print("[WARNING] Decode thread is stalled or starving (no frames processed)!")
+
+        if time.time() - last_decode_timestamp > 1.0:
+            print("[WARNING] Decode thread is stalled or starving, no frames processed!")
+
         time.sleep(0.2)
 
-# --- Start watchdog thread ---
+# Watchdog thread initialization
 
-watch_thread = threading.Thread(target=watchdog, daemon=True)
+watch_thread = threading.Thread(target = watchdog, daemon = True)
 watch_thread.start()
 
 # --- Main function ---
