@@ -1,78 +1,97 @@
 
 # --- Imports ---
 
+# Library modules
+
 import time
 import cv2
 import numpy as np
-from collections import Counter
 from numba import njit, prange
+
+# Non-library modules
+
 from utilities.global_definitions import (
-    number_of_rows as rows, number_of_columns as cols
-    ,red_lower_hsv_limit_1, red_upper_hsv_limit_1,
+    number_of_rows, number_of_columns,
+    red_lower_hsv_limit_1, red_upper_hsv_limit_1,
     red_lower_hsv_limit_2, red_upper_hsv_limit_2,
     white_lower_hsv_limit, white_upper_hsv_limit,
     black_lower_hsv_limit, black_upper_hsv_limit,
     green_lower_hsv_limit, green_upper_hsv_limit,
     blue_lower_hsv_limit, blue_upper_hsv_limit,
     end_bit_steps, dominant_color_steps
-    )
+)
 
 # --- Functions ---
 
 class BitColorTracker:
+
+    """
+    
+    """
+
     def __init__(self):
+        
+        """
+        
+        """
+
         self.time_in = 0
-        self.rows = rows
-        self.cols = cols
+        self.number_of_rows = number_of_rows
+        self.number_of_columns = number_of_columns
         self.hsv_frames = []
         self.LUT = None
         self.color_names = None
 
     def add_frame(self, hsv_roi):
+        
+        """
+        
+        """
+
         self.hsv_frames.append(hsv_roi)
+
         if not hasattr(BitColorTracker.add_frame, "time"):
             self.time_in = time.time()
             BitColorTracker.add_frame.time = ("chingchong")
 
         if not hasattr(BitColorTracker.add_frame, "walla") and (time.time() - self.time_in > 0.15) and self.time_in != 0:
-            # debug dump
             
-            # quick stats
             H = hsv_roi[:,:,0]; S = hsv_roi[:,:,1]; V = hsv_roi[:,:,2]
+
             print("HSV roi shape:", hsv_roi.shape, "dtype:", hsv_roi.dtype)
             print("H min/max:", int(H.min()), int(H.max()))
             print("S min/max:", int(S.min()), int(S.max()))
             print("V min/max:", int(V.min()), int(V.max()))
+
             BitColorTracker.add_frame.walla = ("bingbing")
 
-
     def _pad_frames(self, frames):
-        # H = frame height, W = frame width
+
+        
+        """
+        
+        """
+
         _, H, W, _ = frames.shape
 
-        # dividing H/W into cell_H/-W
-        # always rounds up, ex. 4.1 -> 5
-        cell_h = int(np.ceil(H / self.rows))
-        cell_w = int(np.ceil(W / self.cols))
+        cell_h = int(np.ceil(H / self.number_of_rows))
+        cell_w = int(np.ceil(W / self.number_of_columns))
 
-        # creating the padded H/W
-        padded_H = cell_h * self.rows
-        padded_W = cell_w * self.cols
+        padded_H = cell_h * self.number_of_rows
+        padded_W = cell_w * self.number_of_columns
 
-        # calculating how much it should extend in H/W
         pad_bottom = padded_H - H
         pad_right = padded_W - W
 
-        # making the padded frames
-        padded_frames = np.pad(
-            frames,
-            ((0, 0), (0, pad_bottom), (0, pad_right), (0, 0)),
-            mode='edge'
-        )
+        padded_frames = np.pad(frames, ((0, 0), (0, pad_bottom), (0, pad_right), (0, 0)), mode = "edge")
+
         return padded_frames, cell_h, cell_w
   
     def end_bit(self):
 
+        """
+        
+        """
 
         if len(self.hsv_frames) == 0:
             return None
@@ -82,12 +101,10 @@ class BitColorTracker:
 
         padded_frames, self.cell_h, self.cell_w = self._pad_frames(hsv_frames)
 
-        N, H, W, _ = padded_frames.shape
+        N, _, _, _ = padded_frames.shape
 
-        # Split into cells
-        cells = padded_frames.reshape(N, self.rows, self.cell_h, self.cols, self.cell_w, 3)
+        cells = padded_frames.reshape(N, self.number_of_rows, self.cell_h, self.number_of_columns, self.cell_w, 3)
 
-        # --- Centered rectangle sampling inside each cell ---
         patch_h = max(self.cell_h // 2, 1)
         patch_w = max(self.cell_w // 2, 1)
 
@@ -96,37 +113,41 @@ class BitColorTracker:
         w0 = (self.cell_w - patch_w) // 2
         w1 = w0 + patch_w
 
-        sampled_cells = cells[:, :, h0:h1, :, w0:w1, :]  # shape: (N, rows, patch_h, cols, patch_w, 3)
-        if patch_h > end_bit_steps and patch_w > end_bit_steps:
-            sampled_cells = sampled_cells[:, :, ::end_bit_steps, :, ::end_bit_steps, :] # adding pixel steps to prevent too many pixels  
+        sampled_cells = cells[:, :, h0:h1, :, w0:w1, :]
 
-        # HSV → class IDs using LUT
+        if patch_h > end_bit_steps and patch_w > end_bit_steps:
+            sampled_cells = sampled_cells[:, :, ::end_bit_steps, :, ::end_bit_steps, :]
+
         Hc = sampled_cells[..., 0].astype(np.uint16)
         Sc = sampled_cells[..., 1].astype(np.uint16)
         Vc = sampled_cells[..., 2].astype(np.uint16)
-        classes = self.LUT[Hc, Sc, Vc]  # shape: (N, rows, patch_h, cols, patch_w)
 
-        # Merge all samples per cell
-        merged = classes  # shape: (N, rows, patch_h, cols, patch_w)
+        classes = self.LUT[Hc, Sc, Vc]
 
-        # Majority vote
+        merged = classes
+
         number_of_classes = int(self.LUT.max()) + 1
         bitgrid = bitgrid_majority_calculator(merged, number_of_classes)
-
-        #print(f"[DEBUG] bitgrid with color ids: \n{bitgrid}")
 
         black_idx = 3
         bitgrid_str = np.where(bitgrid == black_idx, "0", "1")
 
-        #print(f"[DEBUG] bitgrid: \n{bitgrid_str}")
-
         return bitgrid_str
 
-
     def reset(self):
+        
+        """
+        
+        """
+
         self.hsv_frames = []
 
     def colors(self, LUT, color_names):
+        
+        """
+        
+        """
+
         self.LUT = LUT
         self.color_names = color_names
 
@@ -179,58 +200,56 @@ def bitgrid_majority_calculator(patch_class_array, number_of_classes):
 
     return out
 
-
 tracker = BitColorTracker()
 
-# --- Compute a full HSV → COLOR lookup table (LUT) after corrected ranges ---
-# corrected ranges need to be in np.array for it to classify color ids properly
-
 def build_color_LUT(corrected_ranges):
-    """
-    Build a 180 x 256 x 256 LUT mapping HSV -> class index.
-    Class indices follow the order of corrected_ranges keys.
-    """
-    # Color index map
-    color_names = list(corrected_ranges.keys())   # ["red1", "red2", "white", ...]
-    num_colors = len(color_names)
 
-    # Create empty LUT (180×256×256)
-    LUT = np.zeros((180, 256, 256), dtype=np.uint8)
+    """
+    Build a 180 x 256 x 256 LUT mapping HSV -> class index. Class indices follow the order of corrected_ranges keys.
 
-    # Prepare full HSV cube (180×256×256)
+    Arguments:
+        "corrected_ranges"
+
+    Returns:
+        "LUT"
+        "color_names"
+
+    """
+
+    color_names = list(corrected_ranges.keys())
+
+    LUT = np.zeros((180, 256, 256), dtype = np.uint8)
+
     H = np.arange(180)[:, None, None]
     S = np.arange(256)[None, :, None]
     V = np.arange(256)[None, None, :]
 
-    # Broadcast to 3D grid
-    H = np.broadcast_to(np.arange(180, dtype=np.uint16)[:,None,None], (180,256,256))
-    S = np.broadcast_to(np.arange(256, dtype=np.uint16)[None,:,None], (180,256,256))
-    V = np.broadcast_to(np.arange(256, dtype=np.uint16)[None,None,:], (180,256,256))
+    H = np.broadcast_to(np.arange(180, dtype = np.uint16)[:,None,None], (180,256,256))
+    S = np.broadcast_to(np.arange(256, dtype = np.uint16)[None,:,None], (180,256,256))
+    V = np.broadcast_to(np.arange(256, dtype = np.uint16)[None,None,:], (180,256,256))
 
-    # Fill LUT by writing integer class indices
-    for idx, (color, (lower, upper)) in enumerate(corrected_ranges.items()):
+    for idx, (_, (lower, upper)) in enumerate(corrected_ranges.items()):
+
         lh, ls, lv = lower
         uh, us, uv = upper
 
         if lh <= uh:
-            # Normal range
             mask = (
                 (H >= lh) & (H <= uh) &
                 (S >= ls) & (S <= us) &
                 (V >= lv) & (V <= uv)
-            )
+)
+
         else:
-            # Hue wraps around (e.g. red)
             mask = (
                 ((H >= lh) | (H <= uh)) &
                 (S >= ls) & (S <= us) &
                 (V >= lv) & (V <= uv)
-            )
+)
 
         LUT[mask] = idx
 
     return LUT, color_names
-
 
 def dominant_color_hsv(hsv):
 
@@ -239,7 +258,7 @@ def dominant_color_hsv(hsv):
     
     ph, pw, _ = hsv.shape
     
-    if ph > dominant_color_steps and pw > dominant_color_steps: # adding pixel steps to prevent too many pixels
+    if ph > dominant_color_steps and pw > dominant_color_steps:
         hsv = hsv [::dominant_color_steps, ::dominant_color_steps, :]
 
     H = hsv[:, :, 0]
@@ -248,12 +267,13 @@ def dominant_color_hsv(hsv):
 
     classes = LUT[H, S, V]
 
-    hist = np.bincount(classes.ravel(), minlength=len(names))
+    hist = np.bincount(classes.ravel(), minlength = len(names))
 
     names = names[int(hist.argmax())]
 
     if names == "red1" or names == "red2":
         return "red"
+    
     else:
         return names
 
