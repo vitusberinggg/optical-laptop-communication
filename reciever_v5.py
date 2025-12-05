@@ -34,7 +34,7 @@ from utilities.global_definitions import (
 
 # Defenitions 
 
-using_webcam = False
+using_webcam = True
 debug_bytes = False
  
 # --- Video capture setup ---
@@ -383,7 +383,7 @@ def receive_message():
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
                 
                 if using_webcam:
-                   color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
+                    color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
                 else:
                     if tracker.LUT is not None:
                         color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
@@ -403,6 +403,8 @@ def receive_message():
                 
                 # Puts a text in the GUI of the current dominant color
                 cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness)
+
+                cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
