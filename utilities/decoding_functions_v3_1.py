@@ -169,6 +169,7 @@ def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
 
             if printing:
                 print(f"[SYNC] Estimated frame interval: {average_frame_interval:.4f} seconds")
+                print(f"[SYNC] Timestamps in s: {frame_intervals}")
 
             return average_frame_interval, False
 

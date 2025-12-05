@@ -23,7 +23,7 @@ profiler.enable()
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
-from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr, bitgrid_majority_calc
+from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr, bitgrid_majority_calculator
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions_v3_1 import sync_interval_detector, decode_bitgrid
 from utilities.accuracy_calculator import accuracy_calculator
@@ -110,7 +110,7 @@ def warmup_all():
     """
 
     dummy_merged = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
-    bitgrid_majority_calc(dummy_merged, 5)
+    bitgrid_majority_calculator(dummy_merged, 5)
 
 # --- Threading setup ---
 
