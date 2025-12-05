@@ -155,9 +155,11 @@ def decoding_worker():
     while not stop_thread or not frame_queue.empty(): # While "stop_thread" is False or the frame queue isn't empty:
 
         try:
+
             hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
 
         except queue.Empty:
+
             continue
         
         # --- Debugging ---
@@ -360,9 +362,7 @@ def receive_message():
                 cv2.aruco.drawDetectedMarkers(display, corners, marker_ids) # Draw the detected markers on the display frame
 
                 cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
-            
-                # marker_ids = None # Reset marker IDs to avoid repeated processing
-                
+                            
             else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
@@ -378,10 +378,9 @@ def receive_message():
                 
                     try:
                         roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+
                     except Exception:
                         roi_padding_px = 0
-
-                        
 
                     start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
 
@@ -433,27 +432,34 @@ def receive_message():
                 roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
                 
-                if using_webcam:
+                if using_webcam: # If we're using the webcam:
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
-                else:
+
+                else: # If we're using a pre-recorded video:
+
                     if tracker.LUT is not None:
                         color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
+
                     else:
                         color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
                                 
-                # Initializes last_color_time
-                if not hasattr(receive_message, "first_color"):
+                # "last_color_time" initialization
+
+                if not hasattr(receive_message, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
                     last_color_time = time.time()
                     receive_message.first_color = ("Get first dominant color")
 
                 # Calculates the time of how long it has been the same color
-                if last_color != color and last_color_time is not None:
+
+                if color != last_color and last_color_time is not None: # If the current color isn't the same as the last, and "last_color_time" has a value
+
                     last_color_time = time.time() - last_color_time
+
                     print(f"\n[INFO] Dominant color in minimized ROI: {last_color}, lasted for: {last_color_time:.3f}")
+
                     last_color_time = time.time()
                 
-                # Puts a text in the GUI of the current dominant color
-                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness)
+                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness) # Puts a text in the GUI of the current dominant color
 
                 if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
@@ -465,23 +471,22 @@ def receive_message():
 
                 if current_state == "color_calibration":
                     
-                    # Checks if receive_message() has an attribute that is called "color_calibration"
-                    if not hasattr(receive_message, "color_calibration"):
+                    if not hasattr(receive_message, "color_calibration"): # If "recieve_message()" doesn't yet have the attribute "color_calibration"
+
                         try:
+
                             corrected_ranges = color_offset_calculation(roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
 
-                            # Warming up numba for use
-                            warmup_all()
+                            warmup_all() # Warming up numba for use
                             
-                            # Gives receive_message() an attribute so that it calibrates colors only once
-                            receive_message.color_calibration = ("color calibrated")
+                            receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
 
                         except Exception as e:
                             print("\n[INFO] Color calibration error:", e)
 
-                    if hasattr(receive_message, "color_calibration"):
+                    if hasattr(receive_message, "color_calibration"): # If "recieve_message()" has the attribute "color_calibration":
                         current_state = "syncing"
                 
                 # --- Syncing ---
@@ -489,6 +494,7 @@ def receive_message():
                 if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
                     
                     if not hasattr(receive_message, "syncing"):
+
                         print("\n[INFO] Trying to sync and get the interval...")
                         receive_message.syncing = ("Initialized")
 
@@ -509,8 +515,9 @@ def receive_message():
                 
                 # --- End of sync ---
 
+                # --- Blue frame (to prevent early decoding) ---
+
                 elif current_state == "end of sync":
-                    # A frame between sync and decoding so that it doesn't decode during a sync frame
                     if color != "blue" and last_color == "blue":
                         current_state = "decoding"
 
@@ -533,6 +540,7 @@ def receive_message():
                     frame_time = current_time - last_frame_time 
 
                     if interval > 0:
+
                         if frame_time >= interval:
                             end_frame = True
                             add_frame = True 
@@ -545,6 +553,7 @@ def receive_message():
                     elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
                         
                         print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
+
                         while not frame_queue.empty(): # Waits for the frame queue to be empty
                             time.sleep(0.005)
 
@@ -553,23 +562,26 @@ def receive_message():
 
                     try:
                         frame_queue.put_nowait((roi_hsv.copy(), recall, add_frame, end_frame))
-                    except queue.Full:
-                        pass  # [Failsafe] Skip if queue is full
 
-                    while recall and (decoded_message is None or decoded_message.strip() == ""):
+                    except queue.Full: # If the queue is full:
+                        pass # Skip
+
+                    while recall and (decoded_message is None or decoded_message.strip() == ""): # While recall is True and the decoded message still is empty
                         time.sleep(0.05)
 
                     if decoded_message is not None:
                         print("\n[INFO] Decoding finished.")
                         break
                     
-                # Initializes last_state_time
+                # "last_state_time" initialization
+
                 if not hasattr(receive_message, "first_state"):
                     last_state_time = time.time()
                     receive_message.first_state = ("Get first state")
 
-                 # Calculates the time of how long it has been the same state
-                if last_state != current_state and last_state_time is not None:
+                # Calculates the time of how long it has been the same state
+
+                if last_state != current_state and last_state_time is not None: # If the current state is different from the last and "last_state_time" has a value:
                     last_state_time = time.time() - last_state_time
                     print(f"\n[INFO] State: {last_state}, lasted for: {last_state_time:.3f}")
                     last_state_time = time.time()
@@ -608,12 +620,11 @@ def receive_message():
 
 if __name__ == "__main__":
 
-
     receive_message()
 
     profiler.disable()
 
     stats = pstats.Stats(profiler)
-    stats.strip_dirs()        # remove full paths
-    stats.sort_stats("cumtime")  # sort by cumulative time
-    stats.print_stats(20)      # print only top 20 functions
+    stats.strip_dirs() # Removes directorys
+    stats.sort_stats("cumtime") # Sorts by cumulative time
+    stats.print_stats(20) # Prints only top 20 functions
