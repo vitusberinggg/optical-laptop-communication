@@ -13,12 +13,12 @@ bitgrids = []
 
 # --- Functions ---
 
-def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False, debug_bytes=False):
+def decode_bitgrid(hsv_frame, add_frame = False, recall = False, end_frame = False, debug_bytes = False):
 
     """
     Handles bitgrid collection and decoding.
 
-    Args:
+    Arguments:
         hsv_frame: HSV frame for processing (only used when add_frame=True)
         add_frame: Add this frame to the tracker
         recall: Decode collected bitgrids into bytes and characters
@@ -26,31 +26,35 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False, de
 
     Returns:
         str | None: Decoded message (if recall=True)
+
     """
 
     global bitgrids
 
     if add_frame:
+
         if end_frame:
-            # Retrieve completed bitgrid from tracker
-            bitgrid = color_functions_v3_1.tracker.end_bit()   # e.g. shape (8, 16)
+
+            bitgrid = color_functions_v3_1.tracker.end_bit()
 
             if bitgrid is not None:
-                bitgrids.append(bitgrid)   # Store safely as a separate frame
+                bitgrids.append(bitgrid)
 
             color_functions_v3_1.tracker.reset()
+
         else:
             color_functions_v3_1.tracker.add_frame(hsv_frame)
 
         return None
 
     if recall:
+
         if len(bitgrids) == 0:
             print("No bitgrids collected yet.")
             return None
 
         # Combine all bitgrids horizontally
-        combined = np.vstack(bitgrids)     # shape becomes (8, N)
+        combined = np.vstack(bitgrids)
 
         flat = combined.ravel()
         num_bytes = len(flat) // 8
@@ -58,15 +62,15 @@ def decode_bitgrid(hsv_frame, add_frame=False, recall=False, end_frame=False, de
         # Split into 8-bit chunks
         byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
 
-        #print(f"Decoding bit matrix into bytes: \n{byte_matrix}\n")
-
         print(f"Decoded {len(byte_matrix)} bytes:")
 
         for i, byte_bits in enumerate(byte_matrix):
-            # Convert booleans to '0'/'1'
+
             s = "".join([ b for b in byte_bits])
+
             try:
                 char = chr(int(s, 2))
+                
             except ValueError:
                 char = '?'
 
@@ -109,7 +113,7 @@ def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
     """
     Syncs timing by detecting black/white transitions.
 
-    Args:
+    Arguments:
         "color" (str):
         "detect_color_fn": Function that returns "black" or "white".
         "transitions_needed" (int): How many transitions we need to detect.
