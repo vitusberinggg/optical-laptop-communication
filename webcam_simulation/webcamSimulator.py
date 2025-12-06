@@ -5,6 +5,8 @@ import cv2
 import threading
 import time
 
+from distorter import FrameDistorter
+
 # --- Definitions ---
 
 sender_output_width = 1920 # Width of the sender output in pixels
@@ -41,6 +43,8 @@ class VideoThreadedCapture:
 
         self.cap = cv2.VideoCapture(video_path)
 
+        self.distorter = FrameDistorter(preset="custom")
+
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
 
@@ -58,6 +62,8 @@ class VideoThreadedCapture:
 
         self.ret = False
         self.stopped = False
+
+        self.now1 = time.time()
 
         fps = self.cap.get(cv2.CAP_PROP_FPS)
 
@@ -92,6 +98,10 @@ class VideoThreadedCapture:
             if delay > 0:
                 time.sleep(delay)
 
+            if time.time() - self.now1 > 0.5:
+                print(f"Delay is: {delay}")
+                self.now1 = time.time()
+
             ret, frame = self.cap.read()
 
             if not ret:
@@ -104,7 +114,7 @@ class VideoThreadedCapture:
 
             frame = frame.copy()
 
-            
+            frame = self.distorter.apply(frame)
 
             if self.write_buffer == 0:
                 self.buffer_a = frame

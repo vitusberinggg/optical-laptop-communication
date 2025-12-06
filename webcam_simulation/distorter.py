@@ -14,12 +14,12 @@ ocl = OpenCL()
 PRESETS = {
     "custom": {
         "severity": 1.0,
-        "light_level": 1.0,  # normal light
+        "light_level": 1.0,
         "effects": ["temporal_instability"]
     },
     "none": {
         "severity": 0.0,
-        "light_level": 1.0,  # normal light
+        "light_level": 1.0,
         "effects": []
     },
         "light": {
