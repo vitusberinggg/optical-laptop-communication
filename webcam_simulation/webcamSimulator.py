@@ -42,8 +42,18 @@ class VideoThreadedCapture:
         """
 
         self.cap = cv2.VideoCapture(video_path)
+        '''
+        List of presets:
 
-        self.distorter = FrameDistorter(preset="custom")
+            custom
+            none
+            light
+            medium
+            heavy
+            webcam
+        '''
+
+        self.distorter = FrameDistorter(preset="webcam")
 
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")

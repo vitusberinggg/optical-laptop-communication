@@ -40,11 +40,11 @@ PRESETS = {
                     "rolling_shutter", "warp", "chromatic_aberration", 
                     "blur", "jpeg_compress", "temporal_instability"]
     },
-        "webcam_realistic": {
-        "severity": 0.5,
+        "webcam": {
+        "severity": 0.1,
         "light_level": 0.8,
         "effects": ["noise","jitter_color","white_balance_shift",
-                    "rolling_shutter","blur","chromatic_aberration",
+                    "blur","chromatic_aberration",
                     "jpeg_compress", "temporal_instability"]
     }
 }
@@ -53,7 +53,7 @@ PRESETS = {
 # --- Frame distorter ---
 
 class FrameDistorter:
-    def __init__(self, preset="webcam_realistic"):
+    def __init__(self, preset="webcam"):
         config = PRESETS[preset]
         self.severity = config["severity"]
         self.light_level = config.get("light_level", 1.0)
