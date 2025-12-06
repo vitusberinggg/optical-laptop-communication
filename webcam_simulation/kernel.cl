@@ -4,6 +4,42 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp32 : enable
 
+// Simple hash function to generate pseudo-random per-pixel noise
+uint hash(uint x, uint y, uint c, uint seed) {
+    uint h = x * 374761393u + y * 668265263u + c * 2147483647u + seed * 1274126177u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    return h;
+}
+
+// -------- Noise ----------
+
+__kernel void add_noise(
+    __global uchar *img,
+    float base_sigma,
+    float signal_sigma,
+    int width,
+    int height,
+    uint seed
+) {
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (x >= width || y >= height) return;
+
+    int idx = (y * width + x) * 3;
+
+    for (int c = 0; c < 3; c++) {
+        uint h = hash(x, y, c, seed);
+        float noise = ((float)(h & 0xFFFF) / 65535.0f - 0.5f); // -0.5..0.5
+        float pixel = (float)img[idx + c];
+        float sigma = base_sigma + signal_sigma * pixel;
+        pixel += noise * sigma * 2.0f; // scale to match standard deviation
+        img[idx + c] = (uchar)clamp(pixel, 0.0f, 255.0f);
+    }
+}
+
+
+
+
 // ---------- JITTER (brightness/contrast + RGB gains) ----------
 __kernel void jitter(
     __global uchar *img,
@@ -230,3 +266,69 @@ __kernel void jpeg_approx(
         }
     }
 }
+
+
+// ---------- GAUSSIAN BLUR (1D Horizontal) ----------
+__kernel void gaussian_blur(
+    __global uchar *in_img,
+    __global uchar *out_img,
+    __global float *kernel_array,   // 1D Gaussian weights
+    int ksize,
+    int width,
+    int height
+){
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if(x >= width || y >= height) return;
+
+    int khalf = ksize / 2;
+    float3 acc = (float3)(0.0f, 0.0f, 0.0f);
+
+    for(int i=-khalf; i<=khalf; i++){
+        int sx = clamp(x+i, 0, width-1);
+        int idx = (y*width + sx)*3;
+        float w = kernel_array[i + khalf];
+        acc.x += w * (float)in_img[idx + 0];
+        acc.y += w * (float)in_img[idx + 1];
+        acc.z += w * (float)in_img[idx + 2];
+    }
+
+    int idx = (y*width + x)*3;
+    out_img[idx+0] = (uchar)clamp(acc.x, 0.0f, 255.0f);
+    out_img[idx+1] = (uchar)clamp(acc.y, 0.0f, 255.0f);
+    out_img[idx+2] = (uchar)clamp(acc.z, 0.0f, 255.0f);
+}
+
+
+// ---------- CHROMATIC ABERRATION ----------
+__kernel void chromatic_aberration(
+    __global uchar *in_img,
+    __global uchar *out_img,
+    int width,
+    int height,
+    float dx_r,
+    float dy_r,
+    float dx_b,
+    float dy_b
+) {
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if(x >= width || y >= height) return;
+
+    int idx = (y * width + x) * 3;
+
+    // Coordinates for red and blue channels
+    int xr = clamp((int)round(x + dx_r), 0, width-1);
+    int yr = clamp((int)round(y + dy_r), 0, height-1);
+    int xb = clamp((int)round(x + dx_b), 0, width-1);
+    int yb = clamp((int)round(y + dy_b), 0, height-1);
+
+    int idx_r = (yr * width + xr) * 3;
+    int idx_b = (yb * width + xb) * 3;
+
+    // Apply shift
+    out_img[idx + 0] = in_img[idx_b + 0]; // B
+    out_img[idx + 1] = in_img[idx + 1];   // G stays
+    out_img[idx + 2] = in_img[idx_r + 2]; // R
+}
+

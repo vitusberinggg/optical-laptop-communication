@@ -14,8 +14,8 @@ ocl = OpenCL()
 PRESETS = {
     "custom": {
         "severity": 1.0,
-        "light_level": 1.0,
-        "effects": ["temporal_instability"]
+        "light_level": 0.5,
+        "effects": ["noise"]
     },
     "none": {
         "severity": 0.0,
@@ -121,35 +121,11 @@ class Effects:
     @staticmethod
     def noise(frame, severity, light_level):
         """
-        Adds realistic sensor noise (grain-like) instead of sparse pixel spikes.
-        Looks like ISO noise and reacts to brightness.
+        Webcam-realistic noise (GPU).
         """
+        return ocl.run_noise(frame, severity, light_level)
 
-        # Ensure float32 for calculation
-        img = frame.astype(np.float32)
 
-        # Base noise amount (adjust these to taste)
-        base_sigma = 3     # minimum grain
-        max_sigma  = 35    # maximum grain
-
-        # Severity controls sigma linearly
-        sigma = base_sigma + (max_sigma - base_sigma) * severity
-
-        # Light level increases noise when dark:
-        # dark → more noise, bright → less
-        light_factor = 1.0 / max(light_level, 0.15)
-        sigma *= light_factor
-
-        # Generate Gaussian noise
-        noise = np.random.normal(0, sigma, img.shape).astype(np.float32)
-
-        # Add noise
-        noised = img + noise
-
-        # Clip to valid range
-        noised = np.clip(noised, 0, 255).astype(np.uint8)
-
-        return noised
 
 
 
@@ -251,85 +227,71 @@ class Effects:
 
     @staticmethod
     def blur(frame, severity=1.0):
-        radius = 0.8 + severity * 2.0  # scale to 0.8–2.8
-
-        if radius <= 0:
-            return frame
-
-        # Convert to UMat for OpenCL acceleration
-        frame_gpu = cv2.UMat(frame)
-
-        # Kernel size must be odd
-        k = max(3, int(radius * 4) | 1)
-
-        # Apply Gaussian blur on GPU
-        blurred_gpu = cv2.GaussianBlur(frame_gpu, (k, k), sigmaX=radius)
-
-        # Convert back to normal NumPy array
-        blurred = blurred_gpu.get()
-        return blurred
+        """
+        Subtle soft-focus blur for webcam realism.
+        severity: 0.0 = none, 1.0 = max subtle blur
+        """
+        # Map severity to sigma radius (~0.5–2.0 pixels)
+        radius = 0.5 + severity * 2.0
+        return ocl.run_blur(frame, radius=radius)
 
 
-    # --- Frame-Rate Instability (simulate dropped or repeated frames) ---
+
+
+    # --- Frame-Rate Instability ---
+
+    _last_frame = None
+    _frozen_frame = None
+    _freeze_timer = 0
 
     @staticmethod
-    def temporal_instability(frames, drop_prob=0.1, duplicate_prob=0.1):
+    def temporal_instability(frame,
+                             drop_prob=0.05,
+                             freeze_prob=0.03,
+                             freeze_duration=3):
         """
-        frames: list of NumPy arrays (HxWxC)
-        returns: list of NumPy arrays (modified)
+        Returns exactly ONE frame every call.
+        Simulates:
+        - dropped updates (frame repeats)
+        - short freezes
+        - jitter in motion
+
+        frame: HxWxC ndarray
         """
-        new_frames = []
-        for f in frames:
-            r = random.random()
 
-            if r < drop_prob:
-                # drop frame
-                continue
+        # Initialize state on first frame
+        if Effects._last_frame is None:
+            Effects._last_frame = frame.copy()
+            return frame
 
-            new_frames.append(f)
+        # If we are currently frozen: keep outputting frozen frame
+        if Effects._freeze_timer > 0:
+            Effects._freeze_timer -= 1
+            return Effects._frozen_frame
 
-            # duplicate frame sometimes
-            if random.random() < duplicate_prob:
-                new_frames.append(f.copy())
+        r = random.random()
 
-        return new_frames
+        # Start a freeze
+        if r < freeze_prob:
+            Effects._freeze_timer = freeze_duration
+            Effects._frozen_frame = Effects._last_frame.copy()
+            return Effects._frozen_frame
+
+        # Drop update (frame repeats)
+        if r < freeze_prob + drop_prob:
+            return Effects._last_frame
+
+        # Otherwise: update normally
+        Effects._last_frame = frame.copy()
+        return frame
 
 
     # --- Chromatic Aberration (Channel Shift) ---
 
     @staticmethod
     def chromatic_aberration(frame, severity):
-        """
-        severity: 0.0 = none
-                1.0 = strong color separation
-        """
-        H, W, C = frame.shape
-        assert C == 3
+        return ocl.run_chromatic_aberration(frame, severity)
 
-        frame_f = frame.astype(np.float32)
-
-        # shift range (in pixels)
-        max_shift = 2.0   # realistic webcam aberration is tiny (1–2 pixels)
-
-        dx_r = severity * max_shift
-        dy_r = 0.0
-
-        dx_b = -severity * max_shift
-        dy_b = 0.0
-
-        def shift_channel(channel, dx, dy):
-            M = np.float32([[1, 0, dx], [0, 1, dy]])
-            channel_gpu = cv2.UMat(channel)
-            shifted = cv2.warpAffine(channel_gpu, M, (W, H),
-                                    borderMode=cv2.BORDER_REPLICATE)
-            return shifted.get()
-
-        R = shift_channel(frame_f[:, :, 2], dx_r, dy_r)
-        G = frame_f[:, :, 1]
-        B = shift_channel(frame_f[:, :, 0], dx_b, dy_b)
-
-        result = cv2.merge([B, G, R])
-        return np.clip(result, 0, 255).astype(np.uint8)
 
 
 

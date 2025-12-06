@@ -3,7 +3,6 @@ Use this command to install pyopencl:
 pip install pyopencl
 '''
 
-
 import pyopencl as cl
 import numpy as np
 
@@ -27,14 +26,55 @@ class OpenCL:
         self.queue = cl.CommandQueue(self.ctx)
 
         # Load kernel.cl from file
-        kernel_src = self.load_kernel_file("kernel.cl")
+        kernel_src = self.load_kernel_file(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\kernel.cl")
         self.prg = cl.Program(self.ctx, kernel_src).build()
+
+        self.kernel_add_noise = cl.Kernel(self.prg, "add_noise")
 
     @staticmethod
     def load_kernel_file(path):
         with open(path, 'r') as f:
             return f.read()
-    
+        
+
+    # --- Noise ---
+        
+    def run_noise(self, frame, severity, light_level):
+        h, w, _ = frame.shape
+
+        # GPU memory
+        mf = cl.mem_flags
+        src = np.ascontiguousarray(frame)
+        img_buf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=src)
+
+        # Noise parameters
+        base_sigma = 2.0 * severity
+        signal_sigma = 0.02 * severity
+        light_factor = 1.0 / max(light_level, 0.15)
+        base_sigma *= light_factor
+        signal_sigma *= light_factor
+
+        # Generate a different seed per frame
+        seed = np.random.randint(0, 0x7FFFFFFF, dtype=np.uint32)
+
+        # Launch kernel
+        self.prg.add_noise(
+            self.queue,
+            (w, h), None,
+            img_buf,
+            np.float32(base_sigma),
+            np.float32(signal_sigma),
+            np.int32(w),
+            np.int32(h),
+            np.uint32(seed)
+        )
+
+        out = np.empty_like(frame)
+        cl.enqueue_copy(self.queue, out, img_buf)
+        return out
+
+
+
     # --- Jitter color ---
     
     def run_jitter(self, frame, brightness, contrast, gains):
@@ -180,4 +220,80 @@ class OpenCL:
 
         cl.enqueue_copy(self.queue, out, img_out)
         return out
+    
+    # --- Blur ---
+
+    def run_blur(self, frame, radius=1.5):
+        """
+        frame: HxWx3 uint8
+        radius: Gaussian sigma in pixels
+        """
+        h, w, _ = frame.shape
+        mf = cl.mem_flags
+
+        # Create kernel weights
+        ksize = max(3, min(15, int(radius*4)|1))  # odd, 3–15
+        khalf = ksize // 2
+        x = np.arange(-khalf, khalf+1, dtype=np.float32)
+        kernel = np.exp(-0.5 * (x / radius)**2)
+        kernel /= np.sum(kernel)
+
+        kernel_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=kernel)
+        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(frame))
+        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, frame.nbytes)
+
+        self.prg.gaussian_blur(
+            self.queue,
+            (w, h),
+            None,
+            img_in,
+            img_out,
+            kernel_buf,
+            np.int32(ksize),
+            np.int32(w),
+            np.int32(h)
+        )
+
+        out = np.empty_like(frame)
+        cl.enqueue_copy(self.queue, out, img_out)
+        return out
+    
+    # --- Chromatic Abberation ---
+
+    def run_chromatic_aberration(self, frame, severity):
+        """
+        Applies subtle RGB channel shift like real webcam chromatic aberration.
+        severity: 0.0 = none, 1.0 = maximum shift (~2 pixels)
+        """
+        h, w, _ = frame.shape
+        mf = cl.mem_flags
+
+        src = np.ascontiguousarray(frame)
+        out = np.empty_like(src)
+
+        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=src)
+        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
+
+        max_shift = 2.0
+        dx_r = severity * max_shift
+        dy_r = 0.0
+        dx_b = -severity * max_shift
+        dy_b = 0.0
+
+        self.prg.chromatic_aberration(
+            self.queue,
+            (w, h), None,
+            img_in,
+            img_out,
+            np.int32(w),
+            np.int32(h),
+            np.float32(dx_r),
+            np.float32(dy_r),
+            np.float32(dx_b),
+            np.float32(dy_b)
+        )
+
+        cl.enqueue_copy(self.queue, out, img_out)
+        return out
+
 
