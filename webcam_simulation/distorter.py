@@ -14,8 +14,8 @@ ocl = OpenCL()
 PRESETS = {
     "custom": {
         "severity": 1.0,
-        "light_level": 0.5,
-        "effects": ["noise"]
+        "light_level": 1.0,
+        "effects": ["temporal_instability"]
     },
     "none": {
         "severity": 0.0,
@@ -95,9 +95,9 @@ class FrameDistorter:
             if effect.__name__ in ["noise", "jitter_color"]:
                 frame = effect(frame, self.severity, self.light_level)
 
-            # white balance drift needs only severity
-            elif effect.__name__ == "white_balance_shift":
-                frame = effect(frame, self.severity)
+            # temporal instability is special: because it doesn't take severity or light_level
+            elif effect.__name__ == "temporal_instability":
+                frame = effect(frame)
 
             else:
                 frame = effect(frame, self.severity)

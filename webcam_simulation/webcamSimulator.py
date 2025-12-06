@@ -43,7 +43,7 @@ class VideoThreadedCapture:
 
         self.cap = cv2.VideoCapture(video_path)
 
-        self.distorter = FrameDistorter(preset="heavy")
+        self.distorter = FrameDistorter(preset="custom")
 
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
