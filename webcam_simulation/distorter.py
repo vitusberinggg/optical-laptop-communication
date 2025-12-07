@@ -111,10 +111,10 @@ class FrameDistorter:
 
             # temporal instability is special: because it doesn't take severity or light_level
             elif effect.__name__ == "temporal_instability":
-                effect()
+                effect(frame)
 
-            # jpeg compress needs frame to determine block size
-            elif effect.__name__ == "jpeg_compress":
+            # jpeg compress, rolling shutter and warp needs frames for their calculations
+            elif effect.__name__ in ["jpeg_compress", "rolling_shutter", "warp"]:
                 effect(frame, self.severity)
 
             else:
@@ -170,7 +170,7 @@ class Effects:
         # GPU-accelerated processing
         ocl.run_jitter(brightness, contrast, gains)
     
-    def rolling_shutter(self, severity, amplitude=2.0):
+    def rolling_shutter(self, frame, severity, amplitude=2.0):
         # generate slowly-varying row offsets; severity controls amplitude
         h, w, _ = frame.shape
         # base wobble scaled by severity and darkness maybe
@@ -188,7 +188,7 @@ class Effects:
 
     # --- Warp ---
 
-    def warp(self, severity):
+    def warp(self, frame, severity):
         # create low-res displacement map like before but then run on GPU
         h, w, _ = frame.shape
         max_strength = 5.0
