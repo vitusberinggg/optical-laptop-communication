@@ -15,7 +15,7 @@ PRESETS = {
     "custom": {
         "severity": 1.0,
         "light_level": 1.0,
-        "effects": ["temporal_instability"]
+        "effects": ["jpeg_compress", "noise"]
     },
     "none": {
         "severity": 0.0,
@@ -59,6 +59,7 @@ class FrameDistorter:
         self.light_level = config.get("light_level", 1.0)
         self.effects = []
         self.effects_obj = Effects(self.light_level)
+        self.which_effects = []
 
         # Define effect priority (lower number = applied first)
         EFFECT_PRIORITY = {
@@ -73,8 +74,16 @@ class FrameDistorter:
             "temporal_instability": 8,  # Frame-level drops/duplicates happen last
         }
 
+        EFFECT_ORDER = [
+            "noise", "jitter_color", "white_balance_shift",
+            "rolling_shutter", "warp", "chromatic_aberration",
+            "blur", "jpeg_compress", "temporal_instability"
+        ]
+
         # Sort the preset effects automatically by priority
         config_effects = sorted(config["effects"], key=lambda e: EFFECT_PRIORITY.get(e, 99))
+
+        getattr(self.effects_obj, "img_distortion")  # Ensure img_distortion is always available
 
         # Automatically map effect names to functions
         for name in config_effects:
@@ -85,6 +94,11 @@ class FrameDistorter:
             
         print(f"[FrameDistorter] Effects applied in order: {[fn.__name__ for fn in self.effects]}")
 
+        self.which_effects = np.array([
+            1 if name in config["effects"] else 0
+            for name in EFFECT_ORDER
+        ], dtype=np.uint32)
+
     # Apply all effects
     def apply(self, frame):
         # Adjust global brightness first
@@ -93,14 +107,21 @@ class FrameDistorter:
         for effect in self.effects:
             # noise & jitter_color require light_level
             if effect.__name__ in ["noise", "jitter_color"]:
-                frame = effect(frame, self.severity, self.light_level)
+                effect(self.severity, self.light_level)
 
             # temporal instability is special: because it doesn't take severity or light_level
             elif effect.__name__ == "temporal_instability":
-                frame = effect(frame)
+                effect()
+
+            # jpeg compress needs frame to determine block size
+            elif effect.__name__ == "jpeg_compress":
+                effect(frame, self.severity)
 
             else:
-                frame = effect(frame, self.severity)
+                effect(self.severity)
+        
+        # Finally apply image distortion with the selected effects
+        frame = self.effects_obj.img_distortion(frame, self.which_effects)
         return frame
 
 
@@ -110,29 +131,26 @@ class FrameDistorter:
 class Effects:
 
     def __init__(self, light_level):
-        # White balance gains (continuous drift)
         self.light_level = light_level
         self.wb_r = 1.0
         self.wb_g = 1.0
         self.wb_b = 1.0
 
+
     # --- Sensor noise ---
 
     @staticmethod
-    def noise(frame, severity, light_level):
+    def noise(severity, light_level):
         """
         Webcam-realistic noise (GPU).
         """
-        return ocl.run_noise(frame, severity, light_level)
+        ocl.run_noise(severity, light_level)
 
 
-
-
-
-    # --- Color jitter (brightness/contrast) ---
+    # --- Color jitter ---
 
     @staticmethod
-    def jitter_color(frame, severity, light_level):
+    def jitter_color(severity, light_level):
         # 1. brightness
         max_brightness = 40 * severity
         brightness = np.random.uniform(-max_brightness, max_brightness)
@@ -150,9 +168,9 @@ class Effects:
         )
 
         # GPU-accelerated processing
-        return ocl.run_jitter(frame, brightness, contrast, gains)
+        ocl.run_jitter(brightness, contrast, gains)
     
-    def rolling_shutter(self, frame, severity, amplitude=2.0):
+    def rolling_shutter(self, severity, amplitude=2.0):
         # generate slowly-varying row offsets; severity controls amplitude
         h, w, _ = frame.shape
         # base wobble scaled by severity and darkness maybe
@@ -164,13 +182,13 @@ class Effects:
         sine = np.sin(rows * freq + phase) * max_offset
         noise = (np.random.rand(h).astype(np.float32) - 0.5) * (max_offset * 0.2)
         row_offset = sine + noise
-        return ocl.run_rolling_shutter(frame, row_offset)
+        return ocl.run_rolling_shutter(row_offset)
 
 
 
-    # --- Warp / elastic distortion ---
+    # --- Warp ---
 
-    def warp(self, frame, severity):
+    def warp(self, severity):
         # create low-res displacement map like before but then run on GPU
         h, w, _ = frame.shape
         max_strength = 5.0
@@ -187,7 +205,7 @@ class Effects:
         map_x = (x + dx).astype(np.float32)
         map_y = (y + dy).astype(np.float32)
 
-        return ocl.run_warp(frame, map_x, map_y)
+        return ocl.run_warp(map_x, map_y)
 
 
     # --- jpeg compression blocking ---
@@ -196,13 +214,13 @@ class Effects:
         # map severity to quality: severity 0->100, 1->10
         quality = int(100 - severity * 90)
         block_size = 8 if frame.shape[1] <= 1280 else 16
-        return ocl.run_jpeg_approx(frame, block_size=block_size, quality=quality)
+        return ocl.run_jpeg_approx(block_size=block_size, quality=quality)
 
 
 
-    # --- White balance shift (real webcam drift) ---
+    # --- White balance shift ---
 
-    def white_balance_shift(self, frame, severity):
+    def white_balance_shift(self, severity):
         # How strong the drift is depending on severity and light level
         # Much stronger when light is low
         stability = 1.2 - self.light_level       # 0.2 at bright light → 1.2 at darkness
@@ -219,21 +237,21 @@ class Effects:
         self.wb_b = max(0.7, min(1.3, self.wb_b))
 
         gains = (self.wb_r, self.wb_g, self.wb_b)
-        return ocl.run_white_balance(frame, gains)
+        return ocl.run_white_balance(gains)
 
 
 
-    # --- Soft-Focus Blur (Gaussian Blur) ---
+    # --- Gaussian Blur ---
 
     @staticmethod
-    def blur(frame, severity=1.0):
+    def blur(severity=1.0):
         """
         Subtle soft-focus blur for webcam realism.
         severity: 0.0 = none, 1.0 = max subtle blur
         """
         # Map severity to sigma radius (~0.5–2.0 pixels)
         radius = 0.5 + severity * 2.0
-        return ocl.run_blur(frame, radius=radius)
+        return ocl.run_blur(radius=radius)
 
 
 
@@ -286,11 +304,18 @@ class Effects:
         return frame
 
 
-    # --- Chromatic Aberration (Channel Shift) ---
+    # --- Chromatic Aberration ---
 
     @staticmethod
-    def chromatic_aberration(frame, severity):
-        return ocl.run_chromatic_aberration(frame, severity)
+    def chromatic_aberration(severity):
+        return ocl.run_chromatic_aberration(severity)
+
+
+    # --- Image Distortion ---
+
+    @staticmethod
+    def img_distortion(frame, which_effects):
+        return ocl.run_image_distortion(frame, which_effects)
 
 
 
@@ -299,7 +324,7 @@ class Effects:
 
 if __name__ == "__main__":
     
-    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\test_bitgrid.png")
+    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\color_calibration.png")
     distorter = FrameDistorter(preset="custom")
     distorted_frame = distorter.apply(frame)
     cv2.imwrite("distorted.jpg", distorted_frame)

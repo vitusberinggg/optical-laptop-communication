@@ -8,6 +8,52 @@ import numpy as np
 
 class OpenCL:
     def __init__(self):
+
+        #--- Initialize OpenCL context and kernels ---
+
+        # OpenCL memory flags
+        self.mf = cl.mem_flags
+
+        # Parameters for noise
+        self.base_sigma = 0.0
+        self.signal_sigma = 0.0
+        self.seed = 0
+
+        # Parameters for color jitter
+        self.brightness = 0.0
+        self.contrast = 1.0
+        self.jitter_r_gain = 1.0
+        self.jitter_g_gain = 1.0
+        self.jitter_b_gain = 1.0
+
+        # Parameters for white balance
+        self.white_r_gain = 1.0
+        self.white_g_gain = 1.0 
+        self.white_b_gain = 1.0
+
+        # Parameters for warp
+        self.map_x_buf = None
+        self.map_y_buf = None
+
+        # Parameters for rolling shutter
+        self.row_buf = None
+
+        # Parameters for JPEG approximation
+        self.block_size = 8
+        self.luma_scale = 1.0
+
+        # Parameters for Gaussian blur
+        self.kernel_buf = None
+        self.ksize = 0  # Kernel size for Gaussian blur
+
+        # Parameters for chromatic aberration
+        self.dx_r = 0.0
+        self.dy_r = 0.0
+        self.dx_b = 0.0
+        self.dy_b = 0.0
+
+
+
         # Use Intel GPU by default if available
         platforms = cl.get_platforms()
         device = None
@@ -28,8 +74,10 @@ class OpenCL:
         # Load kernel.cl from file
         kernel_src = self.load_kernel_file(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\kernel.cl")
         self.prg = cl.Program(self.ctx, kernel_src).build()
-
-        self.kernel_add_noise = cl.Kernel(self.prg, "add_noise")
+        
+        # Create OpenCL kernels to able to reuse them
+        self.kernel_jpeg_approx = cl.Kernel(self.prg, "jpeg_approx")
+        self.kernel_image_distortion = cl.Kernel(self.prg, "image_distortion")
 
     @staticmethod
     def load_kernel_file(path):
@@ -39,261 +87,206 @@ class OpenCL:
 
     # --- Noise ---
         
-    def run_noise(self, frame, severity, light_level):
-        h, w, _ = frame.shape
-
-        # GPU memory
-        mf = cl.mem_flags
-        src = np.ascontiguousarray(frame)
-        img_buf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=src)
+    def run_noise(self, severity, light_level):
+        # print("[DEBUG] noise")
 
         # Noise parameters
-        base_sigma = 2.0 * severity
-        signal_sigma = 0.02 * severity
+        self.base_sigma = 2.0 * severity
+        self.signal_sigma = 0.02 * severity
         light_factor = 1.0 / max(light_level, 0.15)
-        base_sigma *= light_factor
-        signal_sigma *= light_factor
+        self.base_sigma *= light_factor
+        self.signal_sigma *= light_factor
 
         # Generate a different seed per frame
-        seed = np.random.randint(0, 0x7FFFFFFF, dtype=np.uint32)
-
-        # Launch kernel
-        self.prg.add_noise(
-            self.queue,
-            (w, h), None,
-            img_buf,
-            np.float32(base_sigma),
-            np.float32(signal_sigma),
-            np.int32(w),
-            np.int32(h),
-            np.uint32(seed)
-        )
-
-        out = np.empty_like(frame)
-        cl.enqueue_copy(self.queue, out, img_buf)
-        return out
-
+        self.seed = np.random.randint(0, 0x7FFFFFFF, dtype=np.uint32)
 
 
     # --- Jitter color ---
     
-    def run_jitter(self, frame, brightness, contrast, gains):
-        h, w, _ = frame.shape
-        r_gain, g_gain, b_gain = gains
+    def run_jitter(self, brightness, contrast, gains):
+        # print("[DEBUG] jitter")
+        self.jitter_r_gain, self.jitter_g_gain, self.jitter_b_gain = gains
 
-        # transfer frame to GPU
-        mf = cl.mem_flags
-        img_buf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=frame)
-
-        # run kernel
-        self.prg.jitter(
-            self.queue, 
-            (w, h), None,
-            img_buf,
-            np.float32(brightness),
-            np.float32(contrast),
-            np.float32(r_gain),
-            np.float32(g_gain),
-            np.float32(b_gain),
-            np.int32(w),
-            np.int32(h)
-        )
-
-        # copy back to CPU
-        out = np.empty_like(frame)
-        cl.enqueue_copy(self.queue, out, img_buf)
-        return out
+        self.brightness = brightness
+        self.contrast = contrast
     
     # --- White balance shifter ---
 
-    def run_white_balance(self, frame, gains):
-        h, w, _ = frame.shape
-        r_gain, g_gain, b_gain = gains
+    def run_white_balance(self, gains):
+        # print("[DEBUG] white balance")
 
-        mf = cl.mem_flags
-        img_buf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=frame)
-
-        self.prg.white_balance(
-            self.queue,
-            (w, h), None,
-            img_buf,
-            np.float32(r_gain),
-            np.float32(g_gain),
-            np.float32(b_gain),
-            np.int32(w),
-            np.int32(h)
-        )
-
-        out = np.empty_like(frame)
-        cl.enqueue_copy(self.queue, out, img_buf)
-        return out
+        self.white_r_gain, self.white_g_gain, self.white_b_gain = gains
     
     # ---------- Warp (GPU remap) ----------
-    def run_warp(self, frame, map_x, map_y):
+    def run_warp(self, map_x, map_y):
+        # print("[DEBUG] warp")
         """
         frame: HxWx3 uint8
         map_x,map_y: HxW float32 pixel coords
         """
-        h, w, _ = frame.shape
-        mf = cl.mem_flags
-        src = np.ascontiguousarray(frame)
-        out = np.empty_like(src)
-        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=src)
-        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
-        map_x_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_x.astype(np.float32)))
-        map_y_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_y.astype(np.float32)))
 
-        self.prg.warp(
-            self.queue,
-            (w, h), None,
-            img_in,
-            img_out,
-            map_x_buf,
-            map_y_buf,
-            np.int32(w),
-            np.int32(h)
-        )
-
-        cl.enqueue_copy(self.queue, out, img_out)
-        return out
+        self.map_x_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_x.astype(np.float32)))
+        self.map_y_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_y.astype(np.float32)))
 
     # ---------- Rolling shutter ----------
-    def run_rolling_shutter(self, frame, row_offset):
+
+    def run_rolling_shutter(self, row_offset):
+        # print("[DEBUG] rilling shutter")
         """
         row_offset: 1D float32 array of length height (per-row horizontal offsets in pixels)
         """
-        h, w, _ = frame.shape
-        mf = cl.mem_flags
-        src = np.ascontiguousarray(frame)
-        out = np.empty_like(src)
-        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=src)
-        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
-        row_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(row_offset.astype(np.float32)))
 
-        self.prg.rolling_shutter(
-            self.queue,
-            (w, h), None,
-            img_in,
-            img_out,
-            row_buf,
-            np.int32(w),
-            np.int32(h)
-        )
-
-        cl.enqueue_copy(self.queue, out, img_out)
-        return out
+        self.row_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, 
+                                 hostbuf=np.ascontiguousarray(row_offset.astype(np.float32)))
 
     # ---------- JPEG approximation ----------
-    def run_jpeg_approx(self, frame, block_size=8, quality=50):
+    def run_jpeg_approx(self, block_size=8, quality=50):
+        # print("[DEBUG] jpeg")
         """
         block_size: 8 (typical) or 16 for stronger blocking
         quality: 0..100 (higher = less aggressive compression)
         This routine is an approximation: lowers luma precision and averages chroma per-block.
         """
-        h, w, _ = frame.shape
-        mf = cl.mem_flags
-        src = np.ascontiguousarray(frame)
-        out = np.empty_like(src)
-        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=src)
-        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
 
+        self.block_size = block_size
         # convert quality to luma_scale: lower quality -> larger step
         # clamp quality
         q = max(1, min(100, int(quality)))
         # map quality 100->1.0 (no quant), quality 1->10.0 (very coarse)
-        luma_scale = 0.5 + (101 - q) * 0.2
+        self.luma_scale = 0.5 + (101 - q) * 0.2
 
-        # launch blocks grid
-        bx = (w + block_size - 1) // block_size
-        by = (h + block_size - 1) // block_size
-
-        self.prg.jpeg_approx(
-            self.queue,
-            (bx, by), None,
-            img_in,
-            img_out,
-            np.int32(w),
-            np.int32(h),
-            np.int32(block_size),
-            np.float32(luma_scale)
-        )
-
-        cl.enqueue_copy(self.queue, out, img_out)
-        return out
     
     # --- Blur ---
 
-    def run_blur(self, frame, radius=1.5):
+    def run_blur(self, radius=1.5):
+        # print("[DEBUG] blur")
         """
         frame: HxWx3 uint8
         radius: Gaussian sigma in pixels
         """
-        h, w, _ = frame.shape
-        mf = cl.mem_flags
 
         # Create kernel weights
-        ksize = max(3, min(15, int(radius*4)|1))  # odd, 3–15
-        khalf = ksize // 2
+        self.ksize = max(3, min(15, int(radius*4)|1))  # odd, 3–15
+        khalf = self.ksize // 2
         x = np.arange(-khalf, khalf+1, dtype=np.float32)
         kernel = np.exp(-0.5 * (x / radius)**2)
         kernel /= np.sum(kernel)
 
-        kernel_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=kernel)
-        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(frame))
-        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, frame.nbytes)
+        self.kernel_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=kernel)
 
-        self.prg.gaussian_blur(
-            self.queue,
-            (w, h),
-            None,
-            img_in,
-            img_out,
-            kernel_buf,
-            np.int32(ksize),
-            np.int32(w),
-            np.int32(h)
-        )
-
-        out = np.empty_like(frame)
-        cl.enqueue_copy(self.queue, out, img_out)
-        return out
     
     # --- Chromatic Abberation ---
 
-    def run_chromatic_aberration(self, frame, severity):
+    def run_chromatic_aberration(self, severity):
+        # print("[DEBUG] chromatic aberration")
         """
         Applies subtle RGB channel shift like real webcam chromatic aberration.
         severity: 0.0 = none, 1.0 = maximum shift (~2 pixels)
         """
+
+        max_shift = 2.0
+        self.dx_r = severity * max_shift
+        self.dy_r = 0.0
+        self.dx_b = -severity * max_shift
+        self.dy_b = 0.0
+    
+    def run_image_distortion(self, frame, which_effects):
+        """
+        This method is a placeholder for collective effects that might be applied to the frame.
+        It can be extended to apply multiple effects in a single pass.
+        """
+        # This method can be implemented to combine multiple effects
+
+        #print("Running image distortion with effects:", which_effects)
+
+        mask_np = np.array(which_effects, dtype=np.uint32)
+        bitmask_buf = cl.Buffer(
+            self.ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
+            hostbuf=mask_np
+        )
+
         h, w, _ = frame.shape
-        mf = cl.mem_flags
 
         src = np.ascontiguousarray(frame)
         out = np.empty_like(src)
 
-        img_in = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=src)
-        img_out = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
+        img_buf = cl.Buffer(self.ctx, self.mf.READ_WRITE | self.mf.COPY_HOST_PTR, hostbuf=src)
+        img_temp = cl.Buffer(self.ctx, self.mf.READ_WRITE, out.nbytes)
 
-        max_shift = 2.0
-        dx_r = severity * max_shift
-        dy_r = 0.0
-        dx_b = -severity * max_shift
-        dy_b = 0.0
-
-        self.prg.chromatic_aberration(
+        self.kernel_image_distortion(
             self.queue,
             (w, h), None,
-            img_in,
-            img_out,
+
+            # Input and output images
+            img_buf,
+            img_temp,
+
+            # Image dimensions
             np.int32(w),
             np.int32(h),
-            np.float32(dx_r),
-            np.float32(dy_r),
-            np.float32(dx_b),
-            np.float32(dy_b)
+
+            # Bitmask for active effects
+            bitmask_buf,
+
+            # Noise parameters
+            np.float32(self.base_sigma),
+            np.float32(self.signal_sigma),
+            np.uint32(self.seed),
+
+            # Jitter parameters
+            np.float32(self.brightness),
+            np.float32(self.contrast),
+            np.float32(self.jitter_r_gain),
+            np.float32(self.jitter_g_gain),
+            np.float32(self.jitter_b_gain),
+
+            # White balance parameters
+            np.float32(self.white_r_gain),
+            np.float32(self.white_g_gain),
+            np.float32(self.white_b_gain),
+
+            # Warp parameters
+            self.map_x_buf,
+            self.map_y_buf,
+
+            # Rolling shutter parameter
+            self.row_buf,
+
+            # Gaussian blur kernel
+            self.kernel_buf,
+            np.int32(self.ksize),
+
+            # Chromatic aberration parameters
+            np.float32(self.dx_r),
+            np.float32(self.dy_r),
+            np.float32(self.dx_b),
+            np.float32(self.dy_b)
         )
 
-        cl.enqueue_copy(self.queue, out, img_out)
+        out = np.empty_like(frame)
+
+        if which_effects[7] == 1:
+            
+            # launch blocks grid
+            bx = (w + self.block_size - 1) // self.block_size
+            by = (h + self.block_size - 1) // self.block_size
+   
+            self.kernel_jpeg_approx(
+                self.queue,
+                (bx, by), None,
+                img_buf,
+                img_temp,
+                np.int32(w),
+                np.int32(h),
+                np.int32(self.block_size),
+                np.float32(self.luma_scale)
+            )
+
+            cl.enqueue_copy(self.queue, out, img_temp)
+
+        else:
+            cl.enqueue_copy(self.queue, out, img_buf)
+
         return out
 
 

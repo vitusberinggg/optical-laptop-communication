@@ -4,16 +4,36 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp32 : enable
 
-// Simple hash function to generate pseudo-random per-pixel noise
+
+// Simple hash function to generate pseudo-random per-pixel noise - NOISE
+
 uint hash(uint x, uint y, uint c, uint seed) {
     uint h = x * 374761393u + y * 668265263u + c * 2147483647u + seed * 1274126177u;
     h = (h ^ (h >> 13)) * 1274126177u;
     return h;
 }
 
-// -------- Noise ----------
 
-__kernel void add_noise(
+inline void swap_images(
+    __global uchar *src,
+    __global uchar *dst,
+    int width,
+    int height
+){
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (x >= width || y >= height) return;
+
+    int idx = (y*width + x)*3;
+
+    src[idx+0] = dst[idx+0];
+    src[idx+1] = dst[idx+1];
+    src[idx+2] = dst[idx+2];
+}
+
+// -------- NOISE ----------
+
+void add_noise(
     __global uchar *img,
     float base_sigma,
     float signal_sigma,
@@ -38,10 +58,9 @@ __kernel void add_noise(
 }
 
 
+// ------- JITTER ----------
 
-
-// ---------- JITTER (brightness/contrast + RGB gains) ----------
-__kernel void jitter(
+void jitter(
     __global uchar *img,
     float brightness,
     float contrast,
@@ -69,8 +88,10 @@ __kernel void jitter(
     img[idx + 2] = (uchar)clamp(r, 0.0f, 255.0f);
 }
 
+
 // ---------- WHITE BALANCE ----------
-__kernel void white_balance(
+
+void white_balance(
     __global uchar *img,
     float r_gain,
     float g_gain,
@@ -92,10 +113,12 @@ __kernel void white_balance(
     img[idx + 2] = (uchar)clamp(r, 0.0f, 255.0f);
 }
 
-// ---------- WARP (bilinear sampling using float maps) ----------
-__kernel void warp(
-    __global uchar *in_img,
-    __global uchar *out_img,
+
+// ---------- WARP ----------
+
+void warp(
+    __global uchar *img,
+    __global uchar *temp_img,
     __global float *map_x,
     __global float *map_y,
     int width,
@@ -114,9 +137,10 @@ __kernel void warp(
         int ix = (int)clamp(sx, 0.0f, (float)(width-1));
         int iy = (int)clamp(sy, 0.0f, (float)(height-1));
         int in_idx = (iy * width + ix) * 3;
-        out_img[idx*3 + 0] = in_img[in_idx + 0];
-        out_img[idx*3 + 1] = in_img[in_idx + 1];
-        out_img[idx*3 + 2] = in_img[in_idx + 2];
+        temp_img[idx*3 + 0] = img[in_idx + 0];
+        temp_img[idx*3 + 1] = img[in_idx + 1];
+        temp_img[idx*3 + 2] = img[in_idx + 2];
+
         return;
     }
 
@@ -134,22 +158,24 @@ __kernel void warp(
     int idx11 = (y1 * width + x1) * 3;
 
     for(int c=0; c<3; ++c){
-        float v00 = (float)in_img[idx00 + c];
-        float v10 = (float)in_img[idx10 + c];
-        float v01 = (float)in_img[idx01 + c];
-        float v11 = (float)in_img[idx11 + c];
+        float v00 = (float)img[idx00 + c];
+        float v10 = (float)img[idx10 + c];
+        float v01 = (float)img[idx01 + c];
+        float v11 = (float)img[idx11 + c];
 
         float v0 = v00 * (1.0f - wx) + v10 * wx;
         float v1 = v01 * (1.0f - wx) + v11 * wx;
         float v = v0 * (1.0f - wy) + v1 * wy;
-        out_img[idx*3 + c] = (uchar)clamp(v, 0.0f, 255.0f);
+        temp_img[idx*3 + c] = (uchar)clamp(v, 0.0f, 255.0f);
     }
 }
 
+
 // ---------- ROLLING SHUTTER ----------
-__kernel void rolling_shutter(
-    __global uchar *in_img,
-    __global uchar *out_img,
+
+void rolling_shutter(
+    __global uchar *img,
+    __global uchar *temp_img,
     __global float *row_offset,
     int width,
     int height
@@ -168,9 +194,10 @@ __kernel void rolling_shutter(
         int ix = (int)clamp(sx, 0.0f, (float)(width-1));
         int iy = (int)clamp(sy, 0.0f, (float)(height-1));
         int in_idx = (iy * width + ix) * 3;
-        out_img[idx*3 + 0] = in_img[in_idx + 0];
-        out_img[idx*3 + 1] = in_img[in_idx + 1];
-        out_img[idx*3 + 2] = in_img[in_idx + 2];
+        temp_img[idx*3 + 0] = img[in_idx + 0];
+        temp_img[idx*3 + 1] = img[in_idx + 1];
+        temp_img[idx*3 + 2] = img[in_idx + 2];
+
         return;
     }
 
@@ -188,22 +215,24 @@ __kernel void rolling_shutter(
     int idx11 = (y1 * width + x1) * 3;
 
     for(int c=0; c<3; ++c){
-        float v00 = (float)in_img[idx00 + c];
-        float v10 = (float)in_img[idx10 + c];
-        float v01 = (float)in_img[idx01 + c];
-        float v11 = (float)in_img[idx11 + c];
+        float v00 = (float)img[idx00 + c];
+        float v10 = (float)img[idx10 + c];
+        float v01 = (float)img[idx01 + c];
+        float v11 = (float)img[idx11 + c];
 
         float v0 = v00 * (1.0f - wx) + v10 * wx;
         float v1 = v01 * (1.0f - wx) + v11 * wx;
         float v = v0 * (1.0f - wy) + v1 * wy;
-        out_img[idx*3 + c] = (uchar)clamp(v, 0.0f, 255.0f);
+        temp_img[idx*3 + c] = (uchar)clamp(v, 0.0f, 255.0f);
     }
 }
 
+
 // ---------- JPEG_APPROX ----------
+
 __kernel void jpeg_approx(
-    __global uchar *in_img,
-    __global uchar *out_img,
+    __global uchar *img,
+    __global uchar *temp_img,
     int width,
     int height,
     int block_size,
@@ -227,9 +256,9 @@ __kernel void jpeg_approx(
     for(int y = y0; y < y1; y++){
         for(int x = x0; x < x1; x++){
             int idx = (y*width + x)*3;
-            float R = (float)in_img[idx + 2];
-            float G = (float)in_img[idx + 1];
-            float B = (float)in_img[idx + 0];
+            float R = (float)img[idx + 2];
+            float G = (float)img[idx + 1];
+            float B = (float)img[idx + 0];
 
             float Cb = -0.168736f*R - 0.331264f*G + 0.5f*B + 128.0f;
             float Cr = 0.5f*R - 0.418688f*G - 0.081312f*B + 128.0f;
@@ -246,9 +275,9 @@ __kernel void jpeg_approx(
     for(int y = y0; y < y1; y++){
         for(int x = x0; x < x1; x++){
             int idx = (y*width + x)*3;
-            float R = (float)in_img[idx + 2];
-            float G = (float)in_img[idx + 1];
-            float B = (float)in_img[idx + 0];
+            float R = (float)img[idx + 2];
+            float G = (float)img[idx + 1];
+            float B = (float)img[idx + 0];
 
             float Y = 0.299f*R + 0.587f*G + 0.114f*B;
             float qY = round(Y / luma_scale) * luma_scale;
@@ -260,18 +289,19 @@ __kernel void jpeg_approx(
             float Gq = qY - 0.344136f*Cb - 0.714136f*Cr;
             float Bq = qY + 1.772f*Cb;
 
-            out_img[idx + 2] = (uchar)clamp(Rq, 0.0f, 255.0f);
-            out_img[idx + 1] = (uchar)clamp(Gq, 0.0f, 255.0f);
-            out_img[idx + 0] = (uchar)clamp(Bq, 0.0f, 255.0f);
+            temp_img[idx + 2] = (uchar)clamp(Rq, 0.0f, 255.0f);
+            temp_img[idx + 1] = (uchar)clamp(Gq, 0.0f, 255.0f);
+            temp_img[idx + 0] = (uchar)clamp(Bq, 0.0f, 255.0f);
         }
     }
 }
 
 
-// ---------- GAUSSIAN BLUR (1D Horizontal) ----------
-__kernel void gaussian_blur(
-    __global uchar *in_img,
-    __global uchar *out_img,
+// ---------- GAUSSIAN BLUR ----------
+
+void gaussian_blur(
+    __global uchar *img,
+    __global uchar *temp_img,
     __global float *kernel_array,   // 1D Gaussian weights
     int ksize,
     int width,
@@ -288,22 +318,23 @@ __kernel void gaussian_blur(
         int sx = clamp(x+i, 0, width-1);
         int idx = (y*width + sx)*3;
         float w = kernel_array[i + khalf];
-        acc.x += w * (float)in_img[idx + 0];
-        acc.y += w * (float)in_img[idx + 1];
-        acc.z += w * (float)in_img[idx + 2];
+        acc.x += w * (float)img[idx + 0];
+        acc.y += w * (float)img[idx + 1];
+        acc.z += w * (float)img[idx + 2];
     }
 
     int idx = (y*width + x)*3;
-    out_img[idx+0] = (uchar)clamp(acc.x, 0.0f, 255.0f);
-    out_img[idx+1] = (uchar)clamp(acc.y, 0.0f, 255.0f);
-    out_img[idx+2] = (uchar)clamp(acc.z, 0.0f, 255.0f);
+    temp_img[idx+0] = (uchar)clamp(acc.x, 0.0f, 255.0f);
+    temp_img[idx+1] = (uchar)clamp(acc.y, 0.0f, 255.0f);
+    temp_img[idx+2] = (uchar)clamp(acc.z, 0.0f, 255.0f);
 }
 
 
 // ---------- CHROMATIC ABERRATION ----------
-__kernel void chromatic_aberration(
-    __global uchar *in_img,
-    __global uchar *out_img,
+
+void chromatic_aberration(
+    __global uchar *img,
+    __global uchar *temp_img,
     int width,
     int height,
     float dx_r,
@@ -327,8 +358,96 @@ __kernel void chromatic_aberration(
     int idx_b = (yb * width + xb) * 3;
 
     // Apply shift
-    out_img[idx + 0] = in_img[idx_b + 0]; // B
-    out_img[idx + 1] = in_img[idx + 1];   // G stays
-    out_img[idx + 2] = in_img[idx_r + 2]; // R
+    temp_img[idx + 0] = img[idx_b + 0]; // B
+    temp_img[idx + 1] = img[idx + 1];   // G stays
+    temp_img[idx + 2] = img[idx_r + 2]; // R
 }
 
+
+__kernel void image_distortion(
+
+    // Input and output images
+    __global uchar *img,
+    __global uchar *temp_img,
+
+    // Image dimensions
+    int width,
+    int height,
+
+    // Bitmask for active effects
+    __global uint *mask,
+
+    // Noise parameters
+    float base_sigma,
+    float signal_sigma,
+    uint seed,
+
+    // Jitter parameters
+    float brightness,
+    float contrast,
+    float jitter_r_gain,
+    float jitter_g_gain,
+    float jitter_b_gain,
+
+    // White balance parameters
+    float white_r_gain,
+    float white_g_gain,
+    float white_b_gain,
+
+    // Warp parameters
+    __global float *map_x,
+    __global float *map_y,
+
+    // Rolling shutter parameters
+    __global float *row_offset,
+
+    // Gaussian blur parameters
+    __global float *kernel_array,   // 1D Gaussian weights
+    int ksize,
+
+    // Chromatic aberration parameters
+    float dx_r,
+    float dy_r,
+    float dx_b,
+    float dy_b
+) {
+
+    if (mask[0] == 1){
+        // Apply noise
+        add_noise(img, base_sigma, signal_sigma, width, height, seed);
+    }
+    
+    if (mask[1] == 1){
+        // Apply color jitter
+        jitter(img, brightness, contrast, jitter_r_gain, jitter_g_gain, jitter_b_gain, width, height);
+    }
+
+    if (mask[2] == 1){
+        // Apply white balance
+        white_balance(img, white_r_gain, white_g_gain, white_b_gain, width, height);
+    }
+
+    if (mask[3] == 1){
+        // Apply rolling shutter
+        rolling_shutter(img, temp_img, row_offset, width, height);
+        swap_images(img, temp_img, width, height);
+    }
+
+    if (mask[4] == 1){
+        // Apply Gaussian blur
+        gaussian_blur(img, temp_img, kernel_array, ksize, width, height);
+        swap_images(img, temp_img, width, height);
+    }
+
+    if (mask[5] == 1){
+        // Apply warp
+        warp(img, temp_img, map_x, map_y, width, height);
+        swap_images(img, temp_img, width, height);
+    }
+
+    if (mask[6] == 1){
+        // Apply chromatic aberration
+        chromatic_aberration(img, temp_img, width, height, dx_r, dy_r, dx_b, dy_b);
+        swap_images(img, temp_img, width, height);
+    }
+}
