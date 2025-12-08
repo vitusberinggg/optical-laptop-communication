@@ -1,30 +1,20 @@
 
 # --- Imports ---
 
-# Library imports
-
 import numpy as np # Library for handling numerical arrays, needed to manipulate matrices
 import librosa # High-level audio processing library to load audio files, compute frequency spectrograms, resample etc.
 import soundfile
 
 # --- Definitions ---
 
-"""
-
-"frequency_spectrogram_frame_size" and "hop_length" trade time vs frequency resolution.
-For short, percussive sounds, smaller frames and smaller hops preserve attacks better.
-For tonal music, larger frames give more stable pitch bins.
-
-"""
-
-frequency_bin_reduction_method = "spectral-sparsification"
-
-target_number_of_frequencies = 32 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
-target_number_of_amplitude_levels = 3 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
+target_number_of_frequencies = 16 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
+target_number_of_amplitude_levels = 16 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
 
 hop_length = 256 # The amount of samples between each spectrogram frame (shorter hop length --> more overlap between windows --> smoother time reconstruction but more computation)
 
 target_sample_rate = 8000 # The audio signal's average number of samples (values) per second
+
+seconds_per_time_frame = hop_length / target_sample_rate # Duration of one STFT hop
 
 frequency_spectrogram_frame_size = 1024 # The amount of samples each spectogram contains (larger windows give higher frequency resolution but lower time resolution)
 
@@ -62,28 +52,19 @@ def audio_compressor(input_file):
 
     # Frequency bin reduction
 
-    print("\n[INFO] Reducing the amount of frequency bins...")
+    print(f"\n[INFO] Reducing the amount of frequency bins...")
 
-    number_of_frequency_bins = spectrogram_magnitude.shape[0] # Gets the original number of frequency bins
+    reduced_magnitude = np.zeros_like(spectrogram_magnitude)
 
-    frequency_bin_factor = number_of_frequency_bins // target_number_of_frequencies
+    number_of_time_frames = spectrogram_magnitude.shape[1]
 
-    if frequency_bin_reduction_method == "spectral-sparsification":
+    for time_frame in range(number_of_time_frames):
 
-        reduced_magnitude = np.zeros_like(spectrogram_magnitude)
+        column = spectrogram_magnitude[:, time_frame]
 
-        number_of_time_frames = spectrogram_magnitude.shape[1]
+        loudest_frequency_indices = np.argsort(column)[-target_number_of_frequencies:]
 
-        for time_frame in range(number_of_time_frames):
-
-            column = spectrogram_magnitude[:, time_frame]
-
-            loudest_frequency_indices = np.argsort(column)[-target_number_of_frequencies:]
-
-            reduced_magnitude[loudest_frequency_indices, time_frame] = column[loudest_frequency_indices]
-    
-    else:
-        reduced_magnitude = spectrogram_magnitude[:frequency_bin_factor * target_number_of_frequencies].reshape(target_number_of_frequencies, frequency_bin_factor, -1).mean(axis = 1)
+        reduced_magnitude[loudest_frequency_indices, time_frame] = column[loudest_frequency_indices]
 
     if reduced_magnitude.max() != 0: # If the input isn't silent:
         normalized_magnitude = reduced_magnitude / reduced_magnitude.max() # Normalizes the magnitude by dividing it by its maximum value to ensure that quantization levels are interpreted relative to the maximum energy present
@@ -111,18 +92,7 @@ def audio_compressor(input_file):
 
     if save_compressed_file:
 
-        if frequency_bin_reduction_method == "spectral-sparsification":
-            expanded_magnitude = quantized_magnitude
-        
-        else:
-
-            expanded_magnitude = np.repeat(quantized_magnitude, frequency_bin_factor, axis = 0) # Repeats every coarse frequency row "frequency_bin_factor" times to make the reduced magnitude matrix return to the original number of frequency rows expected by the ISTFT
-
-            if expanded_magnitude.shape[0] < number_of_frequency_bins: # If the expanded magnitude matrix still has fewer rows than expected:
-
-                number_of_padding_rows = number_of_frequency_bins - expanded_magnitude.shape[0]
-
-                expanded_magnitude = np.vstack([expanded_magnitude, np.zeros((number_of_padding_rows, expanded_magnitude.shape[1]))]) # Pad the top with zeros to make shapes match (removes high frequency content that didn't fit into complete groups)
+        expanded_magnitude = quantized_magnitude
         
         reconstructed_spectrogram = expanded_magnitude * np.exp(1j * spectrogram_phase) # Reconstructs the spectrogram based on the magnitude matrix
 
@@ -136,6 +106,32 @@ def audio_compressor(input_file):
     
     else:
         print("\n[INFO] Compression done.")
+
+    # Bitrate calculation
+
+    print("\n[INFO] Calculating bitrate...")
+
+    total_duration = number_of_time_frames * seconds_per_time_frame # Total reconstructed audio duration
+
+    print(f"\n[INFO] Audio duration: {total_duration:.2f} s")
+
+    bits_per_frequency_index = int(np.ceil(np.log2(target_number_of_frequencies))) # Bits required to store frequency index
+
+    print(f"\n[INFO] Bits per frequency index: {bits_per_frequency_index} bits")
+
+    bits_per_amplitude_level = int(np.ceil(np.log2(target_number_of_amplitude_levels))) # Bits required to store quantized amplitude level
+
+    print(f"\n[INFO] Bits per amplitude level: {bits_per_amplitude_level} bits")
+
+    bits_per_frame = target_number_of_frequencies * (bits_per_frequency_index + bits_per_amplitude_level)
+
+    total_amount_of_bits = bits_per_frame * number_of_time_frames
+
+    print(f"\n[INFO] Total amount of bits: {total_amount_of_bits}")
+
+    bitrate = total_amount_of_bits / total_duration
+
+    print(f"\n[INFO] Bitrate: {bitrate:.2f} bits/s")
 
 # --- Execution ---
 
