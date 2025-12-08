@@ -18,7 +18,8 @@ from utilities.global_definitions import (
     black_lower_hcv_limit, black_upper_hcv_limit,
     green_lower_hcv_limit, green_upper_hcv_limit,
     blue_lower_hcv_limit, blue_upper_hcv_limit,
-    end_bit_steps, dominant_color_steps
+    end_bit_steps, dominant_color_steps, idx_to_2bit, 
+    idx_to_1bit, bits_per_cell
 )
 
 # --- Functions ---
@@ -129,11 +130,27 @@ class BitColorTracker:
         number_of_classes = int(self.LUT.max()) + 1
         bitgrid = bitgrid_majority_calculator(merged, number_of_classes)
 
-        black_idx = 3
-        bitgrid_str = np.where(bitgrid == black_idx, "0", "1")
+        if bits_per_cell == 1:
+            idx_to_bit = idx_to_1bit
+        elif bits_per_cell == 2:
+            idx_to_bit = idx_to_2bit
+        else:
+            raise NotImplementedError("Mapping table for this bits_per_cell not defined")
 
-        return bitgrid_str
+        bitgrid_2bit = np.vectorize(lambda idx: idx_to_bit.get(idx, 0b00))(bitgrid)
+        
+        return bitgrid_2bit
 
+    def bitgrid_list_to_bitstream(bitgrids, bits_per_cell):
+
+        bitstream = ""
+
+        for grid in bitgrids:
+            for val in grid.ravel():
+                bitstream += format(val, f"0{bits_per_cell}b")  # Convert to bits_per_cell-bit binary string
+
+        return bitstream
+    
     def reset(self):
         
         """

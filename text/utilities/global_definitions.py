@@ -60,6 +60,20 @@ color_map_2bit = [
     (0, 255, 0),     # 0b11 = Green
 ]
 
+# --- idx to bits maps ---
+
+idx_to_1bit = {
+    3: 0,  # black
+    2: 1,  # white
+}
+
+idx_to_2bit = {
+    3: 0b00,  # black
+    2: 0b01,  # white
+    5: 0b10,  # blue
+    4: 0b11,  # green
+}
+
 # --- Sender output definitions ---
 
 sender_output_width = 1920 # Width of the sender output in pixels
