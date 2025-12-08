@@ -6,7 +6,7 @@ import random
 
 # importing OpenCL(class) from ocl 
 # (used in jitter_color and white_balance_shifter)
-from webcam_simulation.ocl import OpenCL
+from ocl import OpenCL
 ocl = OpenCL()
 
 # --- Presets of the amount effects and severity ---
@@ -15,7 +15,7 @@ PRESETS = {
     "custom": {
         "severity": 1.0,
         "light_level": 1.0,
-        "effects": ["blur"]
+        "effects": ["warp"]
     },
     "none": {
         "severity": 0.0,
@@ -324,7 +324,7 @@ class Effects:
 
 if __name__ == "__main__":
     
-    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\test_bitgrid.png")
+    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\text\webcam_simulation\test_bitgrid.png")
     distorter = FrameDistorter(preset="custom")
     distorted_frame = distorter.apply(frame)
     cv2.imwrite("distorted.jpg", distorted_frame)
