@@ -241,10 +241,14 @@ def bgr_to_hcv(bgr):
     idx = (maxc == B) & mask
     h[idx] = (60 * (R[idx] - G[idx]) // C[idx] + 240) % 360
 
-    # Convert to OpenCV-like hue scaling (0–179)
+    # Convert to OpenCV-like hue scaling
     H = (h // 2).astype(np.uint8)
+    C = C.astype(np.uint8)
+    V = V.astype(np.uint8)
 
-    return H, C.astype(np.uint8), V.astype(np.uint8)
+    # STACK INTO (H, W, 3) IMAGE
+    return np.stack((H, C, V), axis=-1)
+
 
 
 def build_color_LUT(corrected_ranges):
