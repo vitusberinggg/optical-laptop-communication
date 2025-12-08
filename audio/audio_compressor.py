@@ -48,10 +48,10 @@ def audio_compressor(input_file):
 
     # Amplitude quantization
 
-    quantized_amplitude_levels = np.linspace(0, 1, target_number_of_amplitude_levels)
+    quantized_amplitude_levels = np.linspace(0, 1, target_number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
 
-    quantized_magnitude = np.digitize(normalized_magnitude, quantized_amplitude_levels) - 1
+    quantized_magnitude = np.digitize(normalized_magnitude, quantized_amplitude_levels) - 1 # Maps each continuous normalized magnitude value to a discrete index 0
 
-    quantized_magnitude = quantized_amplitude_levels[quantized_magnitude]
+    quantized_magnitude = quantized_amplitude_levels[quantized_magnitude] # Replaces each index with the actual quantized level
 
-    quantized_magnitude *= reduced_magnitude.max() # Restores the original scale
+    quantized_magnitude *= reduced_magnitude.max() # Restores the original scale by multiplying the quantized normalized values back by the previous maximum magnitude
