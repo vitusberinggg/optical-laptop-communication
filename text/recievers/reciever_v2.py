@@ -2,6 +2,7 @@
 import cv2
 import time
 import numpy as np
+import os
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_bgr import dominant_color, tracker
@@ -16,8 +17,13 @@ binary_duration = 0.3     # unused, just for reference
 sender_output_width = 1920
 sender_output_height = 1200
 
+# Video path
+
+base = os.path.dirname(__file__)
+path = os.path.join(base, "webcam_simulation", "sender_v5.mp4")
+
 # --- Setup capture ---
-#cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\recievers\gandalf2.0.mp4")
+#cap = VideoThreadedCapture(path)
 # For live webcam test instead of video, use:
 cap = VideoThreadedCapture(0)
 

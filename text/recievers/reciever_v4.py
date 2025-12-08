@@ -5,6 +5,7 @@ import cProfile
 import cv2
 import time
 import numpy as np
+import os
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
@@ -26,6 +27,11 @@ from utilities.global_definitions import (
 # --- Definitions ---
 
 using_webcam = False
+
+# Video path
+
+base = os.path.dirname(__file__)
+path = os.path.join(base, "webcam_simulation", "sender_v4.mp4")
 
 # --- Video capture setup ---
 
@@ -57,7 +63,7 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
 else:
-    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_live.mp4") # For video test
+    videoCapture = VideoThreadedCapture(path) # For video test
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
