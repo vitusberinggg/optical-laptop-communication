@@ -379,7 +379,7 @@ def color_offset_calculation(roi):
     
     print("\n=== Average hcv offsets applied ===")
     print(f"Average H offset: {average_hue_offset:.2f}")
-    print(f"S scale: {chroma_scale:.2f}")
+    print(f"C scale: {chroma_scale:.2f}")
     print(f"V scale: {value_scale:.2f}\n")
     
     corrected_ranges = {}
