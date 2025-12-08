@@ -5,6 +5,13 @@ import cv2
 import threading
 import time
 
+from distorter import FrameDistorter
+
+# --- Definitions ---
+
+sender_output_width = 1920 # Width of the sender output in pixels
+sender_output_height = 1200 # Height of the sender output in pixels
+
 # --- Main class ---
 
 class VideoThreadedCapture:
@@ -35,6 +42,17 @@ class VideoThreadedCapture:
         """
 
         self.cap = cv2.VideoCapture(video_path)
+        '''
+        List of presets:
+            custom
+            none
+            light
+            medium
+            heavy
+            webcam
+        '''
+
+        self.distorter = FrameDistorter(preset="heavy")
 
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
@@ -53,6 +71,8 @@ class VideoThreadedCapture:
 
         self.ret = False
         self.stopped = False
+
+        self.now1 = time.time()
 
         fps = self.cap.get(cv2.CAP_PROP_FPS)
 
@@ -87,6 +107,10 @@ class VideoThreadedCapture:
             if delay > 0:
                 time.sleep(delay)
 
+            if time.time() - self.now1 > 0.5:
+                print(f"Delay is: {delay}")
+                self.now1 = time.time()
+
             ret, frame = self.cap.read()
 
             if not ret:
@@ -98,6 +122,8 @@ class VideoThreadedCapture:
                 break
 
             frame = frame.copy()
+
+            frame = self.distorter.apply(frame)
 
             if self.write_buffer == 0:
                 self.buffer_a = frame
@@ -224,3 +250,40 @@ class VideoCaptureSingle:
 
         self.stopped = True
         self.cap.release()
+
+# --- Testing Web Cam Simulator ---
+
+if __name__ == "__main__":
+
+
+
+    video_path = r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4"
+    video_capture = VideoThreadedCapture(video_path)
+
+    if not video_capture.isOpened():
+        print("\n[WARNING] Couldn't start video capture.")
+        exit()
+
+    while True:
+
+        read_was_sucessful, frame = video_capture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
+
+        if read_was_sucessful:
+            break
+
+        time.sleep(0.01)
+
+    cv2.namedWindow("sjöbo", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("sjöbo", sender_output_width, sender_output_height)
+
+    while video_capture.isOpened():
+        ret, frame = video_capture.read()
+        if ret:
+            cv2.imshow("sjöbo", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()

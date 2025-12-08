@@ -4,38 +4,48 @@ import cv2
 import numpy as np
 import random
 
+# importing OpenCL(class) from ocl 
+# (used in jitter_color and white_balance_shifter)
+from ocl import OpenCL
+ocl = OpenCL()
+
 # --- Presets of the amount effects and severity ---
 
 PRESETS = {
-    "custom preset": {
-        "severity": 0.5,
-        "light_level": 1.0,  # normal light
-        "effects": ["noise", "jitter_color", "blur", "jpeg_compress", "white_balance_shift"]
+    "custom": {
+        "severity": 1.0,
+        "light_level": 1.0,
+        "effects": ["jpeg_compress", "noise"]
     },
     "none": {
         "severity": 0.0,
-        "light_level": 1.0,  # normal light
+        "light_level": 1.0,
         "effects": []
     },
-    "light": {
+        "light": {
         "severity": 0.2,
-        "light_level": 1.2,  # slightly bright
+        "light_level": 1.2,
         "effects": ["noise", "jitter_color", "white_balance_shift"]
     },
-    "medium": {
+        "medium": {
         "severity": 0.5,
-        "light_level": 1.0,  # normal
-        "effects": ["noise", "jitter_color", "blur", "jpeg_compress", "white_balance_shift"]
+        "light_level": 1.0,
+        "effects": ["noise", "jitter_color", "white_balance_shift", 
+                    "rolling_shutter", "blur", "jpeg_compress"]
     },
-    "heavy": {
+        "heavy": {
         "severity": 0.8,
-        "light_level": 0.7,  # darker
-        "effects": ["noise", "jitter_color", "blur", "warp", "jpeg_compress", "white_balance_shift"]
+        "light_level": 0.7,
+        "effects": ["noise", "jitter_color", "white_balance_shift", 
+                    "rolling_shutter", "warp", "chromatic_aberration", 
+                    "blur", "jpeg_compress", "temporal_instability"]
     },
-    "webcam_realistic": {
-        "severity": 0.5,
-        "light_level": 0.8,  # slightly dim
-        "effects": ["noise", "jitter_color", "white_balance_shift", "blur", "jpeg_compress"]
+        "webcam": {
+        "severity": 0.1,
+        "light_level": 0.8,
+        "effects": ["noise","jitter_color","white_balance_shift",
+                    "blur","chromatic_aberration",
+                    "jpeg_compress", "temporal_instability"]
     }
 }
 
@@ -43,18 +53,51 @@ PRESETS = {
 # --- Frame distorter ---
 
 class FrameDistorter:
-    def __init__(self, preset="webcam_realistic"):
+    def __init__(self, preset="webcam"):
         config = PRESETS[preset]
         self.severity = config["severity"]
         self.light_level = config.get("light_level", 1.0)
         self.effects = []
+        self.effects_obj = Effects(self.light_level)
+        self.which_effects = []
+
+        # Define effect priority (lower number = applied first)
+        EFFECT_PRIORITY = {
+            "noise": 0,                 # Sensor/ISO noise happens first
+            "jitter_color": 1,          # Brightness/contrast/tint readout adjustments
+            "white_balance_shift": 2,   # Color drift after initial readout
+            "rolling_shutter": 3,       # Per-row readout offset occurs during capture
+            "warp": 4,                  # Geometric distortions applied after row offsets
+            "chromatic_aberration": 5,  # Optical color fringing before defocus blur
+            "blur": 6,                  # Lens defocus / softening happens after CA
+            "jpeg_compress": 7,         # Compression applied to the final frame
+            "temporal_instability": 8,  # Frame-level drops/duplicates happen last
+        }
+
+        EFFECT_ORDER = [
+            "noise", "jitter_color", "white_balance_shift",
+            "rolling_shutter", "warp", "chromatic_aberration",
+            "blur", "jpeg_compress", "temporal_instability"
+        ]
+
+        # Sort the preset effects automatically by priority
+        config_effects = sorted(config["effects"], key=lambda e: EFFECT_PRIORITY.get(e, 99))
+
+        getattr(self.effects_obj, "img_distortion")  # Ensure img_distortion is always available
 
         # Automatically map effect names to functions
-        for name in config["effects"]:
-            if hasattr(Effects, name):
-                self.effects.append(getattr(Effects, name))
+        for name in config_effects:
+            if hasattr(self.effects_obj, name):
+                self.effects.append(getattr(self.effects_obj, name))
             else:
-                raise ValueError(f"Effect '{name}' not found in Effects class.")
+                raise ValueError(f"Effect '{name}' not found.")
+            
+        print(f"[FrameDistorter] Effects applied in order: {[fn.__name__ for fn in self.effects]}")
+
+        self.which_effects = np.array([
+            1 if name in config["effects"] else 0
+            for name in EFFECT_ORDER
+        ], dtype=np.uint32)
 
     # Apply all effects
     def apply(self, frame):
@@ -62,11 +105,23 @@ class FrameDistorter:
         frame = np.clip(frame.astype(np.float32) * self.light_level, 0, 255).astype(np.uint8)
 
         for effect in self.effects:
-            # Pass light_level only to effects that need it
-            if effect.__name__ in ["add_noise", "jitter_color"]:
-                frame = effect(frame, self.severity, self.light_level)
+            # noise & jitter_color require light_level
+            if effect.__name__ in ["noise", "jitter_color"]:
+                effect(self.severity, self.light_level)
+
+            # temporal instability is special: because it doesn't take severity or light_level
+            elif effect.__name__ == "temporal_instability":
+                effect(frame)
+
+            # jpeg compress, rolling shutter and warp needs frames for their calculations
+            elif effect.__name__ in ["jpeg_compress", "rolling_shutter", "warp"]:
+                effect(frame, self.severity)
+
             else:
-                frame = effect(frame, self.severity)
+                effect(self.severity)
+        
+        # Finally apply image distortion with the selected effects
+        frame = self.effects_obj.img_distortion(frame, self.which_effects)
         return frame
 
 
@@ -75,226 +130,201 @@ class FrameDistorter:
 
 class Effects:
 
+    def __init__(self, light_level):
+        self.light_level = light_level
+        self.wb_r = 1.0
+        self.wb_g = 1.0
+        self.wb_b = 1.0
+
+
     # --- Sensor noise ---
 
     @staticmethod
-    def add_noise(frame, severity, light_level):
+    def noise(severity, light_level):
         """
-        Adds realistic sensor-like noise to a frame.
-        severity: 0.0 → minimal noise, 1.0 → strong noise
+        Webcam-realistic noise (GPU).
         """
-        h, w, c = frame.shape
-        noisy = frame.copy().astype(np.float32)
-
-        # Determine % of pixels to corrupt based on severity
-        min_amount, max_amount = 0.005, 0.05  # 0.5% → 5%
-        amount = min_amount + (max_amount - min_amount) * severity
-        n = int(amount * h * w)
-
-        # Randomly choose pixel coordinates
-        ys = np.random.randint(0, h, n)
-        xs = np.random.randint(0, w, n)
-
-        # scale noise by light level
-        noise_intensity = int(20 * (1.0 / max(light_level, 0.1)))  # avoid division by zero
-        noise = np.random.randint(-noise_intensity, noise_intensity + 1, (n, 3))
-
-        # Apply noise
-        noisy[ys, xs] += noise
-
-        # Clip values to [0, 255] and convert back to uint8
-        return np.clip(noisy, 0, 255).astype(np.uint8)
+        ocl.run_noise(severity, light_level)
 
 
-    # --- Color jitter (brightness/contrast) ---
+    # --- Color jitter ---
 
     @staticmethod
-    def jitter_color(frame, severity, light_level):
-        brightness = int(severity * 40)     # ±40
-        contrast = 1 + (severity * 0.4)     # ±40%
+    def jitter_color(severity, light_level):
+        # 1. brightness
+        max_brightness = 40 * severity
+        brightness = np.random.uniform(-max_brightness, max_brightness)
+        brightness *= 1.0 / max(light_level, 0.1)
 
-        # Random brightness shift
-        b = random.randint(-brightness, brightness)
-        b = int(b * (1.0 / max(light_level, 0.1)))
-        # Random contrast shift
-        c = random.uniform(1 - severity * 0.4, 1 + severity * 0.4)
+        # 2. contrast
+        contrast = np.random.uniform(1 - 0.4 * severity, 1 + 0.4 * severity)
 
-        # Convert to UMat for OpenCL
-        frame_gpu = cv2.UMat(frame.astype(np.float32))
+        # 3. tint
+        max_tint = 0.08 * severity
+        gains = (
+            1 + np.random.uniform(-max_tint, max_tint),  # R
+            1 + np.random.uniform(-max_tint, max_tint),  # G
+            1 + np.random.uniform(-max_tint, max_tint)   # B
+        )
 
-        # Apply brightness (addition)
-        jittered = cv2.add(frame_gpu, b)
-
-        # Apply contrast (multiplication)
-        jittered = cv2.multiply(jittered, c)
-
-        # Clip values to [0,255] on GPU
-        jittered = cv2.min(cv2.max(jittered, 0), 255)
-
-        # Convert back to uint8 NumPy array
-        return jittered.get().astype(np.uint8)
-
-
-    # --- Warp / elastic distortion ---
-
-    @staticmethod
-    def warp_frame(frame, severity):
-        """
-        Realistic warp/frame distortion for webcam-like artifacts.
-        severity: 0.0 → no effect, 1.0 → strong effect
-        """
+        # GPU-accelerated processing
+        ocl.run_jitter(brightness, contrast, gains)
+    
+    def rolling_shutter(self, frame, severity, amplitude=2.0):
+        # generate slowly-varying row offsets; severity controls amplitude
         h, w, _ = frame.shape
+        # base wobble scaled by severity and darkness maybe
+        max_offset = amplitude * severity
+        # generate smooth per-row offsets via a low-frequency sine + small noise
+        freq = 2.0 / max(1, h/100.0)
+        rows = np.arange(h).astype(np.float32)
+        phase = random.uniform(0, 2*np.pi)
+        sine = np.sin(rows * freq + phase) * max_offset
+        noise = (np.random.rand(h).astype(np.float32) - 0.5) * (max_offset * 0.2)
+        row_offset = sine + noise
+        return ocl.run_rolling_shutter(row_offset)
 
-        # Determine warp strength based on severity
-        max_strength = 5  # maximum displacement in pixels for strong effect
+
+
+    # --- Warp ---
+
+    def warp(self, frame, severity):
+        # create low-res displacement map like before but then run on GPU
+        h, w, _ = frame.shape
+        max_strength = 5.0
         strength = severity * max_strength
-
-        # Determine scale of low-res displacement map (smaller = more local distortions)
-        min_scale, max_scale = 15, 40  # smaller scale → finer distortions
-        scale = int(max_scale - (max_scale - min_scale) * severity)
-
-        # Generate low-res random displacement maps
+        # choose scale (bigger = smoother)
+        scale = 32 if max(w,h) >= 1280 else 24
         dx_small = (np.random.rand(h // scale + 1, w // scale + 1) - 0.5) * strength
         dy_small = (np.random.rand(h // scale + 1, w // scale + 1) - 0.5) * strength
+        dx = cv2.resize(dx_small, (w, h), interpolation=cv2.INTER_CUBIC).astype(np.float32)
+        dy = cv2.resize(dy_small, (w, h), interpolation=cv2.INTER_CUBIC).astype(np.float32)
 
-        # Upscale to full frame
-        dx = cv2.resize(dx_small, (w, h), interpolation=cv2.INTER_CUBIC)
-        dy = cv2.resize(dy_small, (w, h), interpolation=cv2.INTER_CUBIC)
-
-        # Optional smoothing for realism
-        blur_sigma = max(1.0, 3.0 * (1 - severity))  # stronger effect = less blur
-        dx = cv2.GaussianBlur(dx, (0, 0), sigmaX=blur_sigma, sigmaY=blur_sigma)
-        dy = cv2.GaussianBlur(dy, (0, 0), sigmaX=blur_sigma, sigmaY=blur_sigma)
-
-        # Build remap grid
+        # build map_x, map_y (pixel coords)
         x, y = np.meshgrid(np.arange(w), np.arange(h))
         map_x = (x + dx).astype(np.float32)
         map_y = (y + dy).astype(np.float32)
 
-        # Move everything to GPU/OpenCL
-        frame_gpu = cv2.UMat(frame)
-        map_x_gpu = cv2.UMat(map_x)
-        map_y_gpu = cv2.UMat(map_y)
-
-        # Apply remap on GPU
-        warped_gpu = cv2.remap(frame_gpu, map_x_gpu, map_y_gpu, cv2.INTER_LINEAR)
-
-        # Convert back to CPU
-        warped = warped_gpu.get()
-        return warped
+        return ocl.run_warp(map_x, map_y)
 
 
     # --- jpeg compression blocking ---
 
-    @staticmethod
-    def jpeg_compress(frame, severity):
-        encode_quality = int(70 - severity * 50)   # quality 70 → 20
-
-        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), encode_quality]
-        _, encimg = cv2.imencode('.jpg', frame, encode_param)
-        decoded = cv2.imdecode(encimg, cv2.IMREAD_COLOR)
-        return decoded
+    def jpeg_compress(self, frame, severity):
+        # map severity to quality: severity 0->100, 1->10
+        quality = int(100 - severity * 90)
+        block_size = 8 if frame.shape[1] <= 1280 else 16
+        return ocl.run_jpeg_approx(block_size=block_size, quality=quality)
 
 
-    # --- White balance shift (real webcam drift) ---
 
-    @staticmethod
-    def white_balance_shift(frame, severity):
-        # Convert to float and to UMat for OpenCL
-        shifted_gpu = cv2.UMat(frame.astype(np.float32))
+    # --- White balance shift ---
 
-        # Random per-channel multipliers
-        r_shift = 1 + random.uniform(-0.15, 0.15) * severity
-        g_shift = 1 + random.uniform(-0.15, 0.15) * severity
-        b_shift = 1 + random.uniform(-0.15, 0.15) * severity
+    def white_balance_shift(self, severity):
+        # How strong the drift is depending on severity and light level
+        # Much stronger when light is low
+        stability = 1.2 - self.light_level       # 0.2 at bright light → 1.2 at darkness
+        strength = severity * stability * 0.02   # drift per frame (2% max per frame in darkness)
 
-        # Split channels (GPU-backed)
-        b, g, r = cv2.split(shifted_gpu)
+        # Add tiny drift to each channel (continuous)
+        self.wb_r += random.uniform(-strength, strength)
+        self.wb_g += random.uniform(-strength, strength)
+        self.wb_b += random.uniform(-strength, strength)
 
-        # Multiply each channel
-        b = cv2.multiply(b, b_shift)
-        g = cv2.multiply(g, g_shift)
-        r = cv2.multiply(r, r_shift)
+        # Soft clamp so it doesn’t go crazy
+        self.wb_r = max(0.7, min(1.3, self.wb_r))
+        self.wb_g = max(0.7, min(1.3, self.wb_g))
+        self.wb_b = max(0.7, min(1.3, self.wb_b))
 
-        # Merge back
-        merged = cv2.merge([b, g, r])
-
-        # Clip and convert back to uint8
-        result = cv2.min(cv2.max(merged, 0), 255).get().astype(np.uint8)
-        return result
+        gains = (self.wb_r, self.wb_g, self.wb_b)
+        return ocl.run_white_balance(gains)
 
 
-    # --- Soft-Focus Blur (Gaussian Blur) ---
+
+    # --- Gaussian Blur ---
 
     @staticmethod
-    def blur(frame, radius=1.2):
-        if radius <= 0:
+    def blur(severity=1.0):
+        """
+        Subtle soft-focus blur for webcam realism.
+        severity: 0.0 = none, 1.0 = max subtle blur
+        """
+        # Map severity to sigma radius (~0.5–2.0 pixels)
+        radius = 0.5 + severity * 2.0
+        return ocl.run_blur(radius=radius)
+
+
+
+
+    # --- Frame-Rate Instability ---
+
+    _last_frame = None
+    _frozen_frame = None
+    _freeze_timer = 0
+
+    @staticmethod
+    def temporal_instability(frame,
+                             drop_prob=0.05,
+                             freeze_prob=0.03,
+                             freeze_duration=3):
+        """
+        Returns exactly ONE frame every call.
+        Simulates:
+        - dropped updates (frame repeats)
+        - short freezes
+        - jitter in motion
+
+        frame: HxWxC ndarray
+        """
+
+        # Initialize state on first frame
+        if Effects._last_frame is None:
+            Effects._last_frame = frame.copy()
             return frame
 
-        # Convert to UMat for OpenCL acceleration
-        frame_gpu = cv2.UMat(frame)
+        # If we are currently frozen: keep outputting frozen frame
+        if Effects._freeze_timer > 0:
+            Effects._freeze_timer -= 1
+            return Effects._frozen_frame
 
-        # Kernel size must be odd
-        k = max(3, int(radius * 4) | 1)
+        r = random.random()
 
-        # Apply Gaussian blur on GPU
-        blurred_gpu = cv2.GaussianBlur(frame_gpu, (k, k), sigmaX=radius)
+        # Start a freeze
+        if r < freeze_prob:
+            Effects._freeze_timer = freeze_duration
+            Effects._frozen_frame = Effects._last_frame.copy()
+            return Effects._frozen_frame
 
-        # Convert back to normal NumPy array
-        blurred = blurred_gpu.get()
-        return blurred
+        # Drop update (frame repeats)
+        if r < freeze_prob + drop_prob:
+            return Effects._last_frame
 
-
-    # --- Frame-Rate Instability (simulate dropped or repeated frames) ---
-
-    @staticmethod
-    def temporal_instability(frames, drop_prob=0.1, duplicate_prob=0.1):
-        """
-        frames: list of NumPy arrays (HxWxC)
-        returns: list of NumPy arrays (modified)
-        """
-        new_frames = []
-        for f in frames:
-            r = random.random()
-
-            if r < drop_prob:
-                # drop frame
-                continue
-
-            new_frames.append(f)
-
-            # duplicate frame sometimes
-            if random.random() < duplicate_prob:
-                new_frames.append(f.copy())
-
-        return new_frames
+        # Otherwise: update normally
+        Effects._last_frame = frame.copy()
+        return frame
 
 
-    # --- Chromatic Aberration (Channel Shift) ---
+    # --- Chromatic Aberration ---
 
     @staticmethod
-    def chromatic_aberration(frame, shift_r=(1.0, 0.0), shift_b=(-1.0, 0.0)):
-        """
-        frame: HxWxC NumPy array (dtype=np.uint8)
-        shift_r, shift_b: pixel shifts for R and B channels (dx, dy)
-        """
-        H, W, C = frame.shape
-        assert C == 3, "Frame must have 3 channels"
+    def chromatic_aberration(severity):
+        return ocl.run_chromatic_aberration(severity)
 
-        # Convert to float for precision
-        frame_f = frame.astype(np.float32)
 
-        def shift_channel(channel, dx, dy):
-            # Build translation matrix
-            M = np.float32([[1, 0, dx], [0, 1, dy]])
-            channel_gpu = cv2.UMat(channel)
-            shifted = cv2.warpAffine(channel_gpu, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
-            return shifted.get()
+    # --- Image Distortion ---
 
-        R = shift_channel(frame_f[:, :, 2], *shift_r)
-        G = frame_f[:, :, 1]
-        B = shift_channel(frame_f[:, :, 0], *shift_b)
+    @staticmethod
+    def img_distortion(frame, which_effects):
+        return ocl.run_image_distortion(frame, which_effects)
 
-        result = cv2.merge([B, G, R])
-        result = np.clip(result, 0, 255).astype(np.uint8)
-        return result
+
+
+
+# --- Test the distorter ---
+
+if __name__ == "__main__":
+    
+    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\color_calibration.png")
+    distorter = FrameDistorter(preset="custom")
+    distorted_frame = distorter.apply(frame)
+    cv2.imwrite("distorted.jpg", distorted_frame)
