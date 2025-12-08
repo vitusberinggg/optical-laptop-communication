@@ -17,7 +17,7 @@ import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture, VideoCaptureSingle
 from utilities.color_functions_hsv import dominant_color, tracker, build_color_LUT, bitgrid_majority_calculator
-from utilities import decoding_functions_v3_1, screen_alignment_functions
+from utilities import decoding_functions, screen_alignment_functions
 from utilities.global_definitions import (
     sender_output_height, sender_output_width,
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
@@ -60,11 +60,11 @@ def decoding_worker():
         
         t0 = time.time()
         if recall:
-            decoded_message = decoding_functions_v3_1.decode_bitgrid(
+            decoded_message = decoding_functions.decode_bitgrid_hsv(
                 hsv_roi, add_frame, recall, end_frame
             )
         else:
-            decoding_functions_v3_1.decode_bitgrid(
+            decoding_functions.decode_bitgrid_hsv(
                 hsv_roi, add_frame, recall, end_frame
             )
 
@@ -314,7 +314,7 @@ def receive_message():
 
         elif syncing:
             color = dominant_color(small_roi)
-            interval, syncing = decoding_functions_v3_1.sync_interval_detector(color, True)
+            interval, syncing = decoding_functions.sync_interval_detector(color, True)
             if not syncing:
                 decoding = True
                 watchdog_on = True

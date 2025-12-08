@@ -11,8 +11,8 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_bgr import dominant_color
 from utilities.color_functions_hsv import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions_v3_1 import sync_interval_detector
-from utilities.decoding_functions import decode_bitgrid
+from utilities.decoding_functions import sync_interval_detector
+from utilities.decoding_functions import decode_bitgrid_hsv
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -358,10 +358,10 @@ def receive_message():
                         break
 
                     if recall: # If it's a recall frame:
-                        message = decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
+                        message = decode_bitgrid_hsv(roi, frame_bit, add_frame, recall, end_frame) # Decode the bitgrid with recall set to True
 
                     else: # Else (if it's not a recall frame):
-                        decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                        decode_bitgrid_hsv(roi, frame_bit, add_frame, recall, end_frame)
 
                     if end_frame:
                         frame_bit += 1 

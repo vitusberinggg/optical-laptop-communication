@@ -1,23 +1,29 @@
 
 # --- Imports ---
+
 import numpy as np
 import time
-from utilities import color_functions
 
-from utilities.global_definitions import number_of_rows, number_of_columns, number_of_sync_frames
-from utilities.decoding_functions_v3_1 import bits_to_message
+from utilities.color_functions_bgr import tracker as tracker_bgr
+from utilities.color_functions_hsv import tracker as tracker_hsv
+from utilities.color_functions_hcv import tracker as tracker_hcv
+from utilities.global_definitions import number_of_sync_frames, number_of_rows, number_of_columns
 
-# --- Functions ---
 
-bits = [[[]]]
 
-def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
+
+# --- Functions BGR ---
+
+
+bits_bgr = [[[]]]
+
+def decode_bitgrid_bgr(frame, frame_bit = 0, add_frame = False, recall = False, end_frame = False):
 
     """
     
     """
     
-    global bits
+    global bits_bgr
 
     h, w = frame.shape[:2]
     bit_cell_height = h / number_of_rows
@@ -25,18 +31,18 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
 
     if add_frame:
 
-        while len(bits) <= frame_bit:
-            bits.append([])
+        while len(bits_bgr) <= frame_bit:
+            bits_bgr.append([])
 
         for row in range(number_of_rows):
 
-            while len(bits[frame_bit]) <= row:
-                bits[frame_bit].append([])
+            while len(bits_bgr[frame_bit]) <= row:
+                bits_bgr[frame_bit].append([])
 
             for column in range(number_of_columns):
 
-                while len(bits[frame_bit][row]) <= column:
-                    bits[frame_bit][row].append(None)
+                while len(bits_bgr[frame_bit][row]) <= column:
+                    bits_bgr[frame_bit][row].append(None)
 
                 y0 = int(row * bit_cell_height)
                 y1 = int(y0 + bit_cell_height)
@@ -45,15 +51,15 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
                 cell = frame[y0:y1, x0:x1]
 
                 if end_frame:
-                    bit = color_functions.tracker.end_bit(row, column)
+                    bit = tracker_bgr.end_bit(row, column)
 
                     if bit not in ["0", "1"]:
                         bit = "0"
 
-                    bits[frame_bit][row][column] = bit
+                    bits_bgr[frame_bit][row][column] = bit
 
                 else:
-                    color_functions.tracker.add_frame(cell, row, column)
+                    tracker_bgr.add_frame(cell, row, column)
 
         return None
 
@@ -66,7 +72,7 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
             for row in range(number_of_rows):
                 for column in range(number_of_columns):
 
-                    value = bits[f][row][column]
+                    value = bits_bgr[f][row][column]
 
                     if value is None:
                         value = "0"
@@ -79,20 +85,205 @@ def decode_bitgrid(frame, frame_bit = 0, add_frame = False, recall = False, end_
 
         print(f"Decoded {len(collected_bytes)} bytes from {frame_bit} frames.")
 
-        for i, byte_bits in enumerate(collected_bytes):
-            byte_str = "".join(str(b) for b in byte_bits)
+        for i, byte_bits_bgr in enumerate(collected_bytes):
+            byte_str = "".join(str(b) for b in byte_bits_bgr)
             print(f"Byte {i}: {byte_str} (char: '{chr(int(byte_str,2))}')")
             
         return bits_to_message(collected_bytes)
 
     return None
 
+
+
+
+# --- Functions HSV ---
+
+
+bitgrids_hsv = []
+
+def decode_bitgrid_hsv(hsv_frame, add_frame = False, recall = False, end_frame = False, debug_bytes = False):
+
+    """
+    Handles bitgrid collection and decoding.
+
+    Arguments:
+        hsv_frame: HSV frame for processing (only used when add_frame=True)
+        add_frame: Add this frame to the tracker
+        recall: Decode collected bitgrids into bytes and characters
+        end_frame: Marks the end of the bit period (pushes 1 full bitgrid)
+
+    Returns:
+        str | None: Decoded message (if recall=True)
+
+    """
+
+    global bitgrids_hsv
+
+    if add_frame:
+
+        if end_frame:
+
+            bitgrid = tracker_hsv.end_bit()
+
+            if bitgrid is not None:
+                bitgrids_hsv.append(bitgrid)
+
+            tracker_hsv.reset()
+
+        else:
+            tracker_hsv.add_frame(hsv_frame)
+
+        return None
+
+    if recall:
+
+        if len(bitgrids_hsv) == 0:
+            print("No bitgrids collected yet.")
+            return None
+
+        # Combine all bitgrids horizontally
+        combined = np.vstack(bitgrids_hsv)
+
+        flat = combined.ravel()
+        num_bytes = len(flat) // 8
+
+        # Split into 8-bit chunks
+        byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
+
+        print(f"Decoded {len(byte_matrix)} bytes:")
+
+        for i, byte_bits in enumerate(byte_matrix):
+
+            s = "".join([ b for b in byte_bits])
+
+            try:
+                char = chr(int(s, 2))
+                
+            except ValueError:
+                char = '?'
+
+            if debug_bytes:
+                print(f"Byte {i}: {s} (char: '{char}')")
+
+        return bits_to_message(byte_matrix)
+
+    return None
+
+
+
+
+# --- Functions HCV ---
+
+
+bitgrids_hcv = []
+
+def decode_bitgrid_hcv(hcv_frame, add_frame = False, recall = False, end_frame = False, debug_bytes = False):
+
+    """
+    Handles bitgrid collection and decoding.
+
+    Arguments:
+        hcv_frame: HCV frame for processing (only used when add_frame=True)
+        add_frame: Add this frame to the tracker
+        recall: Decode collected bitgrids into bytes and characters
+        end_frame: Marks the end of the bit period (pushes 1 full bitgrid)
+
+    Returns:
+        str | None: Decoded message (if recall=True)
+
+    """
+
+    global bitgrids_hcv
+
+    if add_frame:
+
+        if end_frame:
+
+            bitgrid = tracker_hcv.end_bit()
+
+            if bitgrid is not None:
+                bitgrids_hcv.append(bitgrid)
+
+            tracker_hcv.reset()
+
+        else:
+            tracker_hcv.add_frame(hcv_frame)
+
+        return None
+
+    if recall:
+
+        if len(bitgrids_hcv) == 0:
+            print("No bitgrids collected yet.")
+            return None
+
+        # Combine all bitgrids horizontally
+        combined = np.vstack(bitgrids_hcv)
+
+        flat = combined.ravel()
+        num_bytes = len(flat) // 8
+
+        # Split into 8-bit chunks
+        byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
+
+        print(f"Decoded {len(byte_matrix)} bytes:")
+
+        for i, byte_bits in enumerate(byte_matrix):
+
+            s = "".join([ b for b in byte_bits])
+
+            try:
+                char = chr(int(s, 2))
+                
+            except ValueError:
+                char = '?'
+
+            if debug_bytes:
+                print(f"Byte {i}: {s} (char: '{char}')")
+
+        return bits_to_message(byte_matrix)
+
+    return None
+
+
+
+
+# --- Bit decoding functions ---
+
+
+def bits_to_message(byte_matrix):
+
+    """
+    Converts a 2D list of bits (each inner list is a byte) into a readable message.
+
+    Arguments:
+        bit_matrix (list of list of int): Each inner list should contain 8 bits (0s or 1s).
+
+    Returns:
+        str: The decoded message as a string.
+
+    """
+
+    characters = []
+
+    for byte_bits in byte_matrix:
+
+        s = "".join([ b for b in byte_bits])
+
+        try:
+            characters.append(chr(int(s, 2)))
+
+        except ValueError:
+            characters.append('?')  # placeholder for invalid or partial bytes
+            
+    return "".join(characters)
+
 def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
 
     """
     Syncs timing by detecting black/white transitions.
 
-    Args:
+    Arguments:
         "color" (str):
         "detect_color_fn": Function that returns "black" or "white".
         "transitions_needed" (int): How many transitions we need to detect.
@@ -148,12 +339,12 @@ def sync_interval_detector(color, printing = True, sync_state_dictionary = {}):
             for timestamp_index in range (len(timestamps) - 1): # For each timestamp index in the list of timestamps:
                 frame_intervals.append(timestamps[timestamp_index + 1] - timestamps[timestamp_index]) # Add the difference between that timestamp and the next one to the timestamp differences list
 
-            #average_frame_interval = sum(frame_intervals) / len(frame_intervals) # Calculate the average frame interval
-            median_interval = float(np.median(frame_intervals))
+            average_frame_interval = sum(frame_intervals) / len(frame_intervals) # Calculate the average frame interval
 
             if printing:
-                print(f"[SYNC] Estimated frame interval: {median_interval:.4f} seconds")
+                print(f"[SYNC] Estimated frame interval: {average_frame_interval:.4f} seconds")
+                print(f"[SYNC] Timestamps in s: {frame_intervals}")
 
-            return median_interval, False
+            return average_frame_interval, False
 
     return 0, True # If "color" = "last_color", quit (no transition detected yet)

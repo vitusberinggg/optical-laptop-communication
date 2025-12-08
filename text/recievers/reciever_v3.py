@@ -168,9 +168,9 @@ def receive_message():
                 recall = True    
 
             if recall:
-                message = decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                message = decoding_functions.decode_bitgrid_bgr(roi, frame_bit, add_frame, recall, end_frame)
             else:
-                decoding_functions.decode_bitgrid(roi, frame_bit, add_frame, recall, end_frame)
+                decoding_functions.decode_bitgrid_bgr(roi, frame_bit, add_frame, recall, end_frame)
 
             if end_frame:
                 frame_bit += 1
