@@ -14,7 +14,7 @@ class OpenCL:
         # Video path
 
         base = os.path.dirname(__file__)
-        kernel_path = os.path.join(base, "webcam_simulator", "kernel.cl")
+        kernel_path = os.path.join(base, "kernel.cl")
 
         #--- Initialize OpenCL context and kernels ---
 
