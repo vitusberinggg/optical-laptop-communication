@@ -48,15 +48,21 @@ def audio_compressor(input_file):
     """
 
     # Spectrogram creation
+
+    print("\n[INFO] Creating a spectrogram...")
     
-    audio_signal, sample_rate = librosa.load(input_file, sr = target_sample_rate, mono = True) # Reads the audio file
+    audio_signal, _ = librosa.load(input_file, sr = target_sample_rate, mono = True) # Reads the audio file
 
     spectrogram = librosa.stft(audio_signal, n_fft = frequency_spectrogram_frame_size, hop_length = hop_length) # Computes the STFT, which converts the time-domain signal into a complex matrix where each row corresponds to a frequency bin, and each column corresponds to a time frame
 
     spectrogram_magnitude = np.abs(spectrogram) # The absolute value (amplitude) of each frequency bin at each time frame
     spectrogram_phase = np.angle(spectrogram) # The phase of each frequency bin (needed for exact waveform reconstruction, as quantizing causes artifacts)
 
+    print("\n[INFO] Spectrogram created.")
+
     # Frequency bin reduction
+
+    print("\n[INFO] Reducing the amount of frequency bins...")
 
     number_of_frequency_bins = spectrogram_magnitude.shape[0] # Gets the original number of frequency bins
 
@@ -85,7 +91,11 @@ def audio_compressor(input_file):
     else: # Else (if it's completely silent):
         normalized_magnitude = reduced_magnitude # (To avoid division by zero)
 
+    print(f"\n[INFO] Reduced the amount of frequency bins to {target_number_of_frequencies}")
+
     # Amplitude quantization
+
+    print("\n[INFO] Quantizing the amplitude...")
 
     quantized_amplitude_levels = np.linspace(0, 1, target_number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
 
@@ -95,6 +105,8 @@ def audio_compressor(input_file):
 
     quantized_magnitude *= reduced_magnitude.max() # Restores the original scale by multiplying the quantized normalized values back by the previous maximum magnitude
 
+    print(f"\n[INFO] Reduced the amount of amplitude levels to {target_number_of_amplitude_levels}")
+
     # Inverse transform
 
     if save_compressed_file:
@@ -103,7 +115,7 @@ def audio_compressor(input_file):
             expanded_magnitude = quantized_magnitude
         
         else:
-            
+
             expanded_magnitude = np.repeat(quantized_magnitude, frequency_bin_factor, axis = 0) # Repeats every coarse frequency row "frequency_bin_factor" times to make the reduced magnitude matrix return to the original number of frequency rows expected by the ISTFT
 
             if expanded_magnitude.shape[0] < number_of_frequency_bins: # If the expanded magnitude matrix still has fewer rows than expected:
@@ -119,6 +131,11 @@ def audio_compressor(input_file):
         output_file = "compressed_audio.wav"
 
         soundfile.write(output_file, reconstructed_audio_signal, target_sample_rate)
+
+        print(f"\n[INFO] Compression done. Compressed audio file path: {output_file}")
+    
+    else:
+        print("\n[INFO] Compression done.")
 
 # --- Execution ---
 
