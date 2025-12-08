@@ -6,7 +6,7 @@ import random
 
 # importing OpenCL(class) from ocl 
 # (used in jitter_color and white_balance_shifter)
-from ocl import OpenCL
+from webcam_simulation.ocl import OpenCL
 ocl = OpenCL()
 
 # --- Presets of the amount effects and severity ---

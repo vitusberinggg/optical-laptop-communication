@@ -72,7 +72,7 @@ class OpenCL:
         self.queue = cl.CommandQueue(self.ctx)
 
         # Load kernel.cl from file
-        kernel_src = self.load_kernel_file(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\kernel.cl")
+        kernel_src = self.load_kernel_file(r"C:\Users\ejadmax\code\optical-laptop-communication\text\webcam_simulation\kernel.cl")
         self.prg = cl.Program(self.ctx, kernel_src).build()
         
         # Create OpenCL kernels to able to reuse them

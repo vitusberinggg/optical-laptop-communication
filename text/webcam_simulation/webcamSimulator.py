@@ -5,7 +5,7 @@ import cv2
 import threading
 import time
 
-from distorter import FrameDistorter
+from webcam_simulation.distorter import FrameDistorter
 
 # --- Definitions ---
 
