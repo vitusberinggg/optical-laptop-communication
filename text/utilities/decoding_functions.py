@@ -7,7 +7,7 @@ import time
 from utilities.color_functions_bgr import tracker as tracker_bgr
 from utilities.color_functions_hsv import tracker as tracker_hsv
 from utilities.color_functions_hcv import tracker as tracker_hcv
-from utilities.global_definitions import number_of_sync_frames, number_of_rows, number_of_columns
+from utilities.global_definitions import number_of_sync_frames, number_of_rows, number_of_columns, bits_per_cell
 
 
 
@@ -221,16 +221,16 @@ def decode_bitgrid_hcv(hcv_frame, add_frame = False, recall = False, end_frame =
         combined = np.vstack(bitgrids_hcv)
 
         flat = combined.ravel()
-        num_bytes = len(flat) // 8
+        bitstream = "".join([format(val, f"0{bits_per_cell}b") for val in flat])
+        num_bytes = len(bitstream) // 8
 
-        # Split into 8-bit chunks
-        byte_matrix = flat[:num_bytes * 8].reshape(-1, 8)
+        byte_matrix = [bitstream[i*8:(i+1)*8] for i in range(num_bytes)]
 
         print(f"Decoded {len(byte_matrix)} bytes:")
 
         for i, byte_bits in enumerate(byte_matrix):
 
-            s = "".join([ b for b in byte_bits])
+            s = byte_bits
 
             try:
                 char = chr(int(s, 2))
@@ -244,8 +244,6 @@ def decode_bitgrid_hcv(hcv_frame, add_frame = False, recall = False, end_frame =
         return bits_to_message(byte_matrix)
 
     return None
-
-
 
 
 # --- Bit decoding functions ---
