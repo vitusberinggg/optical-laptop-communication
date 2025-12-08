@@ -1,1 +1,165 @@
 
+
+# --- Imports ---
+
+import cv2 # Imports the OpenCV library
+import time
+
+from utilities.encoding_functions import message_to_frame_several_bit_arrays
+from utilities.image_generation_functions import (
+    render_frame_several, create_color_frame,
+    create_color_reference_frame, create_large_aruco_marker_frame
+)
+from utilities.global_definitions import (
+    aruco_marker_frame_duration, frame_duration,
+    red_bgr, blue_bgr,
+    sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, bits_per_cell
+)
+
+# ---- Definitions ----
+
+message = "Fuck my baby dad, fuck my baby dad, fuck my baby dad, Im a fine-ass bitch, I aint in the house sad, Sexyy, Fuck my baby dad BOW BOW BOW BOW BOW"
+
+# --- Main function ---
+
+def send_message(message):
+
+    """
+    Sends a message by displaying frames on the screen.
+
+    Arguments:
+        "message" (str): The message to be sent.
+
+    Returns:
+        None
+    
+    """
+
+    color_reference_frame = create_color_reference_frame()
+
+    sync_frames = []
+
+    for color in sync_colors: # For each color in the sync colors array
+        color_frame = create_color_frame(color) # Creates a frame in the color
+        sync_frames.append(color_frame) # Adds the color frame to the sync frame list
+
+    frame_bit_arrays = message_to_frame_several_bit_arrays(message, bits_per_cell) # Converts the message to frame bit arrays
+
+    blue_frame = create_color_frame(blue_bgr)
+
+    data_frames = []
+
+    for frame_bit_array in frame_bit_arrays: # For each frame bit array:
+        rendered_frame = render_frame_several(frame_bit_array, color_map_2bit) # Render the frame
+        data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
+
+    end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
+
+#   OpenCV window
+
+    window = "SENDER" # The name of the OpenCV window
+    cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
+    cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
+
+#   Aruco marker frames
+
+    aruco_frames = [
+    create_large_aruco_marker_frame(position = "right"),
+    create_large_aruco_marker_frame(position = "left")
+]
+
+    for aruco_frame in aruco_frames:
+
+        aruco_marker_frame_start_time = time.monotonic()
+
+        while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
+
+            cv2.imshow(window, aruco_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                cv2.destroyAllWindows()
+                return
+            
+            time.sleep(0.001)
+
+#   Color reference frame
+
+    color_reference_frame_start_time = time.monotonic()
+
+    while time.monotonic() - color_reference_frame_start_time < (4):
+
+        cv2.imshow(window, color_reference_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            return
+        
+        time.sleep(0.001)
+
+#   Sync frames
+
+    for _ in range(number_of_sync_frames // 2):
+
+        for sync_frame in sync_frames:
+        
+            sync_frame_start_time = time.monotonic()
+            
+            while time.monotonic() - sync_frame_start_time < sync_frame_duration:
+                
+                cv2.imshow(window, sync_frame)
+                
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    return
+                    
+                time.sleep(0.001)
+
+    try:
+
+# End of sync
+
+        end_of_sync_frame_start_time = time.monotonic()
+
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
+
+            cv2.imshow(window, blue_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                return
+            
+            time.sleep(0.001)
+
+#       Data transfer loop
+
+        for frame in data_frames: # For each frame:
+
+            frame_start_time = time.monotonic() # Records the start time for the current frame
+
+            while time.monotonic() - frame_start_time < frame_duration: # While the frame duration limit hasn't been reached:
+
+                cv2.imshow(window, frame) # Display the current frame in the window
+
+                if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                    return # Exit the function
+                
+                time.sleep(0.001) # Small sleep to prevent high CPU usage
+
+#       End frame
+
+        end_frame_start_time = time.monotonic() # Records the start time for the end frame
+
+        while time.monotonic() - end_frame_start_time < frame_duration: # While the end frame duration limit hasn't been reached:
+
+            cv2.imshow(window, end_frame) # Display the end frame in the window
+
+            if cv2.waitKey(1) & 0xFF == ord("q"): # If "Q" is pressed:
+                return # Exit the function
+            
+            time.sleep(0.001) # Small sleep to prevent high CPU usage
+            
+    except KeyboardInterrupt: # If a keyboard interrupt occurs (e.g., Ctrl+C):
+        pass # Continue to the cleanup section
+
+    finally:
+        cv2.destroyAllWindows() # Close all OpenCV windows
+
+if __name__ == "__main__":
+    send_message(message)

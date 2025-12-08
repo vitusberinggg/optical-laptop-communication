@@ -51,6 +51,25 @@ def render_frame(bitgrid):
 
     return image
 
+def render_frame_several(bitgrid, color_map): 
+
+    image = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
+
+    for row in range(number_of_rows):
+        for column in range(number_of_columns):
+            cell_value = int(bitgrid[row, column])
+            color = color_map[cell_value]  # Get the BGR color
+
+            # Cell coordinates
+            x0 = column * bit_cell_width
+            x1 = x0 + bit_cell_width
+            y0 = row * bit_cell_height
+            y1 = y0 + bit_cell_height
+
+            cv2.rectangle(image, (x0, y0), (x1 - 1, y1 - 1), color, thickness=-1)
+
+    return image
+
 def create_color_frame(color):
 
     """
