@@ -15,7 +15,7 @@ PRESETS = {
     "custom": {
         "severity": 1.0,
         "light_level": 1.0,
-        "effects": ["jpeg_compress", "noise"]
+        "effects": ["blur"]
     },
     "none": {
         "severity": 0.0,
@@ -44,7 +44,7 @@ PRESETS = {
         "severity": 0.1,
         "light_level": 0.8,
         "effects": ["noise","jitter_color","white_balance_shift",
-                    "blur","chromatic_aberration",
+                    "blur",
                     "jpeg_compress", "temporal_instability"]
     }
 }
@@ -324,7 +324,7 @@ class Effects:
 
 if __name__ == "__main__":
     
-    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\color_calibration.png")
+    frame = cv2.imread(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\test_bitgrid.png")
     distorter = FrameDistorter(preset="custom")
     distorted_frame = distorter.apply(frame)
     cv2.imwrite("distorted.jpg", distorted_frame)
