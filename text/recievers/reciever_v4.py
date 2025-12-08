@@ -1,5 +1,4 @@
 
-
 # --- Imports ---
 
 import cProfile
@@ -9,11 +8,11 @@ import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
-from utilities.color_functions import dominant_color
-from utilities.color_functions_v3_1 import color_offset_calculation, tracker, build_color_LUT
+from utilities.color_functions_bgr import dominant_color
+from utilities.color_functions_hsv import color_offset_calculation, tracker, build_color_LUT
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-#from utilities.decoding_functions_v3_1 import sync_interval_detector
-from utilities.decoding_functions import decode_bitgrid, sync_interval_detector
+from utilities.decoding_functions_v3_1 import sync_interval_detector
+from utilities.decoding_functions import decode_bitgrid
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
@@ -24,41 +23,50 @@ from utilities.global_definitions import (
     roi_rectangle_thickness, minimized_roi_rectangle_thickness
 )
 
+# --- Definitions ---
+
+using_webcam = False
+
 # --- Video capture setup ---
 
-videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_live.mp4") # For video test
-#videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
-"""
-# Resolution
+if using_webcam:
 
-videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
-videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW) # For live webcam
 
-# White balance
+    # Resolution
 
-videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
-videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
-print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+    videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+    videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
 
-# Exposure
+    # White balance
 
-videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
-videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
-print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+    """
+    videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+    videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
+    print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+    """
 
-# Gain
+    # Exposure
 
-videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+    videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value = Darker
+    print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
 
+    # Gain
+
+    videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
+else:
+    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\.vscode\optical-laptop-communication\webcam_simulation\sender_v4_live.mp4") # For video test
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")
     exit()
-"""
+
 while True:
 
     read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
- 
+
     if read_was_sucessful:
         break
 
@@ -124,20 +132,21 @@ def receive_message():
     previous_time = time.time()
     frame_count = 0
 
-    
+    """
 
     # --- End of debugging ---
 
     print("\n[INFO] Receiver started")
 
-    actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
-    actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    if using_webcam:
+        actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
-   
+        print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
+
     # --- Debugging ---
 
-    
+    """
 
     print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
     print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")   
@@ -150,17 +159,34 @@ def receive_message():
 
         while True:
 
-           read_was_sucessful, frame = videoCapture.read()  # Reads a frame from the video capture
-           frame = frame.copy()
-           
-           if not read_was_sucessful:
-               print("\n[INFO] End of video file reached.")
-               break
+            read_was_sucessful, frame = videoCapture.read() # Reads a frame from the video capture
 
+            if not read_was_sucessful:
+
+                print("\n[WARNING] Failed to capture a frame, trying again...")
+                time.sleep(0.5)
+                continue
+
+            # --- Debugging ---
+
+            """
+
+            frame_count += 1
+
+            current_time = time.time()
+
+            if current_time - previous_time >= 1.0:
+                print(f"[INFO] Loops per second: {frame_count}")
+                frame_count = 0
+                previous_time = current_time
+
+            """
+
+            # --- End of debugging ---
 
             # ArUco marker detection
 
-           if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
+            if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
 
                 try:
                     
@@ -173,17 +199,17 @@ def receive_message():
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
                     if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
+                        roi_coordinates, observed_aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
-                    aruco_marker_side_length = 0
+                    observed_aruco_marker_side_length = 0
 
             # Display drawings
             
-           display = frame.copy() # Create a copy of the frame for display purposes
+            display = frame.copy() # Create a copy of the frame for display purposes
 
-           if marker_ids is not None and len(marker_ids) > 0:
+            if marker_ids is not None and len(marker_ids) > 0:
 
                 cv2.aruco.drawDetectedMarkers(display, corners, marker_ids) # Draw the detected markers on the display frame
 
@@ -191,19 +217,20 @@ def receive_message():
             
                 # marker_ids = None # Reset marker IDs to avoid repeated processing
                 
-           else:
+            else:
                 cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-           cv2.imshow("Webcam Receiver", display)
+            cv2.imshow("Webcam Receiver", display)
 
-           if roi_coordinates is not None: # If there are ROI coordinates:
+            if roi_coordinates is not None: # If there are ROI coordinates:
                 
                 if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
 
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
                     try:
-                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+                        roi_padding_px = (observed_aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+
                     except Exception:
                         roi_padding_px = 0
 
@@ -343,7 +370,7 @@ def receive_message():
 
                 cv2.imshow("ROI", roi)
 
-           if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:

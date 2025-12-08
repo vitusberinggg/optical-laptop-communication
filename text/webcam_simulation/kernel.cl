@@ -364,6 +364,7 @@ void chromatic_aberration(
 }
 
 
+
 __kernel void image_distortion(
 
     // Input and output images
@@ -448,6 +449,6 @@ __kernel void image_distortion(
     if (mask[6] == 1){
         // Apply chromatic aberration
         chromatic_aberration(img, temp_img, width, height, dx_r, dy_r, dx_b, dy_b);
-        swap_images(img, temp_img, width, height);
+        //swap_images(img, temp_img, width, height);
     }
 }
