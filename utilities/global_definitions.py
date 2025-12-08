@@ -32,6 +32,15 @@ green_upper_hsv_limit = (80, 255, 255)
 blue_lower_hsv_limit = (100, 150, 0)
 blue_upper_hsv_limit = (140, 255, 255)
 
+# --- Color maps ---
+
+color_map_2bit = [
+    (0, 0, 0),       # 0b00 = Black
+    (255, 255, 255), # 0b01 = White
+    (255, 0, 0),     # 0b10 = Blue 
+    (0, 255, 0),     # 0b11 = Green
+]
+
 # --- Sender output definitions ---
 
 sender_output_width = 1920 # Width of the sender output in pixels
@@ -42,6 +51,8 @@ number_of_rows = 8 # Number of rows in the frame
 
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
+bits_per_cell = 2 
+number_of_colors = bits_per_cell^2 
 
 frame_duration = 0.3 # Duration for each frame in seconds
 
