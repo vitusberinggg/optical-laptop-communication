@@ -299,12 +299,12 @@ def color_offset_calculation(roi):
     }
 
     original_hsv_ranges = {
-        "red1":  ([red_lower_hsv_limit_1], [red_upper_hsv_limit_1]),
-        "red2":  ([red_lower_hsv_limit_2], [red_upper_hsv_limit_2]),
-        "white": ([white_lower_hsv_limit], [white_upper_hsv_limit]),
-        "black": ([black_lower_hsv_limit], [black_upper_hsv_limit]),
-        "green": ([green_lower_hsv_limit], [green_upper_hsv_limit]),
-        "blue":  ([blue_lower_hsv_limit ], [blue_upper_hsv_limit ])
+        "red1":  (red_lower_hsv_limit_1, red_upper_hsv_limit_1),
+        "red2":  (red_lower_hsv_limit_2, red_upper_hsv_limit_2),
+        "white": (white_lower_hsv_limit, white_upper_hsv_limit),
+        "black": (black_lower_hsv_limit, black_upper_hsv_limit),
+        "green": (green_lower_hsv_limit, green_upper_hsv_limit),
+        "blue":  (blue_lower_hsv_limit , blue_upper_hsv_limit )
     }
 
     def calculate_hue_difference(expected_hue_value, observed_hue_value):
