@@ -25,7 +25,7 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
 from utilities.color_functions_hsv import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr, bitgrid_majority_calculator
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions import sync_interval_detector, decode_bitgrid
+from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hsv
 from utilities.accuracy_calculator import accuracy_calculator
 
 from utilities.global_definitions import (
@@ -178,13 +178,13 @@ def decoding_worker():
 
         if recall: # If it's a recall frame:
 
-            result = decode_bitgrid(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
+            result = decode_bitgrid_hsv(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
 
             if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
                 decoded_message = result
 
         else:
-            decode_bitgrid(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
+            decode_bitgrid_hsv(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
 
         # --- Debugging ---
 
