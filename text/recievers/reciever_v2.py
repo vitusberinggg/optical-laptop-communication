@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
-from utilities.color_functions import dominant_color, tracker
+from utilities.color_functions_bgr import dominant_color, tracker
 from utilities import screen_alignment_functions
 
 # --- Definitions ---

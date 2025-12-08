@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
-from utilities.color_functions import dominant_color, tracker
+from utilities.color_functions_bgr import dominant_color, tracker
 from utilities import screen_alignment_functions, decoding_functions
 from utilities.global_definitions import (
     small_aruco_marker_side_length, aruco_marker_margin
