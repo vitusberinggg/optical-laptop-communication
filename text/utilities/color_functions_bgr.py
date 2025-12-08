@@ -62,7 +62,7 @@ class BitColorTracker:
         frame_colors = []
 
         for frame in frames:
-            color = dominant_color(frame)
+            color = dominant_color_bgr(frame)
             frame_colors.append(color)
 
         majority = Counter(frame_colors).most_common(1)[0][0]
@@ -85,7 +85,7 @@ class BitColorTracker:
 
 tracker = BitColorTracker()
 
-def dominant_color(roi):
+def dominant_color_bgr(roi):
 
     """
     Computes the dominant color in the given ROI using HSV color space.

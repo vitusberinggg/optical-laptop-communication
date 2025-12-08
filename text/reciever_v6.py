@@ -23,9 +23,13 @@ profiler.enable()
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
-from utilities.color_functions_hsv import color_offset_calculation, tracker, build_color_LUT, dominant_color_hsv, dominant_color_bgr, bitgrid_majority_calculator
+from utilities.color_functions_hcv import (
+    color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
+    bitgrid_majority_calculator as numba_hcv, bgr_to_hcv
+)
+from utilities.color_functions_bgr import dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hsv
+from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
 from utilities.accuracy_calculator import accuracy_calculator
 
 from utilities.global_definitions import (
@@ -122,7 +126,7 @@ def warmup_all():
     """
 
     dummy_array = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
-    bitgrid_majority_calculator(dummy_array, 5)
+    numba_hcv(dummy_array, 5)
 
 # Threading setup
 
@@ -156,7 +160,7 @@ def decoding_worker():
 
         try:
 
-            hsv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
+            hcv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
 
         except queue.Empty:
 
@@ -178,13 +182,13 @@ def decoding_worker():
 
         if recall: # If it's a recall frame:
 
-            result = decode_bitgrid_hsv(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
+            result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
 
             if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
                 decoded_message = result
 
         else:
-            decode_bitgrid_hsv(hsv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
+            decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
 
         # --- Debugging ---
 
@@ -429,8 +433,8 @@ def receive_message():
                     roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
                     minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
-                roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                minimized_roi_hsv = cv2.cvtColor(minimized_roi, cv2.COLOR_BGR2HSV)
+                roi_hcv = bgr_to_hcv(roi)
+                minimized_roi_hcv = bgr_to_hcv(minimized_roi)
                 
                 if using_webcam: # If we're using the webcam:
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
@@ -438,7 +442,7 @@ def receive_message():
                 else: # If we're using a pre-recorded video:
 
                     if tracker.LUT is not None:
-                        color = dominant_color_hsv(minimized_roi_hsv) # Get the dominant color in the minimized ROI
+                        color = dominant_color_hcv(minimized_roi_hcv) # Get the dominant color in the minimized ROI
 
                     else:
                         color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
@@ -563,7 +567,7 @@ def receive_message():
                         print("\n[INFO] Frames finished — recalling message...")
 
                     try:
-                        frame_queue.put_nowait((roi_hsv.copy(), recall, add_frame, end_frame))
+                        frame_queue.put_nowait((roi_hcv.copy(), recall, add_frame, end_frame))
 
                     except queue.Full: # If the queue is full:
                         pass # Skip

@@ -230,7 +230,7 @@ def bgr_to_hcv(bgr):
     return H, C.astype(np.uint8), V.astype(np.uint8)
 
 
-def build_color_LUT_HCV(corrected_ranges):
+def build_color_LUT(corrected_ranges):
     """
     Build a 180 x 256 x 256 LUT mapping HCV -> class index.
     H = 0..179
