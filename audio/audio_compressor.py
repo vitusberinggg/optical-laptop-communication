@@ -98,14 +98,19 @@ def audio_compressor(input_file):
     # Inverse transform
 
     if save_compressed_file:
+
+        if frequency_bin_reduction_method == "spectral-sparsification":
+            expanded_magnitude = quantized_magnitude
         
-        expanded_magnitude = np.repeat(quantized_magnitude, frequency_bin_factor, axis = 0) # Repeats every coarse frequency row "frequency_bin_factor" times to make the reduced magnitude matrix return to the original number of frequency rows expected by the ISTFT
+        else:
+            
+            expanded_magnitude = np.repeat(quantized_magnitude, frequency_bin_factor, axis = 0) # Repeats every coarse frequency row "frequency_bin_factor" times to make the reduced magnitude matrix return to the original number of frequency rows expected by the ISTFT
 
-        if expanded_magnitude.shape[0] < number_of_frequency_bins: # If the expanded magnitude matrix still has fewer rows than expected:
+            if expanded_magnitude.shape[0] < number_of_frequency_bins: # If the expanded magnitude matrix still has fewer rows than expected:
 
-            number_of_padding_rows = number_of_frequency_bins - expanded_magnitude.shape[0]
+                number_of_padding_rows = number_of_frequency_bins - expanded_magnitude.shape[0]
 
-            expanded_magnitude = np.vstack([expanded_magnitude, np.zeros((number_of_padding_rows, expanded_magnitude.shape[1]))]) # Pad the top with zeros to make shapes match (removes high frequency content that didn't fit into complete groups)
+                expanded_magnitude = np.vstack([expanded_magnitude, np.zeros((number_of_padding_rows, expanded_magnitude.shape[1]))]) # Pad the top with zeros to make shapes match (removes high frequency content that didn't fit into complete groups)
         
         reconstructed_spectrogram = expanded_magnitude * np.exp(1j * spectrogram_phase) # Reconstructs the spectrogram based on the magnitude matrix
 
