@@ -552,7 +552,7 @@ def receive_message():
                             add_frame = True 
                             last_frame_time = current_time 
 
-                    if color in ["white", "black"]: # If the color is white or black:
+                    if color in ["white", "black", "blue", "green"]: # If the color is white or black:
 
                         add_frame = True
 
