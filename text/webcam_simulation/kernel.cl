@@ -447,8 +447,8 @@ __kernel void image_distortion(
     }
 
     if (mask[6] == 1){
-            // Apply Gaussian blur
-            gaussian_blur(img, temp_img, kernel_array, ksize, width, height);
-            swap_images(img, temp_img, width, height);
-        }
+        // Apply Gaussian blur
+        gaussian_blur(img, temp_img, kernel_array, ksize, width, height);
+        swap_images(img, temp_img, width, height);
+    }
 }
