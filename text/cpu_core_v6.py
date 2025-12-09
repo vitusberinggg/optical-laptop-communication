@@ -22,7 +22,7 @@ profiler.enable()
 
 # Non-library modules
 
-from webcam_simulation.webcamSimulator import VideoThreadedCapture
+from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -53,68 +53,6 @@ watchdog_on = False
 # Debugging
 
 debug_bytes = False
-
-# Video path
-
-base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
- 
-# --- Video capture setup ---
-
-if using_webcam:
-
-    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
-    # Resolution
-
-    videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
-    videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
-
-    # White balance
-
-    """
-    videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
-    videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
-    print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
-    """
-
-    # Exposure
-
-    videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
-    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value --> darker
-    print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
-
-    # Gain
-
-    videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
-
-else:
-    videoCapture = VideoThreadedCapture(path) # Initializes a video capture object with a pre-recorded video
-
-if not videoCapture.isOpened():
-    print("\n[WARNING] Couldn't start video capture.")
-    exit()
-
-while True:
-
-    read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
-
-    if read_was_sucessful:
-        break
-
-    time.sleep(0.01)
-
-# --- OpenCV window setup ---
-
-cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
-
-cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
-
-# --- ArUco detector setup ---
-
-aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
 # --- Helper functions ---
 
@@ -629,6 +567,71 @@ def receive_message():
 # --- Execution ---
 
 if __name__ == "__main__":
+
+    import multiprocessing
+    multiprocessing.freeze_support()   # For Windows EXEs, harmless otherwise
+
+    # Video path
+
+    base = os.path.dirname(__file__)
+    path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
+    
+    # --- Video capture setup ---
+
+    if using_webcam:
+
+        videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+        # Resolution
+
+        videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+        videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+
+        # White balance
+
+        """
+        videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+        videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
+        print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+        """
+
+        # Exposure
+
+        videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+        videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value --> darker
+        print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+
+        # Gain
+
+        videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
+    else:
+        videoCapture = VideoProcessCapture(path, False, True, core=[10,11]) # Initializes a video capture object with a pre-recorded video
+
+    if not videoCapture.isOpened():
+        print("\n[WARNING] Couldn't start video capture.")
+        exit()
+
+    while True:
+
+        read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
+
+        if read_was_sucessful:
+            break
+
+        time.sleep(0.01)
+
+    # --- OpenCV window setup ---
+
+    cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
+
+    cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
+
+    # --- ArUco detector setup ---
+
+    aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
     receive_message()
 
