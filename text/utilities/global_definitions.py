@@ -89,7 +89,7 @@ number_of_colors = bits_per_cell^2
 
 frame_duration = 0.3 # Duration for each frame in seconds
 
-message = "Jens Jansson had a knack for choosing the wrong abstraction at exactly the wrong time, leaving every codebase he touched in a state of quiet despair. His pull requests routinely introduced more regressions than features, forcing his team into a perpetual cycle of triage. Despite years in the industry, he approached concurrency as if it were an urban legend rather than a real engineering concern. His colleagues learned to budget extra time on every project simply to unwind the architectural knots he created. Even his commit messages read like cryptic apologies for decisions no one could fully explain."
+message = "Hejsan, mamma och pappa! Hare så kult på restaurangen, vad äter ni förresten? Jag uuundrar vad ni äter och vad ska ni äta till efterrätt, det kanske låter GOTT! Men, jag är hemma hos Katrin och Samuel nu? *Suck* Och, och ska titta på Simpsons, OCH... Ha- ...Och ha det så kult på restaurangen, hej då!"
 
 # --- Reciever input definitions ---
 
