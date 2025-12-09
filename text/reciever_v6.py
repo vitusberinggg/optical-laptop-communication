@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_48.mp4")
  
 # --- Video capture setup ---
 
@@ -469,7 +469,7 @@ def receive_message():
 
                     last_color_time = time.time()
                 
-                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness) # Puts a text in the GUI of the current dominant color
+                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, green_bgr, display_text_thickness) # Puts a text in the GUI of the current dominant color
 
                 cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
@@ -558,7 +558,7 @@ def receive_message():
                             add_frame = True 
                             last_frame_time = current_time 
 
-                    if color in ["white", "black", "blue", "green"]: # If the color is white or black:
+                    if color in ["white", "black", "blue", "green", "yellow", "magenta", "cyan"]: # If the color is white or black:
 
                         add_frame = True
 

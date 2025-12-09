@@ -13,7 +13,8 @@ from utilities.image_generation_functions import (
 from utilities.global_definitions import (
     aruco_marker_frame_duration, frame_duration,
     red_bgr, blue_bgr,
-    sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, bits_per_cell
+    sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, color_map_3bit, 
+    bits_per_cell
 )
 
 # ---- Definitions ----
@@ -45,10 +46,15 @@ def send_message(message):
 
     frame_bit_arrays = message_to_frame_several_bit_arrays(message, bits_per_cell) # Converts the message to frame bit arrays
 
+    if bits_per_cell == 2:
+        color_map = color_map_2bit
+    elif bits_per_cell == 3:
+        color_map = color_map_3bit
+
     data_frames = []
 
     for frame_bit_array in frame_bit_arrays: # For each frame bit array:
-        rendered_frame = render_frame_several(frame_bit_array, color_map_2bit) # Render the frame
+        rendered_frame = render_frame_several(frame_bit_array, color_map) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     end_frame  = create_color_frame(red_bgr) # Creates the end frame with the specified color
