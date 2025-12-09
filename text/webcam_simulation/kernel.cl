@@ -7,7 +7,7 @@
 
 // Simple hash function to generate pseudo-random per-pixel noise - NOISE
 
-uint hash(uint x, uint y, uint c, uint seed) {
+inline uint hash(uint x, uint y, uint c, uint seed) {
     uint h = x * 374761393u + y * 668265263u + c * 2147483647u + seed * 1274126177u;
     h = (h ^ (h >> 13)) * 1274126177u;
     return h;
@@ -33,7 +33,7 @@ inline void swap_images(
 
 // -------- NOISE ----------
 
-void add_noise(
+inline void add_noise(
     __global uchar *img,
     float base_sigma,
     float signal_sigma,
@@ -60,7 +60,7 @@ void add_noise(
 
 // ------- JITTER ----------
 
-void jitter(
+inline void jitter(
     __global uchar *img,
     float brightness,
     float contrast,
@@ -91,7 +91,7 @@ void jitter(
 
 // ---------- WHITE BALANCE ----------
 
-void white_balance(
+inline void white_balance(
     __global uchar *img,
     float r_gain,
     float g_gain,
@@ -116,7 +116,7 @@ void white_balance(
 
 // ---------- WARP ----------
 
-void warp(
+inline void warp(
     __global uchar *img,
     __global uchar *temp_img,
     __global float *map_x,
@@ -173,7 +173,7 @@ void warp(
 
 // ---------- ROLLING SHUTTER ----------
 
-void rolling_shutter(
+inline void rolling_shutter(
     __global uchar *img,
     __global uchar *temp_img,
     __global float *row_offset,
@@ -299,7 +299,7 @@ __kernel void jpeg_approx(
 
 // ---------- GAUSSIAN BLUR ----------
 
-void gaussian_blur(
+inline void gaussian_blur(
     __global uchar *img,
     __global uchar *temp_img,
     __global float *kernel_array,   // 1D Gaussian weights
@@ -332,7 +332,7 @@ void gaussian_blur(
 
 // ---------- CHROMATIC ABERRATION ----------
 
-void chromatic_aberration(
+inline void chromatic_aberration(
     __global uchar *img,
     __global uchar *temp_img,
     int width,

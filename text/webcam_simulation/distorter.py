@@ -6,7 +6,7 @@ import random
 
 # importing OpenCL(class) from ocl 
 # (used in jitter_color and white_balance_shifter)
-from ocl import OpenCL
+from webcam_simulation.ocl import OpenCL
 ocl = OpenCL()
 
 # --- Presets of the amount effects and severity ---
@@ -48,6 +48,7 @@ PRESETS = {
                     "jpeg_compress", "temporal_instability"]
     }
 }
+
 
 
 # --- Frame distorter ---
@@ -98,6 +99,7 @@ class FrameDistorter:
             1 if name in config["effects"] else 0
             for name in EFFECT_ORDER
         ], dtype=np.uint32)
+
 
     # Apply all effects
     def apply(self, frame):
@@ -170,7 +172,11 @@ class Effects:
         # GPU-accelerated processing
         ocl.run_jitter(brightness, contrast, gains)
     
-    def rolling_shutter(self, frame, severity, amplitude=2.0):
+
+    # --- Rolling shutter ---
+
+    @staticmethod
+    def rolling_shutter(frame, severity, amplitude=2.0):
         # generate slowly-varying row offsets; severity controls amplitude
         h, w, _ = frame.shape
         # base wobble scaled by severity and darkness maybe
@@ -185,10 +191,10 @@ class Effects:
         return ocl.run_rolling_shutter(row_offset)
 
 
-
     # --- Warp ---
 
-    def warp(self, frame, severity):
+    @staticmethod
+    def warp(frame, severity):
         # create low-res displacement map like before but then run on GPU
         h, w, _ = frame.shape
         max_strength = 5.0
@@ -210,12 +216,12 @@ class Effects:
 
     # --- jpeg compression blocking ---
 
+    @staticmethod
     def jpeg_compress(self, frame, severity):
         # map severity to quality: severity 0->100, 1->10
         quality = int(100 - severity * 90)
         block_size = 8 if frame.shape[1] <= 1280 else 16
         return ocl.run_jpeg_approx(block_size=block_size, quality=quality)
-
 
 
     # --- White balance shift ---
@@ -240,7 +246,6 @@ class Effects:
         return ocl.run_white_balance(gains)
 
 
-
     # --- Gaussian Blur ---
 
     @staticmethod
@@ -252,8 +257,6 @@ class Effects:
         # Map severity to sigma radius (~0.5–2.0 pixels)
         radius = 0.5 + severity * 2.0
         return ocl.run_blur(radius=radius)
-
-
 
 
     # --- Frame-Rate Instability ---
@@ -316,8 +319,6 @@ class Effects:
     @staticmethod
     def img_distortion(frame, which_effects):
         return ocl.run_image_distortion(frame, which_effects)
-
-
 
 
 # --- Test the distorter ---

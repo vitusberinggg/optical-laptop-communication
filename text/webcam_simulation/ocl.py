@@ -79,7 +79,7 @@ class OpenCL:
         self.queue = cl.CommandQueue(self.ctx)
 
         # Load kernel.cl from file
-        kernel_src = self.load_kernel_file(r"C:\Users\ejadmax\code\optical-laptop-communication\text\webcam_simulation\kernel.cl")
+        kernel_src = self.load_kernel_file(kernel_path)
         self.prg = cl.Program(self.ctx, kernel_src).build()
         
         # Create OpenCL kernels to able to reuse them
@@ -117,6 +117,7 @@ class OpenCL:
         self.brightness = brightness
         self.contrast = contrast
     
+
     # --- White balance shifter ---
 
     def run_white_balance(self, gains):
@@ -124,7 +125,9 @@ class OpenCL:
 
         self.white_r_gain, self.white_g_gain, self.white_b_gain = gains
     
+
     # ---------- Warp (GPU remap) ----------
+    
     def run_warp(self, map_x, map_y):
         # print("[DEBUG] warp")
         """
@@ -134,6 +137,7 @@ class OpenCL:
 
         self.map_x_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_x.astype(np.float32)))
         self.map_y_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=np.ascontiguousarray(map_y.astype(np.float32)))
+
 
     # ---------- Rolling shutter ----------
 
@@ -146,7 +150,9 @@ class OpenCL:
         self.row_buf = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, 
                                  hostbuf=np.ascontiguousarray(row_offset.astype(np.float32)))
 
+
     # ---------- JPEG approximation ----------
+
     def run_jpeg_approx(self, block_size=8, quality=50):
         # print("[DEBUG] jpeg")
         """
@@ -196,6 +202,9 @@ class OpenCL:
         self.dy_r = 0.0
         self.dx_b = -severity * max_shift
         self.dy_b = 0.0
+    
+
+    # --- Image distortion ---
     
     def run_image_distortion(self, frame, which_effects):
         """
