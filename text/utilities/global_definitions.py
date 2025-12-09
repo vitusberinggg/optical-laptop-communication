@@ -60,6 +60,17 @@ color_map_2bit = [
     (0, 255, 0),     # 0b11 = Green
 ]
 
+color_map_3bit = [
+    (0, 0, 0),         # 0b000 = Black
+    (255, 255, 255),   # 0b001 = White
+    (0, 0, 255),       # 0b010 = Red
+    (0, 255, 0),       # 0b011 = Green
+    (255, 0, 0),       # 0b100 = Blue
+    (0, 255, 255),     # 0b101 = Yellow
+    (255, 255, 0),     # 0b110 = Cyan
+    (255, 0, 255),     # 0b111 = Magenta
+]
+
 # --- idx to bits maps ---
 
 idx_to_1bit = {
@@ -74,17 +85,29 @@ idx_to_2bit = {
     4: 0b11,  # green
 }
 
+idx_to_3bit = {
+    0: 0b001,  # white
+    1: 0b000,  # black
+    2: 0b010,  # red1
+    3: 0b010,  # red2 (same as red1)
+    4: 0b011,  # green
+    5: 0b100,  # blue
+    6: 0b101,  # yellow
+    7: 0b110,  # cyan
+    8: 0b111,  # magenta
+}
+
 # --- Sender output definitions ---
 
 sender_output_width = 1920 # Width of the sender output in pixels
 sender_output_height = 1200 # Height of the sender output in pixels
 
-number_of_columns = 8 # Number of columns in the frame
-number_of_rows = 8 # Number of rows in the frame
+number_of_columns = 4 # Number of columns in the frame
+number_of_rows = 4 # Number of rows in the frame
 
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
-bits_per_cell = 2 
+bits_per_cell = 3
 number_of_colors = bits_per_cell^2 
 
 frame_duration = 0.3 # Duration for each frame in seconds

@@ -19,7 +19,7 @@ from utilities.global_definitions import (
     green_lower_hcv_limit, green_upper_hcv_limit,
     blue_lower_hcv_limit, blue_upper_hcv_limit,
     end_bit_steps, dominant_color_steps, idx_to_2bit, 
-    idx_to_1bit, bits_per_cell
+    idx_to_1bit, idx_to_3bit, bits_per_cell
 )
 
 # --- Functions ---
@@ -134,6 +134,8 @@ class BitColorTracker:
             idx_to_bit = idx_to_1bit
         elif bits_per_cell == 2:
             idx_to_bit = idx_to_2bit
+        elif bits_per_cell == 3:
+            idx_to_bit = idx_to_3bit
         else:
             raise NotImplementedError("Mapping table for this bits_per_cell not defined")
 
@@ -347,10 +349,13 @@ def color_offset_calculation(roi):
     """
     original_hcv_ranges = { "white": ([0, 0, 200], [179, 40, 255]),
                             "black": ([0, 0, 0], [179, 255, 50]), 
-                            "red1": ([0, 40, 100], [10, 255, 255]),
-                            "red2": ([160, 40, 100], [179, 255, 255]),
-                            "green": ([40, 40, 50], [80, 255, 255]), 
-                            "blue": ([100, 40, 0], [140, 255, 255]) }
+                            "red1": ([0, 40, 60], [10, 255, 255]),
+                            "red2": ([160, 40, 60], [179, 255, 255]),
+                            "green": ([40, 40, 60], [80, 255, 255]), 
+                            "blue": ([100, 40, 60], [140, 255, 255]),
+                            "yellow":([20,40,60],[40,255,255]),
+                            "cyan": ([80,40, 60],[100,255,255]),
+                            "magenta":([140,40,60],[160,255,255])}
 
 
     def calculate_hue_difference(expected_hue_value, observed_hue_value):
