@@ -435,20 +435,20 @@ __kernel void image_distortion(
     }
 
     if (mask[4] == 1){
-        // Apply Gaussian blur
-        gaussian_blur(img, temp_img, kernel_array, ksize, width, height);
-        swap_images(img, temp_img, width, height);
-    }
-
-    if (mask[5] == 1){
         // Apply warp
         warp(img, temp_img, map_x, map_y, width, height);
         swap_images(img, temp_img, width, height);
     }
 
-    if (mask[6] == 1){
+    if (mask[5] == 1){
         // Apply chromatic aberration
         chromatic_aberration(img, temp_img, width, height, dx_r, dy_r, dx_b, dy_b);
-        //swap_images(img, temp_img, width, height);
+        swap_images(img, temp_img, width, height);
     }
+
+    if (mask[6] == 1){
+            // Apply Gaussian blur
+            gaussian_blur(img, temp_img, kernel_array, ksize, width, height);
+            swap_images(img, temp_img, width, height);
+        }
 }

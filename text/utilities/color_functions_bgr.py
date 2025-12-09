@@ -69,7 +69,7 @@ class BitColorTracker:
 
         self.current_bit_roi[row][col] = []
 
-        if color == "black":
+        if majority == "black":
             return "0"
         
         else:
