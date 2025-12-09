@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v5.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
  
 # --- Video capture setup ---
 
@@ -530,7 +530,7 @@ def receive_message():
                 # --- Blue frame (to prevent early decoding) ---
 
                 elif current_state == "end of sync":
-                    if color != "blue" and last_color == "blue":
+                    if color != "red" and last_color == "red":
                         current_state = "decoding"
 
                 # --- Decoding ---

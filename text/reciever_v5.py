@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v5.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v5_live2.mp4")
 
 # --- Video capture setup ---
 

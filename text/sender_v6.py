@@ -18,7 +18,7 @@ from utilities.global_definitions import (
 
 # ---- Definitions ----
 
-message = "Fuck my baby dad, fuck my baby dad, fuck my baby dad, Im a fine-ass bitch, I aint in the house sad, Sexyy, Fuck my baby dad BOW BOW BOW BOW BOW"
+message = "Hejsan, mamma och pappa! Hare så kult på restaurangen, vad äter ni förresten? Jag uuundrar vad ni äter och vad ska ni äta till efterrätt, det kanske låter GOTT! Men, jag är hemma hos Katrin och Samuel nu? *Suck* Och, och ska titta på Simpsons, OCH... Ha- ...Och ha det så kult på restaurangen, hej då!"
 
 # --- Main function ---
 
@@ -44,8 +44,6 @@ def send_message(message):
         sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
     frame_bit_arrays = message_to_frame_several_bit_arrays(message, bits_per_cell) # Converts the message to frame bit arrays
-
-    blue_frame = create_color_frame(blue_bgr)
 
     data_frames = []
 
@@ -120,7 +118,7 @@ def send_message(message):
 
         while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
 
-            cv2.imshow(window, blue_frame)
+            cv2.imshow(window, end_frame)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 return

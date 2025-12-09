@@ -335,7 +335,7 @@ def color_offset_calculation(roi):
     "green": np.array([60, 255, 255]),
      "red": np.array([0, 255, 255])
     }
-
+    """
     original_hcv_ranges = {
         "red1":  (red_lower_hcv_limit_1, red_upper_hcv_limit_1),
         "red2":  (red_lower_hcv_limit_2, red_upper_hcv_limit_2),
@@ -344,6 +344,14 @@ def color_offset_calculation(roi):
         "green": (green_lower_hcv_limit, green_upper_hcv_limit),
         "blue":  (blue_lower_hcv_limit , blue_upper_hcv_limit )
     }
+    """
+    original_hcv_ranges = { "white": ([0, 0, 200], [179, 60, 255]),
+                            "black": ([0, 0, 0], [179, 255, 50]), 
+                            "red1": ([0, 100, 100], [10, 255, 255]),
+                            "red2": ([160, 100, 100], [179, 255, 255]),
+                            "green": ([40, 60, 50], [80, 255, 255]), 
+                            "blue": ([100, 150, 0], [140, 255, 255]) }
+
 
     def calculate_hue_difference(expected_hue_value, observed_hue_value):
 
