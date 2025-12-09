@@ -1,0 +1,640 @@
+
+# --- Imports ---
+
+# Library modules
+
+import cProfile # Provides deterministic profiling (statistics that describes how often and for how long various parts of a program executes)
+import pstats # Module for formatting the profiling into reports
+
+import threading
+import queue
+
+import cv2
+import os
+
+import time
+import numpy as np
+
+# Profiling initialization
+
+profiler = cProfile.Profile()
+profiler.enable()
+
+# Non-library modules
+
+from webcam_simulation.webcamSimulator import VideoThreadedCapture
+
+from utilities.color_functions_hcv import (
+    color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
+    bitgrid_majority_calculator as numba_hcv, bgr_to_hcv
+)
+from utilities.color_functions_bgr import dominant_color_bgr
+from utilities.screen_alignment_functions import roi_alignment_for_large_markers
+from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
+from utilities.accuracy_calculator import accuracy_calculator
+
+from utilities.global_definitions import (
+    laptop_webcam_pixel_height, laptop_webcam_pixel_width,
+    sender_output_height, sender_output_width,
+    roi_window_height, roi_window_width,
+    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
+    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
+    display_text_font, display_text_size, display_text_thickness,
+    green_bgr, red_bgr, yellow_bgr,
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
+)
+
+# --- Definitions --- 
+
+using_webcam = False
+
+watchdog_on = False
+
+# Debugging
+
+debug_bytes = False
+
+# Video path
+
+base = os.path.dirname(__file__)
+path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
+ 
+# --- Video capture setup ---
+
+if using_webcam:
+
+    videoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+    # Resolution
+
+    videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, laptop_webcam_pixel_width)
+    videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, laptop_webcam_pixel_height)
+
+    # White balance
+
+    """
+    videoCapture.set(cv2.CAP_PROP_AUTO_WB, 0) # Disables auto white balance
+    videoCapture.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 3000)
+    print(f"\n[INFO] Video capture white balance: {videoCapture.get(cv2.CAP_PROP_WB_TEMPERATURE)}")
+    """
+
+    # Exposure
+
+    videoCapture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) # Disables auto exposure
+    videoCapture.set(cv2.CAP_PROP_EXPOSURE, -5) # Lower value --> darker
+    print(f"\n[INFO] Video capture exposure: {videoCapture.get(cv2.CAP_PROP_EXPOSURE)}")
+
+    # Gain
+
+    videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
+
+else:
+    videoCapture = VideoThreadedCapture(path) # Initializes a video capture object with a pre-recorded video
+
+if not videoCapture.isOpened():
+    print("\n[WARNING] Couldn't start video capture.")
+    exit()
+
+while True:
+
+    read_was_sucessful, frame = videoCapture.read() # Tries to grab one initial frame to make sure the video capture is "warmed up"
+
+    if read_was_sucessful:
+        break
+
+    time.sleep(0.01)
+
+# --- OpenCV window setup ---
+
+cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
+
+cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
+
+# --- ArUco detector setup ---
+
+aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
+
+# --- Helper functions ---
+
+def warmup_all():
+
+    """
+    Performs a one-time warm-up for "bitgrid_majority_calculator" by calling it with a dummy input.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
+    """
+
+    dummy_array = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
+    numba_hcv(dummy_array, 5)
+
+# Threading setup
+
+frame_queue = queue.Queue(maxsize = 100) # Initializes a buffered queue for incoming frames
+last_queue_debug_print = 0 # Timestamp that tracks the last time debugging info about queue size was printed
+
+last_decode_timestamp = time.time() # Timestamp of the most recent completed decode
+decoded_message = None
+
+stop_thread = False # Signal to terminate cleanly
+
+debug_worker = False
+debug_watchdog = False
+
+def decoding_worker():
+
+    """
+    Processes the frames from the queue, decodes the data and updates the decoded message.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
+    """
+    
+    global decoded_message, last_queue_debug_print, last_decode_timestamp
+
+    while not stop_thread or not frame_queue.empty(): # While "stop_thread" is False or the frame queue isn't empty:
+
+        try:
+
+            hcv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
+
+        except queue.Empty:
+
+            continue
+        
+        # --- Debugging ---
+
+        if debug_worker: # If we're debugging the worker:
+
+            current_time = time.time()
+
+            if current_time - last_queue_debug_print > 0.5:
+                print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
+                last_queue_debug_print = current_time
+
+            decoding_start_time = time.time()
+        
+        # --- End of debugging ---
+
+        if recall: # If it's a recall frame:
+
+            result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
+
+            if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
+                decoded_message = result
+
+        else:
+            decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
+
+        # --- Debugging ---
+
+        if debug_watchdog:
+            last_decode_timestamp = time.time()
+
+        if debug_worker:
+
+            decoding_end_time = time.time()
+
+            if decoding_end_time - last_queue_debug_print > 0.5:
+                print(f"[DEBUG] Decode time: {(decoding_end_time - decoding_start_time) * 1000:.2f} ms")
+            
+        # --- End of debugging ---
+
+# Decoding thread initialization
+
+decoding_thread = threading.Thread(target = decoding_worker, daemon = True)
+decoding_thread.start()
+
+def watchdog():
+
+    """
+    Detects decoding pipeline stalls. Any gap larger than a second triggers an alert.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+
+    """
+    
+    while watchdog_on:
+
+        if time.time() - last_decode_timestamp > 1.0:
+            print("[WARNING] Decode thread is stalled or starving, no frames processed!")
+
+        time.sleep(0.2)
+
+# Watchdog thread initialization
+
+watch_thread = threading.Thread(target = watchdog, daemon = True)
+watch_thread.start()
+
+# --- Main function ---
+
+def receive_message():
+
+    """
+    Receives a message from the sender screen.
+    
+    Arguments:
+        None
+
+    Returns:
+        None
+    
+    """
+
+    # Global variables
+
+    global watchdog_on
+
+    # Variable initialization
+
+    bits = ""
+
+    marker_ids = None
+    corners = None
+
+    last_color = None
+    last_state = None
+
+    last_frame_time = None 
+    last_color_time = None
+    last_state_time = None
+
+    interval = 0 # Interval between frames in seconds
+
+    current_bit_colors = [] # Colors collected for the current bit
+    roi_coordinates = None
+
+    has_printed_aruco_detector_message = False
+    has_printed_decoding_message = False
+
+    current_state = "aruco_marker_detection"
+
+    # --- Debugging ---
+
+    """
+
+    previous_time = time.time()
+    frame_count = 0
+
+    """
+
+    # --- End of debugging ---
+    
+    print("\n[INFO] Receiver started")
+
+    if using_webcam:
+        actual_capture_width = videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        actual_capture_height = videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        print(f"\n[INFO] Video capture resolution: {round(actual_capture_width)} x {round(actual_capture_height)}")
+        
+    # --- Debugging ---
+
+    """
+
+    print(f"[DEBUGGING] ArUco marker dictionary: {type(aruco_marker_dictionary)}")
+    print(f"[DEBUGGING] ArUco detector parameters: {type(aruco_detector_parameters)}")   
+
+    """
+
+    # --- End of debugging ---
+
+    try:
+
+        while True:
+
+            read_was_sucessful, frame = videoCapture.read() # Reads a frame from the video capture
+
+            if not read_was_sucessful:
+
+                print("\n[WARNING] Failed to capture a frame, trying again...")
+                time.sleep(0.5)
+                continue
+
+            # --- Debugging ---
+
+            """
+
+            frame_count += 1
+
+            current_time = time.time()
+
+            if current_time - previous_time >= 1.0:
+                print(f"[INFO] Loops per second: {frame_count}")
+                frame_count = 0
+                previous_time = current_time
+
+            """
+
+            # --- End of debugging ---
+
+            # --- ArUco marker detection ---
+
+            if current_state == "aruco_marker_detection": # If no ArUco markers have been found:
+
+                try:
+                    
+                    grayscaled_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Grayscale the frame
+
+                    if not has_printed_aruco_detector_message: # If we haven't already printed the ArUco detector message:
+                        print("\n[INFO] Running the ArUco marker detector...")
+                        has_printed_aruco_detector_message = True
+
+                    corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
+
+                    if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
+                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
+                    
+                except Exception:
+                    print("\n[WARNING] ArUco detection failed.")
+                    aruco_marker_side_length = 0
+
+            # --- Display drawings ---
+            
+            display = frame.copy() # Create a copy of the frame for display purposes
+
+            if marker_ids is not None and len(marker_ids) > 0:
+
+                cv2.aruco.drawDetectedMarkers(display, corners, marker_ids) # Draw the detected markers on the display frame
+
+                cv2.putText(display, f"{len(marker_ids)} ArUco marker(s) detected", (20, 40), display_text_font, display_text_size, green_bgr, display_text_thickness)
+                            
+            else:
+                cv2.putText(display, "No ArUco markers detected", (20, 40), display_text_font, display_text_size, red_bgr, display_text_thickness)
+
+            cv2.imshow("Webcam Receiver", display)
+
+            # --- ROI processing ---
+
+            if roi_coordinates is not None: # If there are ROI coordinates:
+                
+                if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
+
+                    print("\n[INFO] Calculating padded ROI coordinates...")
+                
+                    try:
+                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+
+                    except Exception:
+                        roi_padding_px = 0
+
+                    start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
+
+                    # ROI expansion
+
+                    print("\n[INFO] Calculating ROI coordinates...")
+
+                    start_x = int(start_x - roi_padding_px)
+                    end_x = int(end_x + roi_padding_px)
+
+                    start_y = int(start_y - roi_padding_px)
+                    end_y = int(end_y + roi_padding_px)
+
+                    print(f"[INFO] ROI coordinates: (start_x = {locals().get('start_x')}, end_x = {locals().get('end_x')}, start_y = {locals().get('start_y')}, end_y = {locals().get('end_y')})")
+
+                    # Minimized ROI coordinates
+
+                    print("\n[INFO] Calculating minimized ROI coordinates...")
+
+                    roi_height = end_y - start_y
+                    roi_width = end_x - start_x
+
+                    minimized_roi_height = int(roi_height * minimized_roi_fraction)
+                    minimized_roi_width = int(roi_width * minimized_roi_fraction)
+
+                    minimized_start_x = start_x + (minimized_roi_width // 2)
+                    minimized_end_x   = minimized_start_x + minimized_roi_width
+
+                    minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
+                    minimized_end_y = minimized_start_y + minimized_roi_height
+
+                    print(f"[INFO] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
+
+                    receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+
+                if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
+
+                    cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (green_bgr), roi_rectangle_thickness)
+                    cv2.rectangle(display, (minimized_start_x, minimized_start_y), (minimized_end_x, minimized_end_y), (yellow_bgr), minimized_roi_rectangle_thickness)
+            
+                    roi = frame[start_y:end_y, start_x:end_x] # Extract the ROI from the frame
+                    minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
+            
+                else: # Else (if they aren't):
+                    print("\n[WARNING] Invalid ROI coordinates, creating dummy ROI...")
+                    roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
+                    minimized_roi = roi # Set the minimized ROI to the dummy ROI
+
+                roi_hcv = bgr_to_hcv(roi)
+                minimized_roi_hcv = bgr_to_hcv(minimized_roi)
+                
+                if using_webcam: # If we're using the webcam:
+                    color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
+
+                else: # If we're using a pre-recorded video:
+
+                    if tracker.LUT is not None:
+                        color = dominant_color_hcv(minimized_roi_hcv) # Get the dominant color in the minimized ROI
+
+                    else:
+                        color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
+                                
+                # "last_color_time" initialization
+
+                if not hasattr(receive_message, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
+                    last_color_time = time.time()
+                    receive_message.first_color = ("Get first dominant color")
+
+                # Calculates the time of how long it has been the same color
+
+                if color != last_color and last_color_time is not None: # If the current color isn't the same as the last, and "last_color_time" has a value
+
+                    last_color_time = time.time() - last_color_time
+
+                    print(f"\n[INFO] Dominant color in minimized ROI: {last_color}, lasted for: {last_color_time:.3f}")
+
+                    last_color_time = time.time()
+                
+                cv2.putText(display, f"Dominant color in minimized ROI: {color}", (20, 100), display_text_font, display_text_size, red_bgr, display_text_thickness) # Puts a text in the GUI of the current dominant color
+
+                cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
+
+                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
+                    print("\n[INFO] Starting color calibration...")
+                    current_state = "color_calibration"
+
+                cv2.imshow("Webcam Receiver", display)
+
+                # --- Color calibration ---
+
+                if current_state == "color_calibration":
+                    
+                    if not hasattr(receive_message, "color_calibration"): # If "recieve_message()" doesn't yet have the attribute "color_calibration"
+
+                        try:
+
+                            corrected_ranges = color_offset_calculation(roi)
+                            LUT, color_names = build_color_LUT(corrected_ranges)
+                            tracker.colors(LUT, color_names)
+
+                            warmup_all() # Warming up numba for use
+                            
+                            receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
+
+                        except Exception as e:
+                            print("\n[INFO] Color calibration error:", e)
+
+                    if hasattr(receive_message, "color_calibration"): # If "recieve_message()" has the attribute "color_calibration":
+                        current_state = "syncing"
+                
+                # --- Syncing ---
+
+                if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
+                    
+                    if not hasattr(receive_message, "syncing"):
+
+                        print("\n[INFO] Trying to sync and get the interval...")
+                        receive_message.syncing = ("Initialized")
+
+                        if debug_watchdog:
+                            print("\n[DEBUG] Watchdog on\n")
+                            watchdog_on = True
+
+                    try:
+                        interval, syncing = sync_interval_detector(color, True) # Try to sync and get the interval
+
+                    except Exception as e:
+                        print("\n[WARNING] Sync error:", e)
+                        syncing = False
+                    
+                    if syncing == False:
+                        print(f"\n[INFO] Interval: {interval} s")
+                        current_state = "end of sync"
+                
+                # --- End of sync ---
+
+                # --- Blue frame (to prevent early decoding) ---
+
+                elif current_state == "end of sync":
+                    if color != "red" and last_color == "red":
+                        current_state = "decoding"
+
+                # --- Decoding ---
+
+                elif current_state == "decoding": # If we're decoding:
+                    
+                    if not has_printed_decoding_message:
+                        print("\n[INFO] Decoding...")
+                        has_printed_decoding_message = True
+
+                    recall = False # Initialize recall flag as False
+                    end_frame = False # Initialize end_frame flag as False
+                    add_frame = False # Initialize add_frame flag as False
+
+                    if last_frame_time is None:
+                        last_frame_time = time.time()
+
+                    current_time = time.time()
+                    frame_time = current_time - last_frame_time 
+
+                    if interval > 0:
+
+                        if frame_time >= interval:
+                            end_frame = True
+                            add_frame = True 
+                            last_frame_time = current_time 
+
+                    if color in ["white", "black", "blue", "green"]: # If the color is white or black:
+
+                        add_frame = True
+
+                    elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
+                        
+                        print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
+
+                        while not frame_queue.empty(): # Waits for the frame queue to be empty
+                            time.sleep(0.005)
+
+                        recall = True # Set recall to True
+                        print("\n[INFO] Frames finished — recalling message...")
+
+                    try:
+                        frame_queue.put_nowait((roi_hcv.copy(), recall, add_frame, end_frame))
+
+                    except queue.Full: # If the queue is full:
+                        pass # Skip
+
+                    while recall and (decoded_message is None or decoded_message.strip() == ""): # While recall is True and the decoded message still is empty
+                        time.sleep(0.05)
+
+                    if decoded_message is not None:
+                        print("\n[INFO] Decoding finished.")
+                        break
+                    
+                # "last_state_time" initialization
+
+                if not hasattr(receive_message, "first_state"):
+                    last_state_time = time.time()
+                    receive_message.first_state = ("Get first state")
+
+                # Calculates the time of how long it has been the same state
+
+                if last_state != current_state and last_state_time is not None: # If the current state is different from the last and "last_state_time" has a value:
+                    last_state_time = time.time() - last_state_time
+                    print(f"\n[INFO] State: {last_state}, lasted for: {last_state_time:.3f}")
+                    last_state_time = time.time()
+
+                # --- End of decoding ---
+
+                last_color = color # Update the last color
+                last_state = current_state
+
+                cv2.imshow("ROI", roi)
+
+            # --- End of ROI processing ---
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        if current_bit_colors: # If there are colors collected for the current unfinished bit:
+            print(f"[INFO] Colors collected for last unfinished bit: {current_bit_colors}")
+
+        if bits: # If there are remaining bits not yet converted:
+            print(f"[INFO] Bits not yet converted: {bits}")
+
+        print(f"\n[INFO] Final message: {decoded_message}")
+
+        accuracy_percentage = accuracy_calculator(decoded_message)
+
+        print(f"\n[INFO] Accuracy: {accuracy_percentage} %")
+
+    finally:
+        videoCapture.release()
+        cv2.destroyAllWindows() 
+
+# --- Execution ---
+
+if __name__ == "__main__":
+
+    receive_message()
+
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+    stats.strip_dirs() # Removes directorys
+    stats.sort_stats("cumtime") # Sorts by cumulative time
+    stats.print_stats(20) # Prints only top 20 functions

@@ -117,6 +117,7 @@ class OpenCL:
         self.brightness = brightness
         self.contrast = contrast
     
+
     # --- White balance shifter ---
 
     def run_white_balance(self, gains):
@@ -124,7 +125,9 @@ class OpenCL:
 
         self.white_r_gain, self.white_g_gain, self.white_b_gain = gains
     
+
     # ---------- Warp (GPU remap) ----------
+    
     def run_warp(self, map_x, map_y):
         # print("[DEBUG] warp")
         """
@@ -149,6 +152,7 @@ class OpenCL:
 
 
     # ---------- JPEG approximation ----------
+
     def run_jpeg_approx(self, block_size=8, quality=50):
         # print("[DEBUG] jpeg")
         """
