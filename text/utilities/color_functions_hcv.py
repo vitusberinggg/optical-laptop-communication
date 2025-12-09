@@ -355,7 +355,8 @@ def color_offset_calculation(roi):
                             "blue": ([100, 40, 60], [140, 255, 255]),
                             "yellow":([20,40,60],[40,255,255]),
                             "cyan": ([80,40, 60],[100,255,255]),
-                            "magenta":([140,40,60],[160,255,255])}
+                            "magenta":([140,40,60],[160,255,255]),
+                            "gray": ([0, 0, 80], [179, 50, 180])}
 
 
     def calculate_hue_difference(expected_hue_value, observed_hue_value):

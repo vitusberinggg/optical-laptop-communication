@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_48.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_88.mp4")
  
 # --- Video capture setup ---
 
@@ -530,7 +530,7 @@ def receive_message():
                 # --- Blue frame (to prevent early decoding) ---
 
                 elif current_state == "end of sync":
-                    if color != "red" and last_color == "red":
+                    if color != "gray" and last_color == "gray":
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -558,11 +558,11 @@ def receive_message():
                             add_frame = True 
                             last_frame_time = current_time 
 
-                    if color in ["white", "black", "blue", "green", "yellow", "magenta", "cyan"]: # If the color is white or black:
+                    if color in ["white", "black", "blue", "green", "yellow", "magenta", "cyan", "red"]: # If the color is white or black:
 
                         add_frame = True
 
-                    elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
+                    elif color == "gray" and last_color != "gray": # If the color is red and the last color wasn't red:
                         
                         print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
 
