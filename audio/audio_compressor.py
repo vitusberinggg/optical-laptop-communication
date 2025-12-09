@@ -111,11 +111,13 @@ def audio_compressor(input_file):
 
     print("\n[INFO] Calculating bitrate...")
 
+    number_of_frequency_bins = spectrogram_magnitude.shape[0]
+
     total_duration = number_of_time_frames * seconds_per_time_frame # Total reconstructed audio duration
 
     print(f"\n[INFO] Audio duration: {total_duration:.2f} s")
 
-    bits_per_frequency_index = int(np.ceil(np.log2(target_number_of_frequencies))) # Bits required to store frequency index
+    bits_per_frequency_index = int(np.ceil(np.log2(number_of_frequency_bins))) # Bits required to store frequency index
 
     print(f"\n[INFO] Bits per frequency index: {bits_per_frequency_index} bits")
 
