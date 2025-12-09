@@ -3,6 +3,7 @@
 
 import cProfile
 import pstats
+import os
 
 if __name__ == '__main__':
     profiler = cProfile.Profile()
@@ -153,8 +154,14 @@ def receive_message():
 
     warmup_all()
 
+    
+    # Video path
+
+    base = os.path.dirname(__file__)
+    path = os.path.join(base, "webcam_simulation", "sender_v3_video.mp4")
+
     # --- Setup capture ---
-    cap = VideoThreadedCapture(r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v3_video.mp4")
+    cap = VideoThreadedCapture(path)
     # For live webcam test instead of video, use:
     #cap = cv2.VideoCapture(0)
 

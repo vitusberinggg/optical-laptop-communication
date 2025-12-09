@@ -4,6 +4,7 @@
 import cv2
 import threading
 import time
+import os
 
 from webcam_simulation.distorter import FrameDistorter
 
@@ -255,9 +256,12 @@ class VideoCaptureSingle:
 
 if __name__ == "__main__":
 
+    
+    # Video path
 
+    base = os.path.dirname(__file__)
+    video_path = os.path.join(base, "sender_v5.mp4")
 
-    video_path = r"C:\Users\ejadmax\code\optical-laptop-communication\webcam_simulation\sender_v5.mp4"
     video_capture = VideoThreadedCapture(video_path)
 
     if not video_capture.isOpened():

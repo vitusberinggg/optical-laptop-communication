@@ -10,6 +10,7 @@ import threading
 import queue
 
 import cv2
+import os
 
 import time
 import numpy as np
@@ -52,6 +53,11 @@ watchdog_on = False
 # Debugging
 
 debug_bytes = False
+
+# Video path
+
+base = os.path.dirname(__file__)
+path = os.path.join(base, "webcam_simulation", "sender_v5.mp4")
  
 # --- Video capture setup ---
 
@@ -83,7 +89,7 @@ if using_webcam:
     videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
 else:
-    videoCapture = VideoThreadedCapture(r"C:\Users\eanpaln\Videos\Screen Recordings\rec6.mp4")
+    videoCapture = VideoThreadedCapture(path) # Initializes a video capture object with a pre-recorded video
 
 if not videoCapture.isOpened():
     print("\n[WARNING] Couldn't start video capture.")

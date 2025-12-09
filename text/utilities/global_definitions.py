@@ -63,13 +63,13 @@ color_map_2bit = [
 # --- idx to bits maps ---
 
 idx_to_1bit = {
-    3: 0,  # black
-    2: 1,  # white
+    1: 0,  # black
+    0: 1,  # white
 }
 
 idx_to_2bit = {
-    3: 0b00,  # black
-    2: 0b01,  # white
+    1: 0b00,  # black
+    0: 0b01,  # white
     5: 0b10,  # blue
     4: 0b11,  # green
 }
