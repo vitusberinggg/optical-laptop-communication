@@ -23,6 +23,7 @@ profiler.enable()
 # Non-library modules
 
 from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
+from decoding_pipeline.pipeline import start_pipeline, stop_pipeline, push_frame
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -511,7 +512,9 @@ def receive_message():
                         print("\n[INFO] Frames finished — recalling message...")
 
                     try:
-                        frame_queue.put_nowait((roi_hcv.copy(), recall, add_frame, end_frame))
+                        frame_data = (roi_hcv, recall, add_frame, end_frame) # Create a tuple with the frame data
+                        # Push frames as they arrive
+                        push_frame(frame_data) # Push the frame to the decoding pipeline
 
                     except queue.Full: # If the queue is full:
                         pass # Skip
@@ -569,6 +572,7 @@ def receive_message():
 if __name__ == "__main__":
 
     import multiprocessing
+
     multiprocessing.freeze_support()   # For Windows EXEs, harmless otherwise
 
     # Video path
@@ -633,7 +637,13 @@ if __name__ == "__main__":
 
     aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
+    # Start pipeline
+    start_pipeline(core_worker=[4, 5, 6, 7, 8], core_watchdog=[9])
+
     receive_message()
+
+    # Stop when done
+    stop_pipeline()
 
     profiler.disable()
 
