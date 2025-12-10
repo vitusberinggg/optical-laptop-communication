@@ -7,10 +7,10 @@ import soundfile
 
 # --- Definitions ---
 
-target_number_of_frequencies = 16 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
-target_number_of_amplitude_levels = 16 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
+target_number_of_frequencies = 8 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
+target_number_of_amplitude_levels = 12 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
 
-hop_length = 256 # The amount of samples between each spectrogram frame (shorter hop length --> more overlap between windows --> smoother time reconstruction but more computation)
+hop_length = 512 # The amount of samples between each spectrogram frame (shorter hop length --> more overlap between windows --> smoother time reconstruction but more computation)
 
 target_sample_rate = 8000 # The audio signal's average number of samples (values) per second
 
@@ -133,7 +133,7 @@ def audio_compressor(input_file):
 
     bitrate = total_amount_of_bits / total_duration
 
-    print(f"\n[INFO] Bitrate: {bitrate:.2f} bits/s")
+    print(f"\n[INFO] Bitrate: {round(bitrate)} bits/s")
 
 # --- Execution ---
 
