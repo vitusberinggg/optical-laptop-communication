@@ -217,7 +217,7 @@ class Effects:
     # --- jpeg compression blocking ---
 
     @staticmethod
-    def jpeg_compress(self, frame, severity):
+    def jpeg_compress(frame, severity):
         # map severity to quality: severity 0->100, 1->10
         quality = int(100 - severity * 90)
         block_size = 8 if frame.shape[1] <= 1280 else 16

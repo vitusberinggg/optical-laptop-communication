@@ -17,7 +17,7 @@ from utilities.image_generation_functions import (
 from utilities.global_definitions import (
     message,
     aruco_marker_frame_duration, frame_duration,
-    red_bgr, blue_bgr, gray_bgr, orange_bgr,
+    red_bgr, blue_bgr, gray_bgr,
     sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, color_map_3bit, 
     bits_per_cell
 )
@@ -59,10 +59,9 @@ def send_message(message):
         rendered_frame = render_frame_several(frame_bit_array, color_map) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    end_frame  = create_color_frame(orange_bgr) # Creates the end frame with the specified color
+    end_frame  = create_color_frame(gray_bgr) # Creates the end frame with the specified color
 
     # OpenCV window
-#   OpenCV window
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
@@ -125,7 +124,7 @@ def send_message(message):
 
         end_of_sync_frame_start_time = time.monotonic()
 
-        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration/2):
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
 
             cv2.imshow(window, end_frame)
 

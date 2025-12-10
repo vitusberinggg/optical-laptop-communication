@@ -108,6 +108,7 @@ number_of_rows = 16 # Number of rows in the frame
 
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
+
 bits_per_cell = 3
 number_of_colors = bits_per_cell^2 
 

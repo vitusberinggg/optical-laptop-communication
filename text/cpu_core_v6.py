@@ -23,7 +23,7 @@ profiler.enable()
 # Non-library modules
 
 from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
-from decoding_pipeline.pipeline import start_pipeline, stop_pipeline, push_frame
+from decoding_pipeline.pipeline import start_pipeline, stop_pipeline, push_frame, push_LUT
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -429,6 +429,7 @@ def receive_message():
                             corrected_ranges = color_offset_calculation(roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
+                            push_LUT(LUT, color_names)
 
                             warmup_all() # Warming up numba for use
                             
@@ -469,7 +470,7 @@ def receive_message():
                 # --- Blue frame (to prevent early decoding) ---
 
                 elif current_state == "end of sync":
-                    if color != "red" and last_color == "red":
+                    if color != "blue" and last_color == "blue":
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -519,12 +520,6 @@ def receive_message():
                     except queue.Full: # If the queue is full:
                         pass # Skip
 
-                    while recall and (decoded_message is None or decoded_message.strip() == ""): # While recall is True and the decoded message still is empty
-                        time.sleep(0.05)
-
-                    if decoded_message is not None:
-                        print("\n[INFO] Decoding finished.")
-                        break
                     
                 # "last_state_time" initialization
 
@@ -578,7 +573,7 @@ if __name__ == "__main__":
     # Video path
 
     base = os.path.dirname(__file__)
-    path = os.path.join(base, "webcam_simulation", "sender_v6_3.mp4")
+    path = os.path.join(base, "webcam_simulation", "sender_v6.mp4")
     
     # --- Video capture setup ---
 
