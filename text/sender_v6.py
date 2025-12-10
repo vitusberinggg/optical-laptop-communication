@@ -58,7 +58,6 @@ def send_message(message):
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     end_frame  = create_color_frame(orange_bgr) # Creates the end frame with the specified color
-
 #   OpenCV window
 
     window = "SENDER" # The name of the OpenCV window
@@ -122,7 +121,7 @@ def send_message(message):
 
         end_of_sync_frame_start_time = time.monotonic()
 
-        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration/2):
 
             cv2.imshow(window, end_frame)
 

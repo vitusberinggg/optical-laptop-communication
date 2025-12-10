@@ -46,7 +46,7 @@ from utilities.global_definitions import (
 
 # --- Definitions --- 
 
-using_webcam = False
+using_webcam = True
 
 watchdog_on = False
 
@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_orange.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_1604.mp4")
  
 # --- Video capture setup ---
 
@@ -557,9 +557,9 @@ def receive_message():
 
                         add_frame = True
 
-                    elif color == "orange" and last_color != "orange": # If the color is red and the last color wasn't red:
+                    elif color == "orange" and last_color != "orange": # If the color is orange and the last color wasn't orange:
                         
-                        print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
+                        print("\n[INFO] orange detected — waiting for decode thread to process all frames...")
 
                         while not frame_queue.empty(): # Waits for the frame queue to be empty
                             time.sleep(0.005)

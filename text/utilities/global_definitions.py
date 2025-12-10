@@ -103,8 +103,8 @@ idx_to_3bit = {
 sender_output_width = 1920 # Width of the sender output in pixels
 sender_output_height = 1200 # Height of the sender output in pixels
 
-number_of_columns = 8 # Number of columns in the frame
-number_of_rows = 8 # Number of rows in the frame
+number_of_columns = 16 # Number of columns in the frame
+number_of_rows = 16 # Number of rows in the frame
 
 bit_cell_width = sender_output_width // number_of_columns # Width of each bit cell in pixels
 bit_cell_height = sender_output_height // number_of_rows # Height of each bit cell in pixels
@@ -136,7 +136,7 @@ aruco_marker_frame_duration = 1
 
 # --- Sync definitions ---
 
-number_of_sync_frames = 6
+number_of_sync_frames = 10
 
 sync_colors = [black_bgr, white_bgr]
 
@@ -156,8 +156,7 @@ roi_window_width = 854
 roi_rectangle_thickness = 3
 
 minimized_roi_rectangle_thickness = 2
-minimized_roi_fraction = 1/5
-
+minimized_roi_fraction = 1/10
 # --- Steps definitions ---
 
 end_bit_steps = 2

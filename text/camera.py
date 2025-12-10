@@ -38,7 +38,7 @@ def main():
     height, width = sample_frame.shape[:2]
 
     # ---- SAVE LOCATION YOU REQUESTED ----
-    output_path = r"C:\Users\eanpaln\Videos\Screen Recordings\rec4.mp4"
+    output_path = r"C:\Users\eanpaln\Videos\Screen Recordings\rec7.mp4"
     # -------------------------------------
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
