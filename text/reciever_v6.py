@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_88.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_orange.mp4")
  
 # --- Video capture setup ---
 
@@ -442,17 +442,12 @@ def receive_message():
                 roi_hcv = bgr_to_hcv(roi)
                 minimized_roi_hcv = bgr_to_hcv(minimized_roi)
                 
-                if using_webcam: # If we're using the webcam:
+                if tracker.LUT is not None:
+                    color = dominant_color_hcv(minimized_roi_hcv) # Get the dominant color in the minimized ROI
+
+                else:
                     color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
-
-                else: # If we're using a pre-recorded video:
-
-                    if tracker.LUT is not None:
-                        color = dominant_color_hcv(minimized_roi_hcv) # Get the dominant color in the minimized ROI
-
-                    else:
-                        color = dominant_color_bgr(minimized_roi) # Get the dominant color in the minimized ROI
-                                
+                            
                 # "last_color_time" initialization
 
                 if not hasattr(receive_message, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
@@ -530,7 +525,7 @@ def receive_message():
                 # --- Blue frame (to prevent early decoding) ---
 
                 elif current_state == "end of sync":
-                    if color != "gray" and last_color == "gray":
+                    if color != "orange" and last_color == "orange":
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -562,7 +557,7 @@ def receive_message():
 
                         add_frame = True
 
-                    elif color == "gray" and last_color != "gray": # If the color is red and the last color wasn't red:
+                    elif color == "orange" and last_color != "orange": # If the color is red and the last color wasn't red:
                         
                         print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
 

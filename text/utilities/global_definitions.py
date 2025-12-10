@@ -12,6 +12,7 @@ yellow_bgr = (0, 255, 255)
 black_bgr = (0, 0, 0)
 white_bgr = (255, 255, 255)
 gray_bgr = (128, 128, 128)
+orange_bgr = (0, 140, 255)
 
 # --- HSV definitions ---
 
