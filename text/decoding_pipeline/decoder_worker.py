@@ -33,12 +33,12 @@ def decoding_worker(frame_queue, stop_flag, last_decode_timestamp, debug_worker=
             decode_start_time = time.time()
 
         # --- Decode frame ---
-        if recall:            
+        if False:            
             result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes=False)
             if isinstance(result, str) and result.strip():
                 decoded_message = result
             
-        else:
+        elif not recall:
             decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes=False)
 
         # Update timestamp for watchdog

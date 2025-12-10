@@ -130,6 +130,8 @@ class BitColorTracker:
         number_of_classes = int(self.LUT.max()) + 1
         bitgrid = bitgrid_majority_calculator(merged, number_of_classes)
 
+        print(f"[DEBUG] End bitgrid with color id: {bitgrid}")
+
         if bits_per_cell == 1:
             idx_to_bit = idx_to_1bit
         elif bits_per_cell == 2:
