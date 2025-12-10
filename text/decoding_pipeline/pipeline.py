@@ -8,6 +8,7 @@ from decoding_pipeline.watchdog import watchdog
 
 # Shared objects
 _frame_queue = None
+_command_queue = None
 _stop_flag = None
 _last_decode_timestamp = None
 
@@ -26,18 +27,19 @@ def start_pipeline(core_worker=None, core_watchdog=None, queue_maxsize=100):
         queue_maxsize (int): Maximum size of the frame queue.
     """
 
-    global _frame_queue, _stop_flag, _last_decode_timestamp
+    global _frame_queue, _command_queue, _stop_flag, _last_decode_timestamp
     global _decode_process, _watchdog_process
 
     # Shared objects
     _frame_queue = multiprocessing.Queue(maxsize=queue_maxsize)
+    _command_queue = multiprocessing.Queue()
     _stop_flag = multiprocessing.Value('b', False)  # boolean stop flag
     _last_decode_timestamp = multiprocessing.Value('d', time.time())  # double timestamp
 
     # Start decoding worker process
     _decode_process = multiprocessing.Process(
         target=decoding_worker,
-        args=(_frame_queue, _stop_flag, _last_decode_timestamp),
+        args=(_frame_queue, _command_queue, _stop_flag, _last_decode_timestamp),
         daemon=True
     )
     _decode_process.start()
@@ -104,7 +106,15 @@ def push_frame(frame_data):
         raise RuntimeError("Pipeline not started. Call start_pipeline() first.")
 
     try:
+        hcv_roi, recall, add_frame, end_frame = frame_data
+        print(f"")
         _frame_queue.put(frame_data, timeout=0.1)
     except multiprocessing.queues.Full:
         # Optional: drop frame if queue is full
         pass
+
+def push_LUT(LUT, color_names):
+    """Send LUT to worker at any time after startup."""
+    _command_queue.put(("set_lut", (LUT, color_names)))
+    print("[Pipeline] LUT pushed to worker.")
+

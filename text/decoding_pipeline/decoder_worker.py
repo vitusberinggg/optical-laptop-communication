@@ -1,9 +1,12 @@
 # decoding_pipeline/decoder_worker.py
 
 import time
+import queue
+from multiprocessing import queues
 from utilities.decoding_functions import decode_bitgrid_hcv
+from utilities.color_functions_hcv import tracker
 
-def decoding_worker(frame_queue, stop_flag, last_decode_timestamp, debug_worker=False):
+def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp, debug_worker=False):
     """
     Decoding worker process.
 
@@ -16,8 +19,34 @@ def decoding_worker(frame_queue, stop_flag, last_decode_timestamp, debug_worker=
 
     decoded_message = None
     last_queue_debug_print = 0
+    LUT_ready = False
 
     while not stop_flag.value or not frame_queue.empty():
+
+        
+        # Check for commands
+        try:
+            cmd, payload = command_queue.get_nowait()
+
+            if cmd == "set_lut":
+                tracker.LUT, tracker.color_names = payload
+                LUT_ready = True
+                print("[Worker] LUT received and initialized.")
+
+            elif cmd == "shutdown":
+                print("[Worker] Shutdown received.")
+                break
+
+        except (queue.Empty, queues.Empty):
+            pass
+
+        # Don't decode until LUT exists
+        if not LUT_ready:
+            time.sleep(0.01)
+            continue
+
+
+
         try:
             # Frame format: (hcv_roi, recall, add_frame, end_frame)
             hcv_roi, recall, add_frame, end_frame = frame_queue.get(timeout=0.1)
@@ -39,6 +68,7 @@ def decoding_worker(frame_queue, stop_flag, last_decode_timestamp, debug_worker=
                 decoded_message = result
             
         elif not recall:
+
             decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes=False)
 
         # Update timestamp for watchdog

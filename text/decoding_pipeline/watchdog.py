@@ -2,7 +2,7 @@
 
 import time
 
-def watchdog(last_decode_timestamp, stop_flag, watchdog_on=True, stall_threshold=1.0):
+def watchdog(last_decode_timestamp, stop_flag, watchdog_on=False, stall_threshold=1.0):
     """
     Watchdog process to detect decoding pipeline stalls.
 
@@ -14,11 +14,12 @@ def watchdog(last_decode_timestamp, stop_flag, watchdog_on=True, stall_threshold
     """
 
     while watchdog_on and not stop_flag.value:
+        
         try:
             time_since_last_decode = time.time() - last_decode_timestamp.value
             if time_since_last_decode > stall_threshold:
                 print(f"[WARNING] Decode thread stalled! No frames processed for {time_since_last_decode:.2f} seconds.")
         except Exception as e:
             print(f"[ERROR] Watchdog exception: {e}")
-
+        
         time.sleep(0.2)  # Check 5 times per second
