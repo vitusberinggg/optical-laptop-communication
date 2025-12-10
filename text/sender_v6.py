@@ -1,25 +1,26 @@
 
-
 # --- Imports ---
 
-import cv2 # Imports the OpenCV library
+# Library imports
+
+import cv2
 import time
+
+# Non-library imports
 
 from utilities.encoding_functions import message_to_frame_several_bit_arrays
 from utilities.image_generation_functions import (
     render_frame_several, create_color_frame,
     create_color_reference_frame, create_large_aruco_marker_frame
 )
+
 from utilities.global_definitions import (
+    message,
     aruco_marker_frame_duration, frame_duration,
-    red_bgr, blue_bgr, gray_bgr,
+    red_bgr, blue_bgr, gray_bgr, orange_bgr,
     sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, color_map_3bit, 
     bits_per_cell
 )
-
-# ---- Definitions ----
-
-message = "Hejsan, mamma och pappa! Hare så kult på restaurangen, vad äter ni förresten? Jag uuundrar vad ni äter och vad ska ni äta till efterrätt, det kanske låter GOTT! Men, jag är hemma hos Katrin och Samuel nu? *Suck* Och, och ska titta på Simpsons, OCH... Ha- ...Och ha det så kult på restaurangen, hej då!"
 
 # --- Main function ---
 
@@ -48,6 +49,7 @@ def send_message(message):
 
     if bits_per_cell == 2:
         color_map = color_map_2bit
+
     elif bits_per_cell == 3:
         color_map = color_map_3bit
 
@@ -57,15 +59,15 @@ def send_message(message):
         rendered_frame = render_frame_several(frame_bit_array, color_map) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    end_frame  = create_color_frame(gray_bgr) # Creates the end frame with the specified color
+    end_frame  = create_color_frame(orange_bgr) # Creates the end frame with the specified color
 
-#   OpenCV window
+    # OpenCV window
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
     cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) # Sets the window to fullscreen
 
-#   Aruco marker frames
+    # Aruco marker frames
 
     aruco_frames = [
     create_large_aruco_marker_frame(position = "right"),
@@ -86,7 +88,7 @@ def send_message(message):
             
             time.sleep(0.001)
 
-#   Color reference frame
+    # Color reference frame
 
     color_reference_frame_start_time = time.monotonic()
 
@@ -99,7 +101,7 @@ def send_message(message):
         
         time.sleep(0.001)
 
-#   Sync frames
+    # Sync frames
 
     for _ in range(number_of_sync_frames // 2):
 
@@ -118,7 +120,7 @@ def send_message(message):
 
     try:
 
-# End of sync
+        # End of sync
 
         end_of_sync_frame_start_time = time.monotonic()
 
@@ -131,7 +133,7 @@ def send_message(message):
             
             time.sleep(0.001)
 
-#       Data transfer loop
+        # Data transfer loop
 
         for frame in data_frames: # For each frame:
 
@@ -146,7 +148,7 @@ def send_message(message):
                 
                 time.sleep(0.001) # Small sleep to prevent high CPU usage
 
-#       End frame
+        # End frame
 
         end_frame_start_time = time.monotonic() # Records the start time for the end frame
 
