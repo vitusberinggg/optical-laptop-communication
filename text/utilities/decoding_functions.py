@@ -246,8 +246,78 @@ def decode_bitgrid_hcv(hcv_frame, add_frame = False, recall = False, end_frame =
     return None
 
 
-# --- Bit decoding functions ---
+# --- Core worker functions ---
 
+# Decode bitgrid
+def core_decode_bitgrid_hcv(hcv_frame, end_frame = False, debug_bytes = False):
+
+    """
+    Handles bitgrid collection and decoding.
+
+    Arguments:
+        hcv_frame: HCV frame for processing (only used when add_frame=True)
+        end_frame: Marks the end of the bit period (pushes 1 full bitgrid)
+
+    Returns:
+        bitgrid (tuple) | None: Decoded bitgrid (if end_frame=True)
+    """
+
+    if end_frame:
+
+        bitgrid = tracker_hcv.end_bit()
+        tracker_hcv.reset()
+
+        return bitgrid
+
+    else:
+        tracker_hcv.add_frame(hcv_frame)
+        return None
+
+# Decode message
+def core_decode_message(core_bitgrid, debug_bytes=False):
+
+    """
+    Decode the message through decoded bitgrid
+    
+    Arguments:
+        core_bitgrids_hcv (tuple)
+
+    Returns:
+        str | None: Decoded message (if len(core_bitgrid_hcv) > 0)
+    """
+
+    if len(core_bitgrid) == 0:
+        print("No bitgrids collected yet.")
+        return None
+
+    # Combine all bitgrids horizontally
+    combined = np.vstack(core_bitgrid)
+
+    flat = combined.ravel()
+    bitstream = "".join([format(val, f"0{bits_per_cell}b") for val in flat])
+    num_bytes = len(bitstream) // 8
+
+    byte_matrix = [bitstream[i*8:(i+1)*8] for i in range(num_bytes)]
+
+    print(f"Decoded {len(byte_matrix)} bytes:")
+
+    for i, byte_bits in enumerate(byte_matrix):
+
+        s = byte_bits
+
+        try:
+            char = chr(int(s, 2))
+            
+        except ValueError:
+            char = '?'
+
+        if debug_bytes:
+            print(f"Byte {i}: {s} (char: '{char}')")
+
+    return bits_to_message(byte_matrix)
+
+
+# --- Bit decoding functions ---
 
 def bits_to_message(byte_matrix):
 

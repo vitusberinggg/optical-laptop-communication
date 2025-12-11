@@ -6,7 +6,6 @@
 import cProfile # Provides deterministic profiling (statistics that describes how often and for how long various parts of a program executes)
 import pstats # Module for formatting the profiling into reports
 
-import threading
 import queue
 
 import cv2
@@ -23,7 +22,8 @@ profiler.enable()
 # Non-library modules
 
 from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
-from decoding_pipeline.pipeline import start_pipeline, stop_pipeline, push_frame, push_LUT
+from decoding_pipeline.pipeline import pip
+from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -49,12 +49,6 @@ from utilities.global_definitions import (
 
 using_webcam = False
 
-watchdog_on = False
-
-# Debugging
-
-debug_bytes = False
-
 # --- Helper functions ---
 
 def warmup_all():
@@ -73,111 +67,7 @@ def warmup_all():
     dummy_array = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
     numba_hcv(dummy_array, 5)
 
-# Threading setup
-
-frame_queue = queue.Queue(maxsize = 100) # Initializes a buffered queue for incoming frames
-last_queue_debug_print = 0 # Timestamp that tracks the last time debugging info about queue size was printed
-
-last_decode_timestamp = time.time() # Timestamp of the most recent completed decode
 decoded_message = None
-
-stop_thread = False # Signal to terminate cleanly
-
-debug_worker = False
-debug_watchdog = False
-
-def decoding_worker():
-
-    """
-    Processes the frames from the queue, decodes the data and updates the decoded message.
-
-    Arguments:
-        None
-
-    Returns:
-        None
-
-    """
-    
-    global decoded_message, last_queue_debug_print, last_decode_timestamp
-
-    while not stop_thread or not frame_queue.empty(): # While "stop_thread" is False or the frame queue isn't empty:
-
-        try:
-
-            hcv_roi, recall, add_frame, end_frame = frame_queue.get(timeout = 0.1) # Get a frame and its additional info from the queue
-
-        except queue.Empty:
-
-            continue
-        
-        # --- Debugging ---
-
-        if debug_worker: # If we're debugging the worker:
-
-            current_time = time.time()
-
-            if current_time - last_queue_debug_print > 0.5:
-                print(f"[DEBUG] Decode thread queue size = {frame_queue.qsize()}")
-                last_queue_debug_print = current_time
-
-            decoding_start_time = time.time()
-        
-        # --- End of debugging ---
-
-        if recall: # If it's a recall frame:
-
-            result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
-
-            if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
-                decoded_message = result
-
-        else:
-            decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
-
-        # --- Debugging ---
-
-        if debug_watchdog:
-            last_decode_timestamp = time.time()
-
-        if debug_worker:
-
-            decoding_end_time = time.time()
-
-            if decoding_end_time - last_queue_debug_print > 0.5:
-                print(f"[DEBUG] Decode time: {(decoding_end_time - decoding_start_time) * 1000:.2f} ms")
-            
-        # --- End of debugging ---
-
-# Decoding thread initialization
-
-decoding_thread = threading.Thread(target = decoding_worker, daemon = True)
-decoding_thread.start()
-
-def watchdog():
-
-    """
-    Detects decoding pipeline stalls. Any gap larger than a second triggers an alert.
-
-    Arguments:
-        None
-
-    Returns:
-        None
-
-    """
-    
-    while watchdog_on:
-
-        if time.time() - last_decode_timestamp > 1.0:
-            print("[WARNING] Decode thread is stalled or starving, no frames processed!")
-
-        time.sleep(0.2)
-
-# Watchdog thread initialization
-
-watch_thread = threading.Thread(target = watchdog, daemon = True)
-watch_thread.start()
 
 # --- Main function ---
 
@@ -193,10 +83,6 @@ def receive_message():
         None
     
     """
-
-    # Global variables
-
-    global watchdog_on
 
     # Variable initialization
 
@@ -429,7 +315,7 @@ def receive_message():
                             corrected_ranges = color_offset_calculation(roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
-                            push_LUT(LUT, color_names)
+                            shared_class.push_LUT(LUT, color_names)
 
                             warmup_all() # Warming up numba for use
                             
@@ -449,10 +335,6 @@ def receive_message():
 
                         print("\n[INFO] Trying to sync and get the interval...")
                         receive_message.syncing = ("Initialized")
-
-                        if debug_watchdog:
-                            print("\n[DEBUG] Watchdog on\n")
-                            watchdog_on = True
 
                     try:
                         interval, syncing = sync_interval_detector(color, True) # Try to sync and get the interval
@@ -481,7 +363,6 @@ def receive_message():
                         print("\n[INFO] Decoding...")
                         has_printed_decoding_message = True
 
-                    recall = False # Initialize recall flag as False
                     end_frame = False # Initialize end_frame flag as False
                     add_frame = False # Initialize add_frame flag as False
 
@@ -495,31 +376,34 @@ def receive_message():
 
                         if frame_time >= interval:
                             end_frame = True
-                            add_frame = True 
                             last_frame_time = current_time 
 
-                    if color in ["white", "black", "blue", "green"]: # If the color is white or black:
+                    if color != "red": # If the color is not red:
 
                         add_frame = True
 
                     elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
                         
-                        print("\n[INFO] Red detected — waiting for decode thread to process all frames...")
-
-                        while not frame_queue.empty(): # Waits for the frame queue to be empty
-                            time.sleep(0.005)
-
-                        recall = True # Set recall to True
-                        print("\n[INFO] Frames finished — recalling message...")
+                        current_state = "waiting for message"
 
                     try:
-                        frame_data = (roi_hcv, recall, add_frame, end_frame) # Create a tuple with the frame data
+                        frame_data = (roi_hcv, add_frame, end_frame) # Create a tuple with the frame data
                         # Push frames as they arrive
-                        push_frame(frame_data) # Push the frame to the decoding pipeline
+                        shared_class.push_frame(frame_data) # Push the frame to the decoding pipeline
 
                     except queue.Full: # If the queue is full:
                         pass # Skip
+                        
+                elif current_state == "waiting for message":
+                    if not hasattr(receive_message, "waiting_for_message"):
+                        print("\n[INFO] Waiting for message to be decoded...")
+                        receive_message.waiting_for_message = ("Initialized")
 
+                    decoded_message = shared_class.pull_decoded_message()
+
+                    if decoded_message is not None:
+                        print("\n[INFO] Message done")
+                        break
                     
                 # "last_state_time" initialization
 
@@ -605,7 +489,7 @@ if __name__ == "__main__":
         videoCapture.set(cv2.CAP_PROP_GAIN, 0) # Disables auto gain
 
     else:
-        videoCapture = VideoProcessCapture(path, False, True, core=[10,11]) # Initializes a video capture object with a pre-recorded video
+        videoCapture = VideoProcessCapture(path, False, True, core=[11, 10]) # Initializes a video capture object with a pre-recorded video
 
     if not videoCapture.isOpened():
         print("\n[WARNING] Couldn't start video capture.")
@@ -633,12 +517,13 @@ if __name__ == "__main__":
     aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
     # Start pipeline
-    start_pipeline(core_worker=[4, 5, 6, 7, 8], core_watchdog=[9])
+    pip.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_message_worker=[5], core_watchdog=[4])
 
-    receive_message()
-
-    # Stop when done
-    stop_pipeline()
+    try:
+        receive_message()
+    except KeyboardInterrupt:
+        print("[Main] Caught Ctrl+C — shutting down pipeline")
+        pip.stop_pipeline()
 
     profiler.disable()
 
