@@ -9,7 +9,7 @@ import numpy as np
 
 from utilities.global_definitions import(
     bits_per_frequency, bits_per_amplitude_level, bits_per_cell,
-    number_of_cells
+    number_of_cells, number_of_columns, number_of_rows
 )
 
 # --- Functions ---
@@ -85,7 +85,7 @@ def audio_data_to_frame_bit_arrays(frequency_indices_per_time_frame, quantized_a
         if len(frame_cells) < number_of_cells: # If there aren't enough cells (a last, partial frame)
             frame_cells.extend([0] * (number_of_cells - len(frame_cells))) # Pad it with zeros
 
-        frame_cell_array = np.array(frame_cells, dtype = np.uint8) # Convert "frame_cells" into a NumPy array
+        frame_cell_array = np.array(frame_cells, dtype = np.uint8).reshape(number_of_rows, number_of_columns) # Convert "frame_cells" into a NumPy array
 
         visual_frames.append(frame_cell_array)
     
