@@ -9,7 +9,7 @@ import soundfile
 
 # Non-library imports
 
-from global_definitions import(
+from utilities.global_definitions import(
     number_of_frequencies as target_number_of_frequencies, number_of_amplitude_levels as target_number_of_amplitude_levels,
     hop_length, sample_rate as target_sample_rate, seconds_per_time_frame, frequency_spectrogram_frame_size
 )
@@ -18,8 +18,8 @@ from global_definitions import(
 
 test_audio_file = "audio_files/The Chords - Sh-Boom.mp3"
 
-save_compressed_file = True
-calculate_and_print_bitrate = True
+save_compressed_file = False
+calculate_and_print_bitrate = False
 
 # --- Main function ---
 
@@ -65,7 +65,7 @@ def audio_compressor(input_file):
 
         loudest_frequency_indices = np.argsort(column)[-target_number_of_frequencies:]
 
-        frequency_indices_per_time_frame.append(loudest_frequency_indices)
+        frequency_indices_per_time_frame.append(loudest_frequency_indices.astype(np.int32))
 
         reduced_magnitude[loudest_frequency_indices, time_frame] = column[loudest_frequency_indices]
 
@@ -95,7 +95,7 @@ def audio_compressor(input_file):
 
         quantized_amplitude_indices = np.digitize(normalized_magnitude[loudest_frequency_indices, time_frame], quantized_amplitude_levels) - 1
 
-        quantized_amplitude_levels_per_time_frame.append(quantized_amplitude_indices)
+        quantized_amplitude_levels_per_time_frame.append(quantized_amplitude_indices.astype(np.int32))
 
     print(f"\n[INFO] Reduced the amount of amplitude levels to {target_number_of_amplitude_levels}")
 

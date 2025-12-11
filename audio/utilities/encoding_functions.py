@@ -7,7 +7,7 @@ import numpy as np
 
 # Non-library imports
 
-from global_definitions import(
+from utilities.global_definitions import(
     bits_per_frequency, bits_per_amplitude_level, bits_per_cell,
     number_of_cells
 )
