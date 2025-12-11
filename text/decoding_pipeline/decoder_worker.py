@@ -2,12 +2,13 @@
 
 import time
 import queue
+import multiprocessing
 from multiprocessing import queues
 from utilities.decoding_functions import core_decode_bitgrid_hcv
 from utilities.color_functions_hcv import tracker
 from decoding_pipeline.shared_functions import shared_class
 
-def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp, debug_worker=False):
+def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_decode_timestamp, debug_worker=False):
     """
     Decoding worker process.
 
@@ -21,7 +22,7 @@ def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp
 
     last_queue_debug_print = 0
     LUT_ready = False
-    bitgrid = None
+    bitgrid = [[]]  # Initialize bitgrid as empty list
 
     while not stop_flag.value or not frame_queue.empty():
 
@@ -63,14 +64,18 @@ def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp
 
         # --- Decode frame ---
         
-        if add_frame:
-            core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
-        
         if end_frame:
             bitgrid = core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
+        elif add_frame:
+            core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
 
-        if bitgrid:
-            shared_class.push_bitgrid(bitgrid)
+        if len(bitgrid) == 0:
+            continue  # Skip if no bitgrid was produced
+        else:
+            try:
+                bitgrid_queue.put(bitgrid)
+            except multiprocessing.queues.full():
+                print("[WARNIG] It's full you jackass...")
 
         # Update timestamp for watchdog
         last_decode_timestamp.value = time.time()

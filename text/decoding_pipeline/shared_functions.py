@@ -23,8 +23,8 @@ class shared:
         """
         self._frame_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._command_queue = multiprocessing.Queue()
-        self._bitgrid_queue = multiprocessing.Queue()
-        self._message_queue = multiprocessing.Queue()
+        self._bitgrid_queue = multiprocessing.Queue(maxsize=queue_maxsize)
+        self._message_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._stop_flag = multiprocessing.Value('b', False)  # boolean stop flag
         self._recall_flag = multiprocessing.Value('b', False) 
         self._last_decode_timestamp = multiprocessing.Value('d', time.time())  # double timestamp
@@ -82,23 +82,6 @@ class shared:
 
     # --- Message worker ---
 
-    def push_bitgrid(self, bitgrid):
-        """
-        Push a bitgrid to the shared bitgrid queue
-
-        Arguments:
-            bitgrid (tuple)
-        """
-
-        if self._bitgrid_queue is None:
-            raise RuntimeError("Pipeline not started. Call start_pipeline() first.")
-        try:
-            shared.log_queue("_bitgrid_queue", self._bitgrid_queue)
-            self._bitgrid_queue.put(bitgrid, timeout=0.1)
-        except multiprocessing.queues.Full:
-            # Optional: drop bitgrid if queue is full
-            pass
-
     def pull_decoded_message(self, timeout=None):
         """
         Pull a decoded message from the message worker.
@@ -111,8 +94,5 @@ class shared:
             return None
         finally:
             self._recall_flag.value = False
-
-    
-
 
 shared_class = shared()

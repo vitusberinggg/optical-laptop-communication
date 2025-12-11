@@ -3,6 +3,7 @@
 import time
 
 from utilities.decoding_functions import core_decode_message
+from decoding_pipeline.shared_functions import shared_class
 
 def message_worker(bitgrid_queue, message_out_queue, recall, stop_flag, last_message_timestamp, debug_worker=False):
     
@@ -32,19 +33,22 @@ def message_worker(bitgrid_queue, message_out_queue, recall, stop_flag, last_mes
         if debug_worker:
             current_time = time.time()
             if current_time - last_queue_debug_print > 0.5:
-                print(f"[DEBUG] Decode worker queue size = {bitgrid_queue.qsize()}")
+                shared_class.log_queue("bitgrid_queue", bitgrid_queue)
                 last_queue_debug_print = current_time
             decode_start_time = time.time()
 
         # --- Decode message ---
         
+        
         if len(bitgrid) > 0:
-            decoded_message.join(core_decode_message(bitgrid))
+            decoded_message = "".join(core_decode_message(bitgrid))
+            print(f"[DEBUG] message bitch: {decoded_message}")
 
         if recall:
             final_message = "".join(decoded_message)
             message_out_queue.put(final_message)
             decoded_message = []   # reset for next message
+        
 
         # Update timestamp for watchdog
         last_message_timestamp.value = time.time()

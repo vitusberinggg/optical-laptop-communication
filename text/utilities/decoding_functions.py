@@ -265,8 +265,6 @@ def core_decode_bitgrid_hcv(hcv_frame, end_frame = False, debug_bytes = False):
     if end_frame:
 
         bitgrid = tracker_hcv.end_bit()
-        tracker_hcv.reset()
-
         return bitgrid
 
     else:

@@ -54,7 +54,8 @@ class pipeline:
         # Start decoding worker process
         self._decode_process = multiprocessing.Process(
             target=decoding_worker,
-            args=(_frame_queue, _command_queue, _stop_flag, _last_decode_timestamp),
+            args=(_frame_queue, _command_queue, _bitgrid_queue, 
+                  _stop_flag, _last_decode_timestamp),
             daemon=True
         )
         self._decode_process.start()
@@ -73,7 +74,8 @@ class pipeline:
         # Start message worker process
         self._message_process = multiprocessing.Process(
             target=message_worker,
-            args=(_bitgrid_queue, _message_queue, _recall_flag, _stop_flag, _last_message_timestamp),
+            args=(_bitgrid_queue, _message_queue, _recall_flag, 
+                  _stop_flag, _last_message_timestamp),
             daemon=True
         )
         self._message_process.start()
