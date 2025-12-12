@@ -51,7 +51,7 @@ def render_frame(bitgrid):
 
     return image
 
-def render_frame_several(bitgrid, color_map): 
+def render_multicolor_frame(bitgrid, color_map): 
 
     image = np.zeros((sender_output_height, sender_output_width, 3), dtype=np.uint8)
 
