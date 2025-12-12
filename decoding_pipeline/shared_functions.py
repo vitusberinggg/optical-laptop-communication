@@ -2,6 +2,7 @@
 
 import multiprocessing
 import time
+import queue
 
 class shared:
 
@@ -15,6 +16,7 @@ class shared:
         self._recall_flag = None
         self._last_decode_timestamp = None
         self._last_message_timestamp = None
+        self._last_frame = None
 
 
     def initialize_shared_objects(self, queue_maxsize=100):
@@ -26,7 +28,8 @@ class shared:
         self._bitgrid_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._message_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._stop_flag = multiprocessing.Value('b', False)  # boolean stop flag
-        self._recall_flag = multiprocessing.Value('b', False) 
+        self._recall_flag = multiprocessing.Value('b', False)
+        self._last_frame = multiprocessing.Value('b', False)
         self._last_decode_timestamp = multiprocessing.Value('d', time.time())  # double timestamp
         self._last_message_timestamp = multiprocessing.Value('d', time.time())
         print("[Shared] Shared objects initialized.")
@@ -37,7 +40,7 @@ class shared:
         Returns the shared objects for the decoding pipeline.
         """
         return (self._frame_queue, self._command_queue, self._bitgrid_queue,
-                self._message_queue, self._stop_flag, self._recall_flag,
+                self._message_queue, self._stop_flag, self._last_frame, self._recall_flag,
                 self._last_decode_timestamp, self._last_message_timestamp)
     
     def log_queue(self, name, q):
@@ -82,17 +85,26 @@ class shared:
 
     # --- Message worker ---
 
-    def pull_decoded_message(self, timeout=None):
+    def pull_decoded_message(self, max_wait=0.5):
         """
-        Pull a decoded message from the message worker.
+        Pull a decoded message from the message worker without blocking the GUI.
+        
+        Arguments:
+            max_wait (float): Maximum time in seconds to wait for a message.
         """
         self._recall_flag.value = True  # request message recall
+        start_time = time.time()
 
-        try:
-            return self._message_queue.get_nowait(timeout=timeout)  # block until the worker answers
-        except:
-            return None
-        finally:
-            self._recall_flag.value = False
+        decoded_message = None
+        while time.time() - start_time < max_wait:
+            try:
+                decoded_message = self._message_queue.get_nowait()
+                self._recall_flag.value = False
+                break  # message received
+            except queue.Empty:
+                time.sleep(0.01)  # yield CPU / allow GUI to check for input
+
+        
+        return decoded_message
 
 shared_class = shared()
