@@ -15,6 +15,9 @@ import os
 import time
 import numpy as np
 
+import soundfile
+import sounddevice
+
 # Profiling initialization
 
 profiler = cProfile.Profile()
@@ -24,24 +27,25 @@ profiler.enable()
 
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
+from utilities.color_functions_bgr import dominant_color_bgr
+from utilities.screen_alignment_functions import roi_alignment_for_large_markers
+from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv_audio
+from utilities.audio_functions import audio_compressor, audio_reconstructor
+
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
     bitgrid_majority_calculator as numba_hcv, bgr_to_hcv
 )
-from utilities.color_functions_bgr import dominant_color_bgr
-from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
-from utilities.accuracy_calculator import accuracy_calculator
 
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
-    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
-    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction,
+    audio_file
 )
 
 # --- Definitions --- 
@@ -140,7 +144,7 @@ frame_queue = queue.Queue(maxsize = 100) # Initializes a buffered queue for inco
 last_queue_debug_print = 0 # Timestamp that tracks the last time debugging info about queue size was printed
 
 last_decode_timestamp = time.time() # Timestamp of the most recent completed decode
-decoded_message = None
+decoded_audio_data = None
 
 stop_thread = False # Signal to terminate cleanly
 
@@ -160,7 +164,7 @@ def decoding_worker():
 
     """
     
-    global decoded_message, last_queue_debug_print, last_decode_timestamp
+    global decoded_audio_data, last_queue_debug_print, last_decode_timestamp
 
     while not stop_thread or not frame_queue.empty(): # While "stop_thread" is False or the frame queue isn't empty:
 
@@ -188,13 +192,13 @@ def decoding_worker():
 
         if recall: # If it's a recall frame:
 
-            result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
+            result = decode_bitgrid_hcv_audio(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function and store it's return in "result"
 
-            if isinstance(result, str) and result.strip() != "": # If "result" is a string, and it's not empty after removing any leading or trailing whitespaces:
-                decoded_message = result
+            if result is not None:
+                decoded_audio_data = result
 
         else:
-            decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
+            decode_bitgrid_hcv_audio(hcv_roi, add_frame, recall, end_frame, debug_bytes) # Call the bitgrid decoding function
 
         # --- Debugging ---
 
@@ -242,7 +246,7 @@ watch_thread.start()
 
 # --- Main function ---
 
-def receive_message():
+def receive_data():
 
     """
     Receives a message from the sender screen.
@@ -313,6 +317,8 @@ def receive_message():
 
     # --- End of debugging ---
 
+    _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
+
     try:
 
         while True:
@@ -382,7 +388,7 @@ def receive_message():
 
             if roi_coordinates is not None: # If there are ROI coordinates:
                 
-                if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
+                if not hasattr(receive_data, "roi_padded"): # If "receive_data" doesn't have the attribute "roi_padded":
 
                     print("\n[INFO] Calculating padded ROI coordinates...")
                 
@@ -424,7 +430,7 @@ def receive_message():
 
                     print(f"[INFO] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
 
-                    receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
+                    receive_data.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "receive_data" with given values
 
                 if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
 
@@ -450,9 +456,9 @@ def receive_message():
                             
                 # "last_color_time" initialization
 
-                if not hasattr(receive_message, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
+                if not hasattr(receive_data, "first_color"): # If "receive_data" doesn't yet have the attribute "first_color":
                     last_color_time = time.time()
-                    receive_message.first_color = ("Get first dominant color")
+                    receive_data.first_color = ("Get first dominant color")
 
                 # Calculates the time of how long it has been the same color
 
@@ -478,7 +484,7 @@ def receive_message():
 
                 if current_state == "color_calibration":
                     
-                    if not hasattr(receive_message, "color_calibration"): # If "recieve_message()" doesn't yet have the attribute "color_calibration"
+                    if not hasattr(receive_data, "color_calibration"): # If "receive_data()" doesn't yet have the attribute "color_calibration"
 
                         try:
 
@@ -488,22 +494,22 @@ def receive_message():
 
                             warmup_all() # Warming up numba for use
                             
-                            receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
+                            receive_data.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_data()" (to make sure calibration only happens once)
 
                         except Exception as e:
                             print("\n[INFO] Color calibration error:", e)
 
-                    if hasattr(receive_message, "color_calibration"): # If "recieve_message()" has the attribute "color_calibration":
+                    if hasattr(receive_data, "color_calibration"): # If "receive_data()" has the attribute "color_calibration":
                         current_state = "syncing"
                 
                 # --- Syncing ---
 
                 if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
                     
-                    if not hasattr(receive_message, "syncing"):
+                    if not hasattr(receive_data, "syncing"):
 
                         print("\n[INFO] Trying to sync and get the interval...")
-                        receive_message.syncing = ("Initialized")
+                        receive_data.syncing = ("Initialized")
 
                         if debug_watchdog:
                             print("\n[DEBUG] Watchdog on\n")
@@ -573,18 +579,18 @@ def receive_message():
                     except queue.Full: # If the queue is full:
                         pass # Skip
 
-                    while recall and (decoded_message is None or decoded_message.strip() == ""): # While recall is True and the decoded message still is empty
+                    while recall and (decoded_audio_data is None): # While recall is True and the decoded audio data is still is None
                         time.sleep(0.05)
 
-                    if decoded_message is not None:
+                    if decoded_audio_data is not None:
                         print("\n[INFO] Decoding finished.")
                         break
                     
                 # "last_state_time" initialization
 
-                if not hasattr(receive_message, "first_state"):
+                if not hasattr(receive_data, "first_state"):
                     last_state_time = time.time()
-                    receive_message.first_state = ("Get first state")
+                    receive_data.first_state = ("Get first state")
 
                 # Calculates the time of how long it has been the same state
 
@@ -611,11 +617,22 @@ def receive_message():
         if bits: # If there are remaining bits not yet converted:
             print(f"[INFO] Bits not yet converted: {bits}")
 
-        print(f"\n[INFO] Final message: {decoded_message}")
+        if decoded_audio_data is not None:
 
-        accuracy_percentage = accuracy_calculator(decoded_message)
+            print(f"\n[INFO] Reconstructing and playing audio...")
 
-        print(f"\n[INFO] Accuracy: {accuracy_percentage} %")
+            frequency_indices, amplitude_levels = decoded_audio_data
+
+            _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
+
+            output_file = audio_reconstructor(frequency_indices, amplitude_levels, spectrogram_phase)
+
+            audio_data, sample_rate = soundfile.read(output_file)
+            sounddevice.play(audio_data, sample_rate)
+            sounddevice.wait()
+
+        else:
+            print("\n[WARNING] No audio data was decoded.")
 
     finally:
         videoCapture.release()
@@ -625,7 +642,7 @@ def receive_message():
 
 if __name__ == "__main__":
 
-    receive_message()
+    receive_data()
 
     profiler.disable()
 
