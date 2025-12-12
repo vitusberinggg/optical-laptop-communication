@@ -2,6 +2,7 @@
 # --- Imports ---
 
 import math
+import numpy as np
 import cv2
 
 # --- Color definitions ---
@@ -66,6 +67,8 @@ aruco_marker_frame_duration = 1
 
 number_of_frequencies = 8 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
 number_of_amplitude_levels = 12 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
+
+quantized_amplitude_levels = np.linspace(0, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
 
 bits_per_frequency = int(math.log2(number_of_frequencies))
 bits_per_amplitude_level = int(math.log2(bits_per_frequency))
