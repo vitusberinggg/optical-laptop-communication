@@ -41,12 +41,12 @@ from utilities.global_definitions import (
     aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
-    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction, orange_time
 )
 
 # --- Definitions --- 
 
-using_webcam = True
+using_webcam = False
 
 watchdog_on = False
 
@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_1604.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
  
 # --- Video capture setup ---
 
@@ -280,6 +280,7 @@ def receive_message():
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
+    orange_detected = False
 
     current_state = "aruco_marker_detection"
 
@@ -557,15 +558,20 @@ def receive_message():
 
                         add_frame = True
 
-                    elif color == "orange" and last_color != "orange": # If the color is orange and the last color wasn't orange:
-                        
-                        print("\n[INFO] orange detected — waiting for decode thread to process all frames...")
+                    elif color == "orange": # If the color is orange and the last color wasn't orange:
+                        if not orange_detected:
+                            orange_detected = True
+                            orange_start_time = time.monotonic()
 
-                        while not frame_queue.empty(): # Waits for the frame queue to be empty
-                            time.sleep(0.005)
+                        else:
+                            if time.monotonic() - orange_start_time > orange_time:
+                                print("\n[INFO] orange detected — waiting for decode thread to process all frames...")
 
-                        recall = True # Set recall to True
-                        print("\n[INFO] Frames finished — recalling message...")
+                                while not frame_queue.empty(): # Waits for the frame queue to be empty
+                                    time.sleep(0.005)
+
+                                recall = True # Set recall to True
+                                print("\n[INFO] Frames finished — recalling message...")
 
                     try:
                         frame_queue.put_nowait((roi_hcv.copy(), recall, add_frame, end_frame))

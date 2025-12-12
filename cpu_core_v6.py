@@ -27,11 +27,11 @@ from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
-    bitgrid_majority_calculator as numba_hcv, bgr_to_hcv
+    bgr_to_hcv
 )
 from utilities.color_functions_bgr import dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
-from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
+from utilities.decoding_functions import sync_interval_detector
 from utilities.accuracy_calculator import accuracy_calculator
 
 from utilities.global_definitions import (
@@ -48,24 +48,6 @@ from utilities.global_definitions import (
 # --- Definitions --- 
 
 using_webcam = False
-
-# --- Helper functions ---
-
-def warmup_all():
-
-    """
-    Performs a one-time warm-up for "bitgrid_majority_calculator" by calling it with a dummy input.
-
-    Arguments:
-        None
-
-    Returns:
-        None
-
-    """
-
-    dummy_array = np.zeros((2, 2, 8, 16, 10), dtype = np.uint8)
-    numba_hcv(dummy_array, 5)
 
 decoded_message = None
 
@@ -316,8 +298,6 @@ def receive_message():
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
-
-                            warmup_all() # Warming up numba for use
                             
                             receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
 
@@ -382,7 +362,7 @@ def receive_message():
 
                         add_frame = True
 
-                    elif color == "red" and last_color != "red": # If the color is red and the last color wasn't red:
+                    elif color == "red": # If the color is red and the last color wasn't red:
                         
                         current_state = "waiting for message"
 
