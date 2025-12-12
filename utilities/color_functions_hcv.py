@@ -139,9 +139,9 @@ class BitColorTracker:
         else:
             raise NotImplementedError("Mapping table for this bits_per_cell not defined")
 
-        bitgrid_2bit = np.vectorize(lambda idx: idx_to_bit.get(idx, 0b00))(bitgrid)
+        final_bitgrid = np.vectorize(lambda idx: idx_to_bit.get(idx, 0b00))(bitgrid)
         
-        return bitgrid_2bit
+        return final_bitgrid
 
     def bitgrid_list_to_bitstream(bitgrids, bits_per_cell):
 
