@@ -21,7 +21,7 @@ from utilities.image_generation_functions import(
 from utilities.global_definitions import (
     audio_file,
     aruco_marker_frame_duration, frame_duration,
-    gray_bgr, color_map_3_bit,
+    gray_bgr, color_map_3bit,
     sync_colors, number_of_sync_frames, sync_frame_duration,
 )
 
@@ -49,7 +49,7 @@ def send_audio_data(audio_file):
     data_frames = []
 
     for frame_bit_array in frame_bit_arrays: # For each frame bit array:
-        rendered_frame = render_multicolor_frame(frame_bit_array, color_map_3_bit) # Render the frame
+        rendered_frame = render_multicolor_frame(frame_bit_array, color_map_3bit) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     end_frame  = create_color_frame(gray_bgr) # Creates the end frame with the specified color

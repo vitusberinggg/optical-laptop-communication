@@ -10,7 +10,7 @@ import time
 
 from utilities.encoding_functions import message_to_frame_several_bit_arrays
 from utilities.image_generation_functions import (
-    render_frame_several, create_color_frame,
+    render_multicolor_frame, create_color_frame,
     create_color_reference_frame, create_large_aruco_marker_frame
 )
 
@@ -56,7 +56,7 @@ def send_message(message):
     data_frames = []
 
     for frame_bit_array in frame_bit_arrays: # For each frame bit array:
-        rendered_frame = render_frame_several(frame_bit_array, color_map) # Render the frame
+        rendered_frame = render_multicolor_frame(frame_bit_array, color_map) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
     end_frame  = create_color_frame(orange_bgr) # Creates the end frame with the specified color
