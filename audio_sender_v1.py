@@ -8,32 +8,29 @@ import time
 
 # Non-library imports
 
-from utilities.encoding_functions import message_to_frame_several_bit_arrays
-from utilities.image_generation_functions import (
-    render_frame_several, create_color_frame,
-    create_color_reference_frame, create_large_aruco_marker_frame
+from utilities.encoding_functions import audio_data_to_frame_bit_arrays
+from utilities.audio_compressor import audio_compressor
+
+from utilities.image_generation_functions import(
+    create_color_reference_frame,
+    render_multicolor_frame,
+    create_color_frame,
+    create_large_aruco_marker_frame
 )
 
 from utilities.global_definitions import (
-    message,
+    audio_file,
     aruco_marker_frame_duration, frame_duration,
-    red_bgr, blue_bgr, gray_bgr, orange_bgr,
-    sync_colors, number_of_sync_frames, sync_frame_duration, color_map_2bit, color_map_3bit, 
-    bits_per_cell
+    gray_bgr, color_map_3bit,
+    sync_colors, number_of_sync_frames, sync_frame_duration,
 )
 
 # --- Main function ---
 
-def send_message(message):
+def send_audio_data(audio_file):
 
     """
-    Sends a message by displaying frames on the screen.
 
-    Arguments:
-        "message" (str): The message to be sent.
-
-    Returns:
-        None
     
     """
 
@@ -45,24 +42,19 @@ def send_message(message):
         color_frame = create_color_frame(color) # Creates a frame in the color
         sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
-    frame_bit_arrays = message_to_frame_several_bit_arrays(message, bits_per_cell) # Converts the message to frame bit arrays
+    frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame = audio_compressor(audio_file)
 
-    if bits_per_cell == 2:
-        color_map = color_map_2bit
-
-    elif bits_per_cell == 3:
-        color_map = color_map_3bit
+    frame_bit_arrays = audio_data_to_frame_bit_arrays(frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame) # Converts the message to frame bit arrays
 
     data_frames = []
 
     for frame_bit_array in frame_bit_arrays: # For each frame bit array:
-        rendered_frame = render_frame_several(frame_bit_array, color_map) # Render the frame
+        rendered_frame = render_multicolor_frame(frame_bit_array, color_map_3bit) # Render the frame
         data_frames.append(rendered_frame) # Add the rendered frame to the list of data frames
 
-    end_frame  = create_color_frame(orange_bgr) # Creates the end frame with the specified color
+    end_frame  = create_color_frame(gray_bgr) # Creates the end frame with the specified color
 
     # OpenCV window
-#   OpenCV window
 
     window = "SENDER" # The name of the OpenCV window
     cv2.namedWindow(window, cv2.WINDOW_NORMAL) # Creates a window with the specified name
@@ -125,7 +117,7 @@ def send_message(message):
 
         end_of_sync_frame_start_time = time.monotonic()
 
-        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration/2):
+        while time.monotonic() - end_of_sync_frame_start_time < (frame_duration):
 
             cv2.imshow(window, end_frame)
 
@@ -169,4 +161,4 @@ def send_message(message):
         cv2.destroyAllWindows() # Close all OpenCV windows
 
 if __name__ == "__main__":
-    send_message(message)
+    send_audio_data(audio_file)

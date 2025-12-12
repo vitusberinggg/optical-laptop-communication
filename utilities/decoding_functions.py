@@ -245,9 +245,168 @@ def decode_bitgrid_hcv(hcv_frame, add_frame = False, recall = False, end_frame =
 
     return None
 
+audio_bitgrids_hcv = []
+
+def decode_bitgrid_hcv_audio(hcv_frame, add_frame = False, recall = False, end_frame = False, debug_bytes = False):
+
+    """
+    Handles bitgrid collection and decoding for audio data.
+    
+    Arguments:
+        "hcv_frame": HCV frame to be processed.
+        "add_frame" (bool): Boolean indicating if the frame should be added to the tracker or not.
+        "recall" (bool): Boolean indicating whether it's time for the collected bitgrids to get decoded into audio data or not.
+        "end_frame" (bool): Boolean that marks the end of the bit period.
+        
+    Returns:
+        tuple | "frequency_indices", "amplitude_levels" if recall = True, else None
+
+    """
+    
+    global audio_bitgrids_hcv
+
+    if add_frame:
+
+        if end_frame:
+
+            bitgrid = tracker_hcv.end_bit()
+
+            if bitgrid is not None:
+                bitgrids_hcv.append(bitgrid)
+
+            tracker_hcv.reset()
+
+        else:
+            tracker_hcv.add_frame(hcv_frame)
+
+        return None
+    
+    if recall:
+        if len(bitgrids_hcv) == 0:
+            print("\n[WARNING] No bitgrids collected yet.")
+            return None
+        
+        print(f"\n[INFO] Decoding {len(bitgrids_hcv)} bitgrids into audio data...")
+        
+        # Combine all bitgrids
+        combined = np.vstack(bitgrids_hcv)
+        flat = combined.ravel()
+        
+        # Convert to bitstream
+        bitstream = "".join([format(val, f"0{bits_per_cell}b") for val in flat])
+        
+        if debug_bytes:
+            print(f"[DEBUG] Total bits received: {len(bitstream)}")
+        
+        # Calculate how many complete time frames we can decode
+        bits_per_time_frame = number_of_frequencies * (bits_per_frequency + bits_per_amplitude_level)
+        number_of_complete_time_frames = len(bitstream) // bits_per_time_frame
+        
+        print(f"\n[INFO] Decoding {number_of_complete_time_frames} time frames of audio...")
+        
+        frequency_indices_per_time_frame = []
+        quantized_amplitude_levels_per_time_frame = []
+        
+        bit_position = 0
+        
+        for time_frame_idx in range(number_of_complete_time_frames):
+            
+            frequency_indices = []
+            amplitude_levels = []
+            
+            for freq_idx in range(number_of_frequencies):
+                
+                # Extract frequency bits
+                freq_bits = bitstream[bit_position:bit_position + bits_per_frequency]
+                bit_position += bits_per_frequency
+                frequency_value = int(freq_bits, 2)
+                frequency_indices.append(frequency_value)
+                
+                # Extract amplitude bits
+                amp_bits = bitstream[bit_position:bit_position + bits_per_amplitude_level]
+                bit_position += bits_per_amplitude_level
+                amplitude_value = int(amp_bits, 2)
+                amplitude_levels.append(amplitude_value)
+            
+            frequency_indices_per_time_frame.append(np.array(frequency_indices, dtype=np.int32))
+            quantized_amplitude_levels_per_time_frame.append(np.array(amplitude_levels, dtype=np.int32))
+        
+        print(f"\n[INFO] Successfully decoded audio data for {len(frequency_indices_per_time_frame)} time frames")
+        
+        return frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame
+    
+    return None
+
+# --- Core worker functions ---
+
+# Decode bitgrid
+def core_decode_bitgrid_hcv(hcv_frame, end_frame = False, debug_bytes = False):
+
+    """
+    Handles bitgrid collection and decoding.
+
+    Arguments:
+        hcv_frame: HCV frame for processing (only used when add_frame=True)
+        end_frame: Marks the end of the bit period (pushes 1 full bitgrid)
+
+    Returns:
+        bitgrid (tuple) | None: Decoded bitgrid (if end_frame=True)
+    """
+
+    if end_frame:
+
+        bitgrid = tracker_hcv.end_bit()
+        return bitgrid
+
+    else:
+        tracker_hcv.add_frame(hcv_frame)
+        return None
+
+# Decode message
+def core_decode_message(core_bitgrid, debug_bytes=False):
+
+    """
+    Decode the message through decoded bitgrid
+    
+    Arguments:
+        core_bitgrids_hcv (tuple)
+
+    Returns:
+        str | None: Decoded message (if len(core_bitgrid_hcv) > 0)
+    """
+
+    if len(core_bitgrid) == 0:
+        print("No bitgrids collected yet.")
+        return None
+
+    # Combine all bitgrids horizontally
+    combined = np.vstack(core_bitgrid)
+
+    flat = combined.ravel()
+    bitstream = "".join([format(val, f"0{bits_per_cell}b") for val in flat])
+    num_bytes = len(bitstream) // 8
+
+    byte_matrix = [bitstream[i*8:(i+1)*8] for i in range(num_bytes)]
+
+    print(f"Decoded {len(byte_matrix)} bytes:")
+
+    for i, byte_bits in enumerate(byte_matrix):
+
+        s = byte_bits
+
+        try:
+            char = chr(int(s, 2))
+            
+        except ValueError:
+            char = '?'
+
+        if debug_bytes:
+            print(f"Byte {i}: {s} (char: '{char}')")
+
+    return bits_to_message(byte_matrix)
+
 
 # --- Bit decoding functions ---
-
 
 def bits_to_message(byte_matrix):
 

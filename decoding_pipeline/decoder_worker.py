@@ -1,25 +1,28 @@
-# decoding_pipeline/decoder_worker.py
+# decoding_pipeline\decoder_worker.py
 
 import time
 import queue
+import multiprocessing
 from multiprocessing import queues
-from utilities.decoding_functions import decode_bitgrid_hcv
+from utilities.decoding_functions import core_decode_bitgrid_hcv
 from utilities.color_functions_hcv import tracker
+from decoding_pipeline.shared_functions import shared_class
 
-def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp, debug_worker=False):
+def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_decode_timestamp, debug_worker=False):
     """
     Decoding worker process.
 
     Arguments:
         frame_queue (multiprocessing.Queue): Queue of frames to decode.
+        command_queue (multiprocessing.Queue): Queue of LUT and color names
         stop_flag (multiprocessing.Value): Boolean flag to signal stop.
         last_decode_timestamp (multiprocessing.Value): Timestamp of last completed decode.
         debug_worker (bool): Enable debug prints.
     """
 
-    decoded_message = None
     last_queue_debug_print = 0
     LUT_ready = False
+    bitgrid = [[]]  # Initialize bitgrid as empty list
 
     while not stop_flag.value or not frame_queue.empty():
 
@@ -45,11 +48,9 @@ def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp
             time.sleep(0.01)
             continue
 
-
-
         try:
             # Frame format: (hcv_roi, recall, add_frame, end_frame)
-            hcv_roi, recall, add_frame, end_frame = frame_queue.get(timeout=0.1)
+            hcv_roi, add_frame, end_frame = frame_queue.get(timeout=0.1)
         except Exception:
             continue
 
@@ -62,14 +63,19 @@ def decoding_worker(frame_queue, command_queue, stop_flag, last_decode_timestamp
             decode_start_time = time.time()
 
         # --- Decode frame ---
-        if False:            
-            result = decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes=False)
-            if isinstance(result, str) and result.strip():
-                decoded_message = result
-            
-        elif not recall:
+        
+        if end_frame:
+            bitgrid = core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
+        elif add_frame:
+            core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
 
-            decode_bitgrid_hcv(hcv_roi, add_frame, recall, end_frame, debug_bytes=False)
+        if len(bitgrid) == 0:
+            continue  # Skip if no bitgrid was produced
+        else:
+            try:
+                bitgrid_queue.put(bitgrid)
+            except multiprocessing.queues.full():
+                print("[WARNIG] It's full you jackass...")
 
         # Update timestamp for watchdog
         last_decode_timestamp.value = time.time()
