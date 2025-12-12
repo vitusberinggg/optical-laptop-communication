@@ -13,6 +13,7 @@ _command_queue = None
 _bitgrid_queue = None
 _message_queue = None
 _stop_flag = None
+_last_frame = None
 _recall_flag = None
 _last_decode_timestamp = None
 _last_message_timestamp = None
@@ -40,7 +41,7 @@ class pipeline:
         """
 
         global _frame_queue, _command_queue, _bitgrid_queue, \
-            _message_queue, _recall_flag, _stop_flag, \
+            _message_queue, _recall_flag, _last_frame, _stop_flag, \
             _last_decode_timestamp, _last_message_timestamp
                
 
@@ -48,14 +49,14 @@ class pipeline:
         shared_class.initialize_shared_objects(queue_maxsize)
 
         (_frame_queue, _command_queue, _bitgrid_queue,
-         _message_queue, _stop_flag, _recall_flag,
+         _message_queue, _stop_flag, _last_frame, _recall_flag,
          _last_decode_timestamp, _last_message_timestamp) = shared_class.get_shared_objects()
 
         # Start decoding worker process
         self._decode_process = multiprocessing.Process(
             target=decoding_worker,
             args=(_frame_queue, _command_queue, _bitgrid_queue, 
-                  _stop_flag, _last_decode_timestamp),
+                  _stop_flag, _last_frame, _last_decode_timestamp),
             daemon=True
         )
         self._decode_process.start()
@@ -75,7 +76,7 @@ class pipeline:
         self._message_process = multiprocessing.Process(
             target=message_worker,
             args=(_bitgrid_queue, _message_queue, _recall_flag, 
-                  _stop_flag, _last_message_timestamp),
+                  _last_frame, _stop_flag, _last_message_timestamp),
             daemon=True
         )
         self._message_process.start()
