@@ -9,7 +9,7 @@ from utilities.decoding_functions import core_decode_bitgrid_hcv
 from utilities.color_functions_hcv import tracker, bitgrid_majority_calculator as numba, dominant_color_hcv
 from decoding_pipeline.shared_functions import shared_class
 
-def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_frame, last_decode_timestamp, debug_worker=True):
+def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_frame, last_decode_timestamp, debug_worker=False):
     """
     Decoding worker process.
 
@@ -63,7 +63,7 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
         if debug_worker:
             current_time = time.time()
             if current_time - last_queue_debug_print > 0.5:
-                print(f"[DEBUG] Decode worker queue size = {frame_queue.qsize()}")
+                print(f"[WORKER] Decode worker queue size = {frame_queue.qsize()}")
                 last_queue_debug_print = current_time
             decode_start_time = time.time()
 
@@ -96,7 +96,7 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
 
             # print only every 0.5 sec
             if decode_end_time - last_timing_debug_print > 0.5:
-                print(f"[DEBUG] Decode time: {decode_time_ms:.2f} ms")
+                print(f"[WORKER] Decode time: {decode_time_ms:.2f} ms")
                 last_timing_debug_print = decode_end_time
 
 def warmup_all():
