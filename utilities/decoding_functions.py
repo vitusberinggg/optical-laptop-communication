@@ -1,19 +1,23 @@
 
 # --- Imports ---
 
+# Library imports
+
 import numpy as np
 import time
+
+# Non-library imports
 
 from utilities.color_functions_bgr import tracker as tracker_bgr
 from utilities.color_functions_hsv import tracker as tracker_hsv
 from utilities.color_functions_hcv import tracker as tracker_hcv
-from utilities.global_definitions import number_of_sync_frames, number_of_rows, number_of_columns, bits_per_cell
-
-
-
+from utilities.global_definitions import(
+    number_of_sync_frames, number_of_rows, number_of_columns,
+    bits_per_cell, bits_per_frequency, bits_per_amplitude_level,
+    number_of_frequencies,
+)
 
 # --- Functions BGR ---
-
 
 bits_bgr = [[[]]]
 
@@ -253,7 +257,7 @@ def decode_bitgrid_hcv_audio(hcv_frame, add_frame = False, recall = False, end_f
     Handles bitgrid collection and decoding for audio data.
     
     Arguments:
-        "hcv_frame": HCV frame to be processed.
+        "hcv_frame" (np.array): HCV frame to be processed.
         "add_frame" (bool): Boolean indicating if the frame should be added to the tracker or not.
         "recall" (bool): Boolean indicating whether it's time for the collected bitgrids to get decoded into audio data or not.
         "end_frame" (bool): Boolean that marks the end of the bit period.
@@ -282,25 +286,31 @@ def decode_bitgrid_hcv_audio(hcv_frame, add_frame = False, recall = False, end_f
         return None
     
     if recall:
+
         if len(bitgrids_hcv) == 0:
             print("\n[WARNING] No bitgrids collected yet.")
             return None
         
         print(f"\n[INFO] Decoding {len(bitgrids_hcv)} bitgrids into audio data...")
         
-        # Combine all bitgrids
-        combined = np.vstack(bitgrids_hcv)
-        flat = combined.ravel()
+        bitgrids_combined = np.vstack(bitgrids_hcv) # Combines all bitgrids
+        flat = bitgrids_combined.ravel()
         
-        # Convert to bitstream
-        bitstream = "".join([format(val, f"0{bits_per_cell}b") for val in flat])
+        # Bitstream conversion
+
+        values = []
+
+        for value in flat:
+            formatted_value = format(value, f"0{bits_per_cell}b")
+            values.append(formatted_value)
+        
+        bitstream = "".join(values)
         
         if debug_bytes:
             print(f"[DEBUG] Total bits received: {len(bitstream)}")
         
-        # Calculate how many complete time frames we can decode
         bits_per_time_frame = number_of_frequencies * (bits_per_frequency + bits_per_amplitude_level)
-        number_of_complete_time_frames = len(bitstream) // bits_per_time_frame
+        number_of_complete_time_frames = len(bitstream) // bits_per_time_frame # Calculates how many complete time frames it's possible to decode
         
         print(f"\n[INFO] Decoding {number_of_complete_time_frames} time frames of audio...")
         
@@ -309,27 +319,31 @@ def decode_bitgrid_hcv_audio(hcv_frame, add_frame = False, recall = False, end_f
         
         bit_position = 0
         
-        for time_frame_idx in range(number_of_complete_time_frames):
+        for _ in range(number_of_complete_time_frames):
             
             frequency_indices = []
             amplitude_levels = []
             
-            for freq_idx in range(number_of_frequencies):
+            for _ in range(number_of_frequencies): # For each frequency:
                 
-                # Extract frequency bits
-                freq_bits = bitstream[bit_position:bit_position + bits_per_frequency]
+                # Frequency bit extraction
+
+                frequency_bits = bitstream[bit_position:bit_position + bits_per_frequency]
                 bit_position += bits_per_frequency
-                frequency_value = int(freq_bits, 2)
+
+                frequency_value = int(frequency_bits, 2)
                 frequency_indices.append(frequency_value)
                 
-                # Extract amplitude bits
+                # Amplitude bit extraction
+
                 amp_bits = bitstream[bit_position:bit_position + bits_per_amplitude_level]
                 bit_position += bits_per_amplitude_level
+                
                 amplitude_value = int(amp_bits, 2)
                 amplitude_levels.append(amplitude_value)
             
-            frequency_indices_per_time_frame.append(np.array(frequency_indices, dtype=np.int32))
-            quantized_amplitude_levels_per_time_frame.append(np.array(amplitude_levels, dtype=np.int32))
+            frequency_indices_per_time_frame.append(np.array(frequency_indices, dtype = np.int32))
+            quantized_amplitude_levels_per_time_frame.append(np.array(amplitude_levels, dtype = np.int32))
         
         print(f"\n[INFO] Successfully decoded audio data for {len(frequency_indices_per_time_frame)} time frames")
         

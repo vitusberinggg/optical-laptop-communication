@@ -75,23 +75,32 @@ class BitColorTracker:
 
         _, H, W, _ = frames.shape
 
-        cell_h = int(np.ceil(H / self.number_of_rows))
-        cell_w = int(np.ceil(W / self.number_of_columns))
+        cell_height = int(np.ceil(H / self.number_of_rows))
+        cell_width = int(np.ceil(W / self.number_of_columns))
 
-        padded_H = cell_h * self.number_of_rows
-        padded_W = cell_w * self.number_of_columns
+        padded_H = cell_height * self.number_of_rows
+        padded_W = cell_width * self.number_of_columns
 
         pad_bottom = padded_H - H
         pad_right = padded_W - W
 
         padded_frames = np.pad(frames, ((0, 0), (0, pad_bottom), (0, pad_right), (0, 0)), mode = "edge")
 
-        return padded_frames, cell_h, cell_w
+        return padded_frames, cell_height, cell_width
   
     def end_bit(self):
 
         """
+        Processes accumulated HCV frames to extract a bit grid representation.
+        This is done by dividing each frame into a grid of cells, sampling central patches from each cell, classifying the patches using a lookup table and then computing a majority vote.
         
+        Arguments:
+            "self"
+        
+        Returns:
+            "bitgrid_2bit" (np.array): A 2D array containing bit values for each grid cell.
+            None
+            
         """
 
         if len(self.hcv_frames) == 0:
@@ -100,23 +109,24 @@ class BitColorTracker:
         hcv_frames = np.asarray(self.hcv_frames)
         self.hcv_frames = []
 
-        padded_frames, self.cell_h, self.cell_w = self._pad_frames(hcv_frames)
+        padded_frames, self.cell_height, self.cell_width = self._pad_frames(hcv_frames)
 
         N, _, _, _ = padded_frames.shape
 
-        cells = padded_frames.reshape(N, self.number_of_rows, self.cell_h, self.number_of_columns, self.cell_w, 3)
+        cells = padded_frames.reshape(N, self.number_of_rows, self.cell_height, self.number_of_columns, self.cell_width, 3)
 
-        patch_h = max(self.cell_h // 2, 1)
-        patch_w = max(self.cell_w // 2, 1)
+        patch_height = max(self.cell_height // 2, 1)
+        patch_width = max(self.cell_width // 2, 1)
 
-        h0 = (self.cell_h - patch_h) // 2
-        h1 = h0 + patch_h
-        w0 = (self.cell_w - patch_w) // 2
-        w1 = w0 + patch_w
+        h0 = (self.cell_height - patch_height) // 2
+        h1 = h0 + patch_height
+
+        w0 = (self.cell_width - patch_width) // 2
+        w1 = w0 + patch_width
 
         sampled_cells = cells[:, :, h0:h1, :, w0:w1, :]
 
-        if patch_h > end_bit_steps and patch_w > end_bit_steps:
+        if patch_height > end_bit_steps and patch_width > end_bit_steps:
             sampled_cells = sampled_cells[:, :, ::end_bit_steps, :, ::end_bit_steps, :]
 
         Hc = sampled_cells[..., 0].astype(np.uint16)
@@ -132,10 +142,13 @@ class BitColorTracker:
 
         if bits_per_cell == 1:
             idx_to_bit = idx_to_1bit
+
         elif bits_per_cell == 2:
             idx_to_bit = idx_to_2bit
+
         elif bits_per_cell == 3:
             idx_to_bit = idx_to_3bit
+
         else:
             raise NotImplementedError("Mapping table for this bits_per_cell not defined")
 

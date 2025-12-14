@@ -9,7 +9,7 @@ import time
 # Non-library imports
 
 from utilities.encoding_functions import audio_data_to_frame_bit_arrays
-from utilities.audio_compressor import audio_compressor
+from utilities.audio_functions import audio_compressor
 
 from utilities.image_generation_functions import(
     create_color_reference_frame,
@@ -42,7 +42,7 @@ def send_audio_data(audio_file):
         color_frame = create_color_frame(color) # Creates a frame in the color
         sync_frames.append(color_frame) # Adds the color frame to the sync frame list
 
-    frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame = audio_compressor(audio_file)
+    frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame, _, _ = audio_compressor(audio_file)
 
     frame_bit_arrays = audio_data_to_frame_bit_arrays(frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame) # Converts the message to frame bit arrays
 
