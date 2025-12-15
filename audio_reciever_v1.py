@@ -50,7 +50,7 @@ from utilities.global_definitions import (
 
 # --- Definitions --- 
 
-using_webcam = True
+using_webcam = False
 
 watchdog_on = False
 
@@ -61,7 +61,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_1604.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_audio.mp4")
  
 # --- Video capture setup ---
 
