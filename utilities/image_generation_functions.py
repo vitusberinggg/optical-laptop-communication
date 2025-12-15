@@ -6,10 +6,12 @@ import cv2
 
 from utilities.global_definitions import (
     red_bgr, green_bgr, blue_bgr, gray_bgr,
+    yellow_bgr, magenta_bgr, orange_bgr, cyan_bgr,
     sender_output_height, sender_output_width,
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
-    aruco_marker_dictionary, small_aruco_marker_side_length, large_aruco_marker_side_length, aruco_marker_margin, aruco_marker_ids
+    aruco_marker_dictionary, small_aruco_marker_side_length, 
+    large_aruco_marker_side_length, aruco_marker_margin, aruco_marker_ids
 )
 
 # --- Functions ---
@@ -152,6 +154,39 @@ def create_large_aruco_marker_frame(position = "right"):
     frame[y_coordinate:y_coordinate + large_aruco_marker_side_length, x_coordinate:x_coordinate + large_aruco_marker_side_length] = marker_bgr
 
     return frame
+
+def create_seven_color_reference_frame():
+    
+    """
+    Creates a reference frame with all key colors for the receiver to calibrate.
+
+    Arguments: 
+        None
+    
+    Returns:
+        color_reference_frame (np.ndarray): The reference frame (BGR).
+
+    """
+
+    color_reference_frame = np.zeros((sender_output_height, sender_output_width, 3), dtype = np.uint8) # Creates a blank frame
+
+    colors = [red_bgr, green_bgr, blue_bgr, yellow_bgr, cyan_bgr, magenta_bgr, orange_bgr]
+
+    stripe_width = sender_output_width // len(colors) # Divides the frame into equal vertical stripes for each color
+
+    for stripe_index, color in enumerate(colors):
+
+        x_start = stripe_index * stripe_width
+
+        if stripe_index != len(colors) - 1: # If the stripe index isn't the last one:
+            x_end = (stripe_index + 1) * stripe_width
+        
+        else: # Else (if it's the last one):
+            x_end = sender_output_width
+
+        color_reference_frame[:, x_start:x_end] = color # Fill the entire stripe with the current color
+
+    return color_reference_frame
 
 def create_color_reference_frame():
     
