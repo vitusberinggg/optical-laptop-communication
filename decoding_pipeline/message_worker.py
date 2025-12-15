@@ -25,7 +25,7 @@ def message_worker(bitgrid_queue, message_queue, recall, last_frame, stop_flag, 
 
         try:
             # Frame format: (hcv_roi, recall, add_frame, end_frame)
-            bitgrid = bitgrid_queue.get(timeout=0.1)
+            msg_bitgrid, bitgrid = bitgrid_queue.get(timeout=0.1)
         except Exception:
             continue
 
@@ -37,19 +37,25 @@ def message_worker(bitgrid_queue, message_queue, recall, last_frame, stop_flag, 
                 last_queue_debug_print = current_time
             decode_start = time.time()
 
-        # --- Decode message block ---
-        if len(bitgrid) > 0:
+
+        if msg_bitgrid == "DATA":
+            if bitgrid is None or len(bitgrid) == 0:
+                continue
             block = "".join(core_decode_message(bitgrid))
             message_buffer += block   # <-- append to cumulative message
             if debug_worker:
                 print(f"[MESSAGE] Decoded block: {block}")
                 print(f"[MESSAGE] Message buffer so far: {message_buffer}")
 
-        # --- Flush output only if recall=True ---
-        if recall and last_frame.value:
+        elif msg_bitgrid == "<FLUSH>":
             message_queue.put(message_buffer)
-            print(f"[Message] message queue size: {message_queue.qsize()}")
+            print(f"[Message] message complete, queue size: {message_queue.qsize()}")
             message_buffer = ""   # reset ONLY after full flush
+
+        elif msg_bitgrid == "<COMPLETE>":
+            message_queue.put(message_buffer)
+            print(f"[Message] message flushed, queue size: {message_queue.qsize()}")
+            message_buffer = ""   # reset ONLY after full message
         
 
         # Update timestamp for watchdog

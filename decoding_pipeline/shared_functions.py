@@ -110,14 +110,15 @@ class shared:
         Arguments:
             max_wait (float): Maximum time in seconds to wait for a message.
         """
-        self._recall_flag.value = True  # request message recall
+
+        self._bitgrid_queue.put(("<FLUSH>", None))
+        
         start_time = time.time()
 
         decoded_message = None
         while time.time() - start_time < max_wait:
             try:
                 decoded_message = self._message_queue.get_nowait()
-                self._recall_flag.value = False
                 break  # message received
             except queue.Empty:
                 time.sleep(0.01)  # yield CPU / allow GUI to check for input
