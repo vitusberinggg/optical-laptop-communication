@@ -19,7 +19,7 @@ from utilities.global_definitions import (
     green_lower_hcv_limit, green_upper_hcv_limit,
     blue_lower_hcv_limit, blue_upper_hcv_limit,
     end_bit_steps, dominant_color_steps, idx_to_2bit, 
-    idx_to_1bit, idx_to_3bit, bits_per_cell
+    idx_to_1bit, idx_to_3bit, bits_per_cell, delta_h
 )
 
 # --- Functions ---
@@ -451,4 +451,56 @@ def color_offset_calculation(roi):
 
         corrected_ranges[color] = (lower_corrected, upper_corrected)
         
+    return corrected_ranges
+
+def range_calibration(roi):
+    
+    original_hcv_ranges = { "white": ([0, 0, 150], [179, 70, 255]),
+                            "black": ([0, 0, 0], [179, 255, 50]), 
+                            "red": ([0, 40, 60], [10, 255, 255]),
+                            "green": ([40, 40, 60], [80, 255, 255]), 
+                            "blue": ([100, 40, 60], [140, 255, 255]),
+                            "yellow":([20,40,60],[40,255,255]),
+                            "cyan": ([80,40, 60],[100,255,255]),
+                            "magenta":([140,40,60],[160,255,255]), 
+                            "orange": ([10, 40, 60],[20, 255, 255])}
+
+    roi_hcv = bgr_to_hcv(roi)
+
+    colors_to_calibrate = ["red", "green", "blue", "yellow", "cyan", "magenta", "orange"]
+    stripe_width = roi.shape[1] // len(colors_to_calibrate)
+    patch_width = stripe_width // 2
+    start_offset = (stripe_width - patch_width) // 2
+
+    corrected_ranges = {}
+
+     # Keep black and white ranges unchanged
+    for color in ["white", "black"]:
+        corrected_ranges[color] = original_hcv_ranges[color]
+
+    for idx, color in enumerate(colors_to_calibrate):
+        x_start = idx * stripe_width + start_offset
+        x_end = x_start + patch_width
+
+        stripe_patch = roi_hcv[:, x_start:x_end]
+        median_hcv = np.median(stripe_patch.reshape(-1, 3), axis=0)
+        observed_hue, observed_chroma, observed_value = median_hcv
+
+        print(f"[CALIBRATION] {color}: Observed HCV = H:{observed_hue:.1f}, C:{observed_chroma:.1f}, V:{observed_value:.1f}")
+
+        # Keep original C & V
+        lower_orig, upper_orig = original_hcv_ranges[color]
+        lower_orig = np.array(lower_orig, dtype=float)
+        upper_orig = np.array(upper_orig, dtype=float)
+
+        # Apply delta_h around observed hue
+        lower_h = (observed_hue - delta_h) % 180
+        upper_h = (observed_hue + delta_h) % 180
+
+        lower_corrected = np.array([lower_h, lower_orig[1], lower_orig[2]], dtype=int)
+        upper_corrected = np.array([upper_h, upper_orig[1], upper_orig[2]], dtype=int)
+
+        corrected_ranges[color] = (lower_corrected, upper_corrected)
+
+    print(f"corrected ranges: {corrected_ranges}")
     return corrected_ranges
