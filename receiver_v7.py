@@ -97,6 +97,7 @@ def receive_message():
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
+    orange_detected = False
 
     decoded_message = None
 
@@ -378,9 +379,14 @@ def receive_message():
                         add_frame = True
 
                     elif color == "orange": # If the color is orange and the last color wasn't orange:
-                        
-                        #profiler.disable()
-                        current_state = "waiting for message"
+                        if not orange_detected:
+                            orange_detected = True
+                            orange_start_time = time.monotonic()
+
+                        else:
+                            if time.monotonic() - orange_start_time > orange_time:
+                                #profiler.disable()
+                                current_state = "waiting for message"
 
                     try:
                         frame_data = (roi_hcv, add_frame, end_frame) # Create a tuple with the frame data

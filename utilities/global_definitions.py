@@ -56,6 +56,8 @@ green_upper_hcv_limit = (80, 255, 255)
 blue_lower_hcv_limit = (100, 150, 0)
 blue_upper_hcv_limit = (140, 255, 255)
 
+delta_h = 5
+
 # --- Color maps ---
 
 color_map_2bit = [
@@ -89,12 +91,23 @@ idx_to_2bit = {
     5: 0b10,  # blue
     4: 0b11,  # green
 }
-
+"""
 idx_to_3bit = {
     0: 0b001,  # white
     1: 0b000,  # black
     2: 0b010,  # red1
-    3: 0b010,  # red2 (same as red1)
+    3: 0b011,  # green
+    4: 0b100,  # blue
+    5: 0b101,  # yellow
+    6: 0b110,  # cyan
+    7: 0b111,  # magenta
+}
+"""
+idx_to_3bit = {
+    0: 0b001,  # white
+    1: 0b000,  # black
+    2: 0b010,  # red1
+    3: 0b010,  # red2
     4: 0b011,  # green
     5: 0b100,  # blue
     6: 0b101,  # yellow
@@ -165,7 +178,7 @@ roi_window_width = 854
 roi_rectangle_thickness = 3
 
 minimized_roi_rectangle_thickness = 2
-minimized_roi_fraction = 1/10
+minimized_roi_fraction = 1/12
 
 # --- Steps definitions ---
 
