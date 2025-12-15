@@ -5,7 +5,7 @@ import time
 from utilities.decoding_functions import core_decode_message
 from decoding_pipeline.shared_functions import shared_class
 
-def message_worker(bitgrid_queue, message_queue, recall, last_frame, stop_flag, last_message_timestamp, debug_worker=False):
+def message_worker(bitgrid_queue, message_queue, recall, last_frame, stop_flag, last_message_timestamp, debug_worker=True):
     
     """
     Decoding worker process.

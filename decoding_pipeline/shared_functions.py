@@ -1,8 +1,10 @@
 # decoding_pipeline\shared_functions.py
 
 import multiprocessing
+from multiprocessing import shared_memory
 import time
 import queue
+import numpy as np
 
 class shared:
 
@@ -17,6 +19,10 @@ class shared:
         self._last_decode_timestamp = None
         self._last_message_timestamp = None
         self._last_frame = None
+
+        self.shm = None
+        self.shm_array = None
+        self.dtype = np.uint8
 
 
     def initialize_shared_objects(self, queue_maxsize=100):
@@ -60,6 +66,11 @@ class shared:
 
     # --- Decoding worker ---
 
+    def preallocate_shared_memory(self, frame):
+        frame_shape = frame.shape
+        self.shm = shared_memory.SharedMemory(create=True, size=np.prod(frame_shape) * np.dtype(self.dtype).itemsize)
+        self.shm_array = np.ndarray(frame_shape, dtype=self.dtype, buffer=self.shm.buf)
+
     def push_frame(self, frame_data):
         """
         Push a frame into the shared decoding queue.
@@ -70,7 +81,14 @@ class shared:
 
         if self._frame_queue is None:
             raise RuntimeError("Pipeline not started. Call start_pipeline() first.")
+        
+        hcv_roi, add_frame, end_frame = frame_data
 
+        '''
+        np.copyto(self.shm_array, hcv_roi)
+
+        queue_item = (self.shm.name, self.shm_array.shape, str(self.shm_array.dtype), add_frame, end_frame)
+        '''
         try:
             self._frame_queue.put(frame_data, timeout=0.1)
         except multiprocessing.queues.Full:

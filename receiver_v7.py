@@ -6,7 +6,7 @@
 import cProfile # Provides deterministic profiling (statistics that describes how often and for how long various parts of a program executes)
 import pstats # Module for formatting the profiling into reports
 
-import threading
+import multiprocessing
 import queue
 
 import cv2
@@ -52,6 +52,14 @@ using_webcam = False
 
 decoded_message = None
 
+# --- Pre-compile numba functions ---
+
+def warmup_numbas():
+    # Uses dummies to pre-compile with
+    dummy_bgr = np.zeros((480, 640, 3), dtype=np.uint8)
+    dummy_bgr = np.ascontiguousarray(dummy_bgr)
+    bgr_to_hcv(dummy_bgr)
+
 # --- Main function ---
 
 def receive_message():
@@ -82,6 +90,7 @@ def receive_message():
     last_state_time = None
 
     interval = 0 # Interval between frames in seconds
+    frame_waitkey_count = 0
 
     current_bit_colors = [] # Colors collected for the current bit
     roi_coordinates = None
@@ -95,12 +104,12 @@ def receive_message():
 
     # --- Debugging ---
 
-    """
+    #"""
 
     previous_time = time.time()
     frame_count = 0
 
-    """
+    #"""
 
     # --- End of debugging ---
     
@@ -123,6 +132,9 @@ def receive_message():
 
     # --- End of debugging ---
 
+    # pre-compiles the numbas
+    warmup_numbas()
+
     try:
 
         while True:
@@ -137,7 +149,7 @@ def receive_message():
 
             # --- Debugging ---
 
-            """
+            #"""
 
             frame_count += 1
 
@@ -148,7 +160,7 @@ def receive_message():
                 frame_count = 0
                 previous_time = current_time
 
-            """
+            #"""
 
             # --- End of debugging ---
 
@@ -249,6 +261,9 @@ def receive_message():
                     roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
                     minimized_roi = roi # Set the minimized ROI to the dummy ROI
 
+                roi = np.ascontiguousarray(roi)
+                minimized_roi = np.ascontiguousarray(minimized_roi)
+
                 roi_hcv = bgr_to_hcv(roi)
                 minimized_roi_hcv = bgr_to_hcv(minimized_roi)
                 
@@ -296,6 +311,7 @@ def receive_message():
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
+                            #shared_class.preallocate_shared_memory(roi)
                             
                             receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
 
@@ -331,6 +347,7 @@ def receive_message():
 
                 elif current_state == "end of sync":
                     if color != "orange" and last_color == "orange":
+                        #profiler.enable()
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -362,6 +379,7 @@ def receive_message():
 
                     elif color == "orange": # If the color is orange and the last color wasn't orange:
                         
+                        #profiler.disable()
                         current_state = "waiting for message"
 
                     try:
@@ -405,8 +423,10 @@ def receive_message():
 
             # --- End of ROI processing ---
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            #frame_waitkey_count += 1
+            #if frame_waitkey_count%5 == 0:
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:
             print(f"[INFO] Colors collected for last unfinished bit: {current_bit_colors}")
@@ -424,11 +444,13 @@ def receive_message():
         videoCapture.release()
         cv2.destroyAllWindows() 
 
+
+
+
 # --- Execution ---
 
-if __name__ == "__main__":
 
-    import multiprocessing
+if __name__ == "__main__":
 
     multiprocessing.freeze_support()   # For Windows EXEs, harmless otherwise
 
@@ -437,6 +459,7 @@ if __name__ == "__main__":
     base = os.path.dirname(__file__)
     path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
     
+
     # --- Video capture setup ---
 
     if using_webcam:
@@ -469,9 +492,13 @@ if __name__ == "__main__":
     else:
         videoCapture = VideoProcessCapture(path, False, True, core=[11, 10]) # Initializes a video capture object with a pre-recorded video
 
+
+
     if not videoCapture.isOpened():
         print("\n[WARNING] Couldn't start video capture.")
         exit()
+
+
 
     while True:
 
@@ -482,6 +509,8 @@ if __name__ == "__main__":
 
         time.sleep(0.01)
 
+
+
     # --- OpenCV window setup ---
 
     cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
@@ -490,9 +519,12 @@ if __name__ == "__main__":
     cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
 
+
+
     # --- ArUco detector setup ---
 
     aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
+
 
     # Start pipeline
     pip.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_message_worker=[5], core_watchdog=[4])
