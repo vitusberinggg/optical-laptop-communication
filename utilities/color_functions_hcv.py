@@ -234,35 +234,38 @@ def bitgrid_majority_calculator(patch_class_array, number_of_classes):
 
 tracker = BitColorTracker()
 
+@njit("uint8[:, :, :](uint8[:, :, :])", 
+      parallel=True, fastmath=True, cache=True)
 def bgr_to_hcv(bgr):
-    B = bgr[..., 0].astype(np.int16)
-    G = bgr[..., 1].astype(np.int16)
-    R = bgr[..., 2].astype(np.int16)
+    h, w, _ = bgr.shape
+    out = np.empty((h, w, 3), dtype=np.uint8)
 
-    maxc = np.maximum.reduce([R, G, B])
-    minc = np.minimum.reduce([R, G, B])
-    C = maxc - minc
-    V = maxc
+    for i in prange(h):
+        for j in range(w):
+            B = int(bgr[i, j, 0])
+            G = int(bgr[i, j, 1])
+            R = int(bgr[i, j, 2])
 
-    h = np.zeros_like(R)
+            maxc = R if R >= G and R >= B else (G if G >= B else B)
+            minc = R if R <= G and R <= B else (G if G <= B else B)
 
-    mask = C != 0
-    idx = (maxc == R) & mask
-    h[idx] = (60 * (G[idx] - B[idx]) // C[idx]) % 360
+            C = maxc - minc
+            V = maxc
 
-    idx = (maxc == G) & mask
-    h[idx] = (60 * (B[idx] - R[idx]) // C[idx] + 120) % 360
+            hval = 0
+            if C != 0:
+                if maxc == R:
+                    hval = (60 * (G - B) // C) % 360
+                elif maxc == G:
+                    hval = (60 * (B - R) // C + 120) % 360
+                else:
+                    hval = (60 * (R - G) // C + 240) % 360
 
-    idx = (maxc == B) & mask
-    h[idx] = (60 * (R[idx] - G[idx]) // C[idx] + 240) % 360
+            out[i, j, 0] = hval // 2
+            out[i, j, 1] = C
+            out[i, j, 2] = V
 
-    # Convert to OpenCV-like hue scaling
-    H = (h // 2).astype(np.uint8)
-    C = C.astype(np.uint8)
-    V = V.astype(np.uint8)
-
-    # STACK INTO (H, W, 3) IMAGE
-    return np.stack((H, C, V), axis=-1)
+    return out
 
 
 

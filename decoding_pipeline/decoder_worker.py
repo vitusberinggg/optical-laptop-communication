@@ -25,6 +25,7 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
     last_queue_debug_print = 0
     last_timing_debug_print = 0
     LUT_ready = False
+    complete = False
     bitgrid = [[]]  # Initialize bitgrid as empty list
 
     while not stop_flag.value or not frame_queue.empty():
@@ -74,7 +75,8 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
         if color != "orange":
             bitgrid = core_decode_bitgrid_hcv(hcv_roi, end_frame, debug_bytes=False)
         else:
-            last_frame.value = True
+            bitgrid_queue.put(("<COMPLETE>", None))
+            continue
 
         # --- Skip invalid results ---
         if bitgrid is None or (isinstance(bitgrid, np.ndarray) and bitgrid.size == 0):
@@ -82,7 +84,7 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
 
         # --- Push into queue ---
         try:
-            bitgrid_queue.put(bitgrid, timeout=0.1)
+            bitgrid_queue.put(("DATA", bitgrid), timeout=0.1)
         except queue.Full:
             print("[WARNING] Bitgrid queue is full.")
 
