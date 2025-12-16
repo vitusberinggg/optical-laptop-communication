@@ -122,3 +122,36 @@ def roi_alignment_for_large_markers(corners, marker_ids, frame):
             print("\n[INFO] ROI set around outer corners of markers.")
 
     return roi_coordinates, w_px, h_px
+
+def warp_alignment(frame, H, dst_width, dst_height):
+    """
+    Calculates the homography matrix based on the saved corners of the ArUco markers.
+    
+    Arguments:
+        frame = The original frame before warp, 
+        H = The homographic matrix, 
+        dst_width = How wide the finished warp will be, 
+        dst_height = How high the finished warp will be
+
+    Returns:
+        "warped image": The warped image.
+    """
+
+    warped = cv2.warpPerspective(frame, H, (dst_width, dst_height))
+    return warped
+
+def homography_matrix(pts_src, pts_dst):
+
+    """
+    Calculates the homography matrix based on the saved corners of the ArUco markers.
+
+    Arguments:
+        pts_src
+
+    Returns:
+        "homography_matrix": The calculated homography matrix.
+    """
+
+    homography_matrix, _ = cv2.findHomography(pts_src, pts_dst)
+
+    return homography_matrix
