@@ -28,7 +28,7 @@ from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
-    bgr_to_hcv
+    bgr_to_hcv, range_calibration
 )
 from utilities.color_functions_bgr import dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
@@ -294,7 +294,9 @@ def receive_message():
 
                 cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
+                #if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
+                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "red":
+                 
                     print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
@@ -308,7 +310,8 @@ def receive_message():
 
                         try:
 
-                            corrected_ranges = color_offset_calculation(roi)
+                            #corrected_ranges = color_offset_calculation(roi)
+                            corrected_ranges = range_calibration(roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
@@ -463,7 +466,7 @@ if __name__ == "__main__":
     # Video path
 
     base = os.path.dirname(__file__)
-    path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
+    path = os.path.join(base, "webcam_simulation", "sender_v6_color2.mp4")
     
 
     # --- Video capture setup ---

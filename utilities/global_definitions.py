@@ -57,6 +57,8 @@ blue_lower_hcv_limit = (100, 150, 0)
 blue_upper_hcv_limit = (140, 255, 255)
 
 delta_h = 5
+delta_c = 15
+delta_v = 15
 
 # --- Color maps ---
 
@@ -91,7 +93,7 @@ idx_to_2bit = {
     5: 0b10,  # blue
     4: 0b11,  # green
 }
-"""
+
 idx_to_3bit = {
     0: 0b001,  # white
     1: 0b000,  # black
@@ -114,7 +116,7 @@ idx_to_3bit = {
     7: 0b110,  # cyan
     8: 0b111,  # magenta
 }
-
+"""
 # --- Sender output definitions ---
 
 sender_output_width = 1920 # Width of the sender output in pixels
