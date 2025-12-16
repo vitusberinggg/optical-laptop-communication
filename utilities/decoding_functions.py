@@ -419,6 +419,12 @@ def core_decode_message(core_bitgrid, debug_bytes=False):
 
     return bits_to_message(byte_matrix)
 
+def core_decode_audio():
+    """
+    Docstring for core_decode_audio
+    """
+    
+
 
 # --- Bit decoding functions ---
 
