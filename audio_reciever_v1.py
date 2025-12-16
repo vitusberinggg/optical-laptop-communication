@@ -61,7 +61,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_audio.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_audio_2000Hz_(wav).mp4")
  
 # --- Video capture setup ---
 
@@ -317,7 +317,7 @@ def receive_data():
 
     # --- End of debugging ---
 
-    _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
+    #frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame = audio_compressor(audio_file)
 
     try:
 
@@ -623,9 +623,9 @@ def receive_data():
 
             frequency_indices, amplitude_levels = decoded_audio_data
 
-            _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
+            #_, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
 
-            output_file = audio_reconstructor(frequency_indices, amplitude_levels, spectrogram_phase)
+            output_file = audio_reconstructor(frequency_indices, amplitude_levels)
 
             audio_data, sample_rate = soundfile.read(output_file)
             sounddevice.play(audio_data, sample_rate)
