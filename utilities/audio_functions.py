@@ -6,6 +6,7 @@
 import numpy as np # Library for handling numerical arrays, needed to manipulate matrices
 import librosa # High-level audio processing library to load audio files, compute frequency spectrograms, resample etc.
 import soundfile
+import matplotlib.pyplot as plt
 
 # Non-library imports
 
@@ -20,7 +21,8 @@ from utilities.global_definitions import(
 def audio_compressor(input_file):
 
     """
-    Heavily compresses an audio file by removing frequencies and amplitudes, only keeping the bare minimum for the audio to still be recognizable.
+    Heavily compresses an audio file by removing frequencies and amplitudes, 
+    only keeping the bare minimum for the audio to still be recognizable.
 
     Arguments:
         "input_file" (str): The audio file to compress.
@@ -43,12 +45,28 @@ def audio_compressor(input_file):
 
     print("\n[INFO] Creating a spectrogram...")
     
-    audio_signal, _ = librosa.load(input_file, sr = target_sample_rate, mono = True) # Reads the audio file
+    audio_signal, _ = librosa.load(
+        input_file, 
+        sr = target_sample_rate, 
+        mono = True
+    ) # Reads the audio file
 
-    spectrogram = librosa.stft(audio_signal, n_fft = frequency_spectrogram_frame_size, hop_length = hop_length) # Computes the STFT, which converts the time-domain signal into a complex matrix where each row corresponds to a frequency bin, and each column corresponds to a time frame
+    spectrogram = librosa.stft(
+        audio_signal, 
+        n_fft = frequency_spectrogram_frame_size, 
+        hop_length = hop_length
+    ) 
+    """
+    Computes the STFT, which converts the time-domain signal 
+    into a complex matrix where each row corresponds to a frequency bin, 
+    and each column corresponds to a time frame
+    """
 
-    spectrogram_magnitude = np.abs(spectrogram) # The absolute value (amplitude) of each frequency bin at each time frame
-    spectrogram_phase = np.angle(spectrogram) # The phase of each frequency bin (needed for exact waveform reconstruction, as quantizing causes artifacts)
+    spectrogram_magnitude = np.abs(spectrogram) 
+    # The absolute value (amplitude) of each frequency bin at each time frame
+
+    spectrogram_phase = np.angle(spectrogram) 
+    # The phase of each frequency bin (needed for exact waveform reconstruction, as quantizing causes artifacts)
 
     print("\n[INFO] Spectrogram created.")
 
@@ -73,7 +91,11 @@ def audio_compressor(input_file):
         reduced_magnitude[loudest_frequency_indices, time_frame] = column[loudest_frequency_indices]
 
     if reduced_magnitude.max() != 0: # If the input isn't silent:
-        normalized_magnitude = reduced_magnitude / reduced_magnitude.max() # Normalizes the magnitude by dividing it by its maximum value to ensure that quantization levels are interpreted relative to the maximum energy present
+        normalized_magnitude = reduced_magnitude / reduced_magnitude.max() 
+        """
+        Normalizes the magnitude by dividing it by its maximum value to 
+        ensure that quantization levels are interpreted relative to the maximum energy present
+        """
 
     else: # Else (if it's completely silent):
         normalized_magnitude = reduced_magnitude # (To avoid division by zero)
@@ -84,19 +106,29 @@ def audio_compressor(input_file):
 
     print("\n[INFO] Quantizing the amplitude...")
 
-    quantized_magnitude = np.digitize(normalized_magnitude, quantized_amplitude_levels) - 1 # Maps each continuous normalized magnitude value to a discrete index 0
+    quantized_magnitude = np.digitize(normalized_magnitude, quantized_amplitude_levels) - 1 
+    # Maps each continuous normalized magnitude value to a discrete index 0
 
-    quantized_magnitude = quantized_amplitude_levels[quantized_magnitude] # Replaces each index with the actual quantized level
+    quantized_magnitude = quantized_amplitude_levels[quantized_magnitude] 
+    # Replaces each index with the actual quantized level
 
-    quantized_magnitude *= reduced_magnitude.max() # Restores the original scale by multiplying the quantized normalized values back by the previous maximum magnitude
+    quantized_magnitude *= reduced_magnitude.max() 
+    # Restores the original scale by multiplying the quantized normalized values back by the previous maximum magnitude
 
     quantized_amplitude_levels_per_time_frame = []
 
     for time_frame in range(number_of_time_frames):
 
-        quantized_amplitude_indices = np.digitize(normalized_magnitude[loudest_frequency_indices, time_frame], quantized_amplitude_levels) - 1
+        loudest_frequency_indices = frequency_indices_per_time_frame[time_frame]
 
-        quantized_amplitude_levels_per_time_frame.append(quantized_amplitude_indices.astype(np.int32))
+        quantized_amplitude_indices = np.digitize(
+            normalized_magnitude[loudest_frequency_indices, time_frame], 
+            quantized_amplitude_levels
+        ) - 1
+
+        quantized_amplitude_levels_per_time_frame.append(
+            quantized_amplitude_indices.astype(np.int32)
+        )
 
     print(f"\n[INFO] Reduced the amount of amplitude levels to {target_number_of_amplitude_levels}")
 
@@ -106,9 +138,11 @@ def audio_compressor(input_file):
 
         expanded_magnitude = quantized_magnitude
         
-        reconstructed_spectrogram = expanded_magnitude * np.exp(1j * spectrogram_phase) # Reconstructs the spectrogram based on the magnitude matrix
+        reconstructed_spectrogram = expanded_magnitude * np.exp(1j * spectrogram_phase) 
+        # Reconstructs the spectrogram based on the magnitude matrix
 
-        reconstructed_audio_signal = librosa.istft(reconstructed_spectrogram, hop_length = hop_length) # Inverse transformation based on spectrogram
+        reconstructed_audio_signal = librosa.istft(reconstructed_spectrogram, hop_length = hop_length) 
+        # Inverse transformation based on spectrogram
 
         output_file = "audio_files/compressed_audio.wav"
 
@@ -127,15 +161,18 @@ def audio_compressor(input_file):
 
         number_of_frequency_bins = spectrogram_magnitude.shape[0]
 
-        total_duration = number_of_time_frames * seconds_per_time_frame # Total reconstructed audio duration
+        total_duration = number_of_time_frames * seconds_per_time_frame 
+        # Total reconstructed audio duration
 
         print(f"\n[INFO] Audio duration: {total_duration:.2f} s")
 
-        bits_per_frequency_index = int(np.ceil(np.log2(number_of_frequency_bins))) # Bits required to store frequency index
+        bits_per_frequency_index = int(np.ceil(np.log2(number_of_frequency_bins))) 
+        # Bits required to store frequency index
 
         print(f"\n[INFO] Bits per frequency index: {bits_per_frequency_index} bits")
 
-        bits_per_amplitude_level = int(np.ceil(np.log2(target_number_of_amplitude_levels))) # Bits required to store quantized amplitude level
+        bits_per_amplitude_level = int(np.ceil(np.log2(target_number_of_amplitude_levels))) 
+        # Bits required to store quantized amplitude level
 
         print(f"\n[INFO] Bits per amplitude level: {bits_per_amplitude_level} bits")
 
@@ -149,18 +186,38 @@ def audio_compressor(input_file):
 
         print(f"\n[INFO] Bitrate: {round(bitrate)} bits/s")
 
-    return frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame, spectrogram_phase, quantized_magnitude
+    assert len(frequency_indices_per_time_frame) == len(quantized_amplitude_levels_per_time_frame), \
+    "Frame count mismatch between frequency indices and amplitude levels"
 
-def audio_reconstructor(frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame, spectrogram_phase, output_file = "audio_files/recieved_audio"):
+    for i in range(len(frequency_indices_per_time_frame)):
+        assert len(frequency_indices_per_time_frame[i]) == len(quantized_amplitude_levels_per_time_frame[i]), \
+            f"Frequency/amplitude count mismatch at frame {i}"
+
+    return frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame
+
+def audio_reconstructor(
+        frequency_indices_per_time_frame, 
+        quantized_amplitude_levels_per_time_frame, 
+        output_file = "audio_files/recieved_audio.wav"
+    ):
 
     """
     Reconstructs audio from given frequency and amplitude data.
 
     Arguments:
-        "frequency_indices_per_time_frame" (list of np.arrays): A list of 1D np.arrays containing information about the loudest frequencies for each time frame.  
-        "quantized_amplitude_levels_per_time_frame" (list of np.arrays): A list of 1D np.arrays containing information about the quantized amplitude level of each frequency for each time frame.
-        "spectrogram_phase" (np.angle): The phase of each frequency bin.
-        "output_file" (str): The path of the output file.
+        "frequency_indices_per_time_frame" (list of np.arrays): 
+        A list of 1D np.arrays containing information about 
+        the loudest frequencies for each time frame.  
+
+        "quantized_amplitude_levels_per_time_frame" (list of np.arrays): 
+        A list of 1D np.arrays containing information about the quantized 
+        amplitude level of each frequency for each time frame.
+
+        "spectrogram_phase" (np.angle): 
+        The phase of each frequency bin.
+
+        "output_file" (str): 
+        The path of the output file.
 
     Returns:
         None
@@ -169,23 +226,46 @@ def audio_reconstructor(frequency_indices_per_time_frame, quantized_amplitude_le
 
     number_of_time_frames = len(frequency_indices_per_time_frame)
 
-    number_of_frequency_bins = frequency_spectrogram_frame_size // 2 + 1 # Calculates the number of frequency bins using the 1 + n_fft / 2 formula
+    number_of_frequency_bins = frequency_spectrogram_frame_size // 2 + 1 
+    # Calculates the number of frequency bins using the 1 + n_fft / 2 formula
 
-    reconstructed_spectrogram = np.zeros((number_of_frequency_bins, number_of_time_frames)) # Initialized as empty
+    reconstructed_spectrogram = np.zeros((number_of_frequency_bins, number_of_time_frames)) 
+    # Initialized as empty
 
-    for time_frame in range(number_of_time_frames): # For each time frame:
+    for time_frame in range(number_of_time_frames): 
+        # For each time frame:
 
-        frequency_indices = frequency_indices_per_time_frame[time_frame] # Extract the frequency indices
-        amplitude_indices = quantized_amplitude_levels_per_time_frame[time_frame] # Extract the amplitude indices
+        frequency_indices = frequency_indices_per_time_frame[time_frame] 
+        # Extract the frequency indices
+        amplitude_indices = quantized_amplitude_levels_per_time_frame[time_frame] 
+        # Extract the amplitude indices
         
-        amplitude_values = quantized_amplitude_levels[amplitude_indices] # Map amplitude indices back to actual values
+        amplitude_values = quantized_amplitude_levels[amplitude_indices] 
+        # Map amplitude indices back to actual values
         
-        reconstructed_spectrogram[frequency_indices, time_frame] = amplitude_values # Places the amplitudes at their corresponding frequency bins
+        reconstructed_spectrogram[frequency_indices, time_frame] = amplitude_values 
+        # Places the amplitudes at their corresponding frequency bins
+    
+    assert reconstructed_spectrogram.ndim == 2
+    assert reconstructed_spectrogram.shape[0] == frequency_spectrogram_frame_size // 2 + 1
 
-    reconstructed_spectrogram = reconstructed_spectrogram * np.exp(1j * spectrogram_phase)
+    plt.imshow(np.abs(reconstructed_spectrogram), origin='lower', aspect='auto')
+    plt.colorbar()
+    plt.show()
 
-    reconstructed_audio_signal = librosa.istft(reconstructed_spectrogram, hop_length = hop_length)
+    reconstructed_audio_signal = librosa.griffinlim(
+        np.abs(reconstructed_spectrogram),
+        hop_length=hop_length,
+        n_fft=frequency_spectrogram_frame_size,
+        n_iter=32
+    )
+
+    print("Spectrogram shape:", reconstructed_spectrogram.shape)
+    print("Max magnitude:", np.max(reconstructed_spectrogram))
+    print("Min magnitude:", np.min(reconstructed_spectrogram))
+    print("Non-zero elements:", np.count_nonzero(reconstructed_spectrogram))
+
 
     soundfile.write(output_file, reconstructed_audio_signal, sample_rate)
 
-    return
+    return output_file
