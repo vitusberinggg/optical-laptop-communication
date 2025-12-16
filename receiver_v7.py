@@ -48,7 +48,7 @@ from utilities.global_definitions import (
 
 # --- Definitions --- 
 
-using_webcam = False
+using_webcam = True
 
 decoded_message = None
 
@@ -100,6 +100,7 @@ def receive_message():
 
     current_bit_colors = [] # Colors collected for the current bit
     roi_coordinates = None
+    display_warped_roi = None
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
@@ -392,14 +393,17 @@ def receive_message():
                 last_color = color # Update the last color
                 last_state = current_state
 
-                cv2.imshow("Warped roi", display_warped_roi)
+                if display_warped_roi is not None:
+                    if not hasattr(receive_message, "Display_warped_roi"):
+                        cv2.namedWindow("Warped roi", cv2.WINDOW_NORMAL)
+                        cv2.resizeWindow("Warped roi", roi_window_width, roi_window_height)
+                        receive_message.Display_warped_roi = ("Created")
+                    cv2.imshow("Warped roi", display_warped_roi)
 
             # --- End of warped_roi processing ---
 
-            #frame_waitkey_count += 1
-            #if frame_waitkey_count%5 == 0:
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:
             print(f"[INFO] Colors collected for last unfinished bit: {current_bit_colors}")
@@ -488,11 +492,6 @@ if __name__ == "__main__":
 
     cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
-
-    cv2.namedWindow("Warped roi", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Warped roi", roi_window_width, roi_window_height)
-
-
 
     # --- ArUco detector setup ---
 
