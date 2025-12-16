@@ -122,3 +122,119 @@ def roi_alignment_for_large_markers(corners, marker_ids, frame):
             print("\n[INFO] ROI set around outer corners of markers.")
 
     return roi_coordinates, w_px, h_px
+
+def warp_alignment(frame, H, dst_width, dst_height):
+    """
+    Calculates the homography matrix based on the saved corners of the ArUco markers.
+    
+    Arguments:
+        frame = The original frame before warp, 
+        H = The homographic matrix, 
+        dst_width = How wide the finished warp will be, 
+        dst_height = How high the finished warp will be
+
+    Returns:
+        "warped image": The warped image.
+    """
+
+    warped = cv2.warpPerspective(frame, H, (dst_width, dst_height))
+    return warped
+
+def homography_matrix(pts_src, pts_dst):
+
+    """
+    Calculates the homography matrix based on the saved corners of the ArUco markers.
+
+    Arguments:
+        pts_src
+
+    Returns:
+        "homography_matrix": The calculated homography matrix.
+    """
+
+    homography_matrix, _ = cv2.findHomography(pts_src, pts_dst)
+
+    return homography_matrix
+
+def homography_from_large_markers(corners, marker_ids, width, height):
+    """
+    Computes a homography using two large ArUco markers.
+
+    Arguments:
+        corners      : ArUco corners from OpenCV
+        marker_ids   : detected marker IDs
+        frame        : image (used only for safety checks)
+
+    Returns:
+        H             : 3x3 homography matrix or None
+    """
+
+    global saved_corners
+
+    H = None
+
+    # ----------------------------------
+    # Normalize marker_ids
+    # ----------------------------------
+    if hasattr(marker_ids, "flatten"):
+        ids_flat = marker_ids.flatten()
+    else:
+        ids_flat = np.array(marker_ids).flatten()
+
+    # ----------------------------------
+    # Build ID → corners mapping
+    # ----------------------------------
+    id_to_corners = {}
+    for idx, marker_id in enumerate(ids_flat):
+        id_to_corners[int(marker_id)] = corners[idx][0]
+
+    # ----------------------------------
+    # Persist only markers 0 and 1
+    # ----------------------------------
+    for marker_id in [0, 1]:
+        if marker_id in id_to_corners:
+            saved_corners[marker_id] = id_to_corners[marker_id]
+
+    # ----------------------------------
+    # Require both markers
+    # ----------------------------------
+    if saved_corners[0] is None or saved_corners[1] is None:
+        return None
+
+    # ----------------------------------
+    # Select source points (image)
+    # Order: TL, TR, BR, BL
+    # ----------------------------------
+    left_marker  = saved_corners[1]
+    right_marker = saved_corners[0]
+
+    src_pts = np.array([
+        left_marker[0],   # TL
+        right_marker[1],  # TR
+        right_marker[2],  # BR
+        left_marker[3]    # BL
+    ], dtype=np.float32)
+
+    # ----------------------------------
+    # Define destination rectangle
+    # (arbitrary units, consistent scale)
+    # ----------------------------------
+    #width  = np.linalg.norm(src_pts[1] - src_pts[0])
+    #height = np.linalg.norm(src_pts[2] - src_pts[1])
+
+    if width < 5 or height < 5:
+        return None
+
+    dst_pts = np.array([
+        [0, 0],
+        [width, 0],
+        [width, height],
+        [0, height]
+    ], dtype=np.float32)
+
+    # ----------------------------------
+    # Compute homography
+    # ----------------------------------
+    H, _ = cv2.findHomography(src_pts, dst_pts)
+
+    return H, src_pts

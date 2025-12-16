@@ -137,6 +137,8 @@ frame_duration = 0.3 # Duration for each frame in seconds
 
 orange_time = 0.2
 
+margin = 15
+
 message = "Hej! Jag hoppas att du har en stund för dig själv just nu, där du kan sitta ner och andas lite. Ibland känns livet som en snabb film där scenerna bara rusar förbi, och man hinner knappt hämta andan innan nästa moment kommer. Men det är viktigt att påminna sig själv om att även i de mest hektiska stunderna finns det små ögonblick av lugn, små stunder där allt känns lite mer balanserat. Tänk dig att varje dag är som ett tomt blad. Vissa dagar fylls det med färger, skratt, kanske någon tår eller två, och det är helt okej. Livet behöver alla nyanser för att bli komplett. Det du upplever, även de små, vardagliga sakerna, är viktiga delar i din historia. De är de små penseldragen som gör bilden av dig själv unik och värdefull. Jag vill också säga, ge dig själv erkännande. Allt du har klarat av hittills, alla problem du har löst, alla gånger du har rest dig upp igen efter motgångar det är styrka. Ibland är vi våra egna hårdaste kritiker, och det är lätt att glömma hur långt vi faktiskt har kommit. Men varje steg du tar, oavsett hur litet det känns, är betydelsefullt. Och vet du vad? Det är okej att inte alltid ha svaren. Det är okej att tveka, att känna sig osäker, eller att bara vilja stanna upp en stund. Ibland är det just i pauserna, i stillheten, som de bästa idéerna och de djupaste insikterna dyker upp. Så ta den där extra koppen te, gå en liten promenad, eller bara titta ut genom fönstret och observera världen en stund. Livet är fullt av små mirakel, och även om vi ibland inte ser dem direkt, finns de där, tysta men stadiga. Kom ihåg att du inte är ensam, och även när allt känns tungt finns det alltid möjligheter att hitta ljuset igen. Varje dag är en chans att skapa något nytt, att lära dig något om dig själv, och att ta hand om dig själv. Och det är något att vara stolt över. Så, avslutningsvis: fortsätt vara nyfiken, fortsätt drömma stort, och kom ihåg att ge dig själv samma vänlighet som du så lätt ger till andra. Du är värdefull, och världen är bättre med dig i den."
 
 # --- Reciever input definitions ---
@@ -153,6 +155,7 @@ aruco_marker_margin = 15
 
 small_aruco_marker_side_length = sender_output_height // 2 - 50
 large_aruco_marker_side_length = sender_output_height - 2 * aruco_marker_margin
+large_aruco_marker_side_length_without_margin = sender_output_height
 aruco_marker_size = 0
 aruco_marker_ids = [0, 1, 3, 2]
 
