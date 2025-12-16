@@ -25,7 +25,7 @@ profiler.enable()
 from webcam_simulation.webcamSimulator import VideoThreadedCapture
 
 from utilities.color_functions_hcv import (
-    color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
+    color_offset_calculation, range_calibration, tracker, build_color_LUT, dominant_color_hcv, 
     bitgrid_majority_calculator as numba_hcv, bgr_to_hcv
 )
 from utilities.color_functions_bgr import dominant_color_bgr
@@ -57,7 +57,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
+path = os.path.join(base, "webcam_simulation", "sender_v6_color_live.mp4")
  
 # --- Video capture setup ---
 
@@ -469,7 +469,8 @@ def receive_message():
 
                 cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
+                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "red":
+                #if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
@@ -483,7 +484,8 @@ def receive_message():
 
                         try:
 
-                            corrected_ranges = color_offset_calculation(roi)
+                            #corrected_ranges = color_offset_calculation(roi)
+                            corrected_ranges = range_calibration(roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
 
