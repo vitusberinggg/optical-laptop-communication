@@ -18,7 +18,7 @@ import numpy as np
 # Profiling initialization
 
 profiler = cProfile.Profile()
-profiler.enable()
+#profiler.enable()
 
 # Non-library modules
 
@@ -48,7 +48,7 @@ from utilities.global_definitions import (
 
 # --- Definitions --- 
 
-using_webcam = True
+using_webcam = False
 
 decoded_message = None
 
@@ -83,8 +83,8 @@ def receive_message():
     corners = None
     src_pts = None
 
-    wanted_width = 1920
-    wanted_height = 1080
+    wanted_width = 960
+    wanted_height = 540
 
     H = None
 
@@ -99,7 +99,6 @@ def receive_message():
     frame_waitkey_count = 0
 
     current_bit_colors = [] # Colors collected for the current bit
-    roi_coordinates = None
     display_warped_roi = None
 
     has_printed_aruco_detector_message = False
@@ -201,7 +200,6 @@ def receive_message():
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
-                    aruco_marker_side_length = 0
 
             # --- Display drawings ---
             
@@ -316,7 +314,7 @@ def receive_message():
 
                 elif current_state == "end of sync":
                     if color != "orange" and last_color == "orange":
-                        #profiler.enable()
+                        profiler.enable()
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -353,7 +351,7 @@ def receive_message():
 
                         else:
                             if time.monotonic() - orange_start_time > orange_time:
-                                #profiler.disable()
+                                profiler.disable()
                                 current_state = "waiting for message"
 
                     try:
@@ -402,8 +400,10 @@ def receive_message():
 
             # --- End of warped_roi processing ---
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            frame_waitkey_count += 1
+            if frame_waitkey_count%5 == 0:
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
 
         if current_bit_colors: # If there are colors collected for the current unfinished bit:
             print(f"[INFO] Colors collected for last unfinished bit: {current_bit_colors}")
@@ -507,7 +507,7 @@ if __name__ == "__main__":
         print("[Main] Caught Ctrl+C — shutting down pipeline")
         pip.stop_pipeline()
 
-    profiler.disable()
+    #profiler.disable()
 
     stats = pstats.Stats(profiler)
     stats.strip_dirs() # Removes directorys
