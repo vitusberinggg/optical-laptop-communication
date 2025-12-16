@@ -31,7 +31,7 @@ from utilities.color_functions_hcv import (
     bgr_to_hcv
 )
 from utilities.color_functions_bgr import dominant_color_bgr
-from utilities.screen_alignment_functions import roi_alignment_for_large_markers
+from utilities.screen_alignment_functions import roi_alignment_for_large_markers, warp_alignment, homography_from_large_markers
 from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
 from utilities.accuracy_calculator import accuracy_calculator
 
@@ -81,6 +81,12 @@ def receive_message():
 
     marker_ids = None
     corners = None
+    src_pts = None
+
+    wanted_width = 1920
+    wanted_height = 1080
+
+    H = None
 
     last_color = None
     last_state = None
@@ -179,8 +185,18 @@ def receive_message():
 
                     corners, marker_ids, _ = aruco_detector.detectMarkers(grayscaled_frame) # Call the ArUco detector on the grayscaled frame
 
-                    if marker_ids is not None and corners is not None and len(marker_ids) > 0 and roi_coordinates is None: # If markers were detected and there are no ROI coordinates yet:
-                        roi_coordinates, aruco_marker_side_length, _ = roi_alignment_for_large_markers(corners, marker_ids, frame) # Get the ROI coordinates based on the detected markers
+                    if marker_ids is not None and corners is not None and len(marker_ids) > 0 and H is None: # If markers were detected and there are no H (Homography) yet:
+                        H, src_pts = homography_from_large_markers(corners, marker_ids, wanted_width, wanted_height)
+
+                        minimized_roi_height = int(wanted_height * minimized_roi_fraction)
+                        minimized_roi_width = int(wanted_width * minimized_roi_fraction)
+
+                        minimized_start_x = minimized_roi_width // 2
+                        minimized_end_x   = minimized_start_x + minimized_roi_width
+
+                        minimized_start_y = (wanted_height - minimized_roi_height) // 2
+                        minimized_end_y = minimized_start_y + minimized_roi_height
+
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
@@ -201,71 +217,22 @@ def receive_message():
 
             cv2.imshow("Webcam Receiver", display)
 
-            # --- ROI processing ---
+            # --- warped_roi processing ---
 
-            if roi_coordinates is not None: # If there are ROI coordinates:
-                
-                if not hasattr(receive_message, "roi_padded"): # If "recieve_message" doesn't have the attribute "roi_padded":
+            if H is not None: # If there are a H (Homography):
+        
+                warped_roi = warp_alignment(frame, H, wanted_width, wanted_height)
+                minimized_roi = warped_roi[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
 
-                    print("\n[INFO] Calculating padded ROI coordinates...")
-                
-                    try:
-                        roi_padding_px = (aruco_marker_side_length / large_aruco_marker_side_length) * aruco_marker_margin # Calculate the padding in pixels
+                display_warped_roi = warped_roi.copy()
 
-                    except Exception:
-                        roi_padding_px = 0
+                cv2.polylines(display, [src_pts.astype(np.int32)], True, (green_bgr), roi_rectangle_thickness)
+                cv2.rectangle(display_warped_roi, (minimized_start_x, minimized_start_y), (minimized_end_x, minimized_end_y), (yellow_bgr), minimized_roi_rectangle_thickness)
 
-                    start_x, end_x, start_y, end_y = roi_coordinates # Unpack the ROI coordinates
-
-                    # ROI expansion
-
-                    print("\n[INFO] Calculating ROI coordinates...")
-
-                    start_x = int(start_x - roi_padding_px)
-                    end_x = int(end_x + roi_padding_px)
-
-                    start_y = int(start_y - roi_padding_px)
-                    end_y = int(end_y + roi_padding_px)
-
-                    print(f"[INFO] ROI coordinates: (start_x = {locals().get('start_x')}, end_x = {locals().get('end_x')}, start_y = {locals().get('start_y')}, end_y = {locals().get('end_y')})")
-
-                    # Minimized ROI coordinates
-
-                    print("\n[INFO] Calculating minimized ROI coordinates...")
-
-                    roi_height = end_y - start_y
-                    roi_width = end_x - start_x
-
-                    minimized_roi_height = int(roi_height * minimized_roi_fraction)
-                    minimized_roi_width = int(roi_width * minimized_roi_fraction)
-
-                    minimized_start_x = start_x + (minimized_roi_width // 2)
-                    minimized_end_x   = minimized_start_x + minimized_roi_width
-
-                    minimized_start_y = start_y + ((roi_height - minimized_roi_height) // 2)
-                    minimized_end_y = minimized_start_y + minimized_roi_height
-
-                    print(f"[INFO] Minimized ROI coordinates: (minimized_start_x = {locals().get('minimized_start_x')}, minimized_end_x = {locals().get('minimized_end_x')}, minimized_start_y = {locals().get('minimized_start_y')}, minimized_end_y = {locals().get('minimized_end_y')})")
-
-                    receive_message.roi_padded = (start_x, end_x, start_y, end_y) # Assigns the attribute "roi_padded" to "recieve_message" with given values
-
-                if start_x < end_x and start_y < end_y: # If the ROI coordinates are valid:
-
-                    cv2.rectangle(display, (start_x, start_y), (end_x, end_y), (green_bgr), roi_rectangle_thickness)
-                    cv2.rectangle(display, (minimized_start_x, minimized_start_y), (minimized_end_x, minimized_end_y), (yellow_bgr), minimized_roi_rectangle_thickness)
-            
-                    roi = frame[start_y:end_y, start_x:end_x] # Extract the ROI from the frame
-                    minimized_roi = frame[minimized_start_y:minimized_end_y, minimized_start_x:minimized_end_x] # Extract the minimized ROI from the frame
-            
-                else: # Else (if they aren't):
-                    print("\n[WARNING] Invalid ROI coordinates, creating dummy ROI...")
-                    roi = np.zeros((10, 10, 3), dtype = np.uint8) # Create a dummy ROI
-                    minimized_roi = roi # Set the minimized ROI to the dummy ROI
-
-                roi = np.ascontiguousarray(roi)
+                warped_roi = np.ascontiguousarray(warped_roi)
                 minimized_roi = np.ascontiguousarray(minimized_roi)
 
-                roi_hcv = bgr_to_hcv(roi)
+                roi_hcv = bgr_to_hcv(warped_roi)
                 minimized_roi_hcv = bgr_to_hcv(minimized_roi)
                 
                 if tracker.LUT is not None:
@@ -294,7 +261,7 @@ def receive_message():
 
                 cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-                if current_state == "aruco_marker_detection" and roi_coordinates is not None and color == "blue":
+                if current_state == "aruco_marker_detection" and H is not None and color == "blue":
                     print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
@@ -308,11 +275,11 @@ def receive_message():
 
                         try:
 
-                            corrected_ranges = color_offset_calculation(roi)
+                            corrected_ranges = color_offset_calculation(warped_roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
-                            #shared_class.preallocate_shared_memory(roi)
+                            #shared_class.preallocate_shared_memory(warped_roi)
                             
                             receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
 
@@ -425,9 +392,9 @@ def receive_message():
                 last_color = color # Update the last color
                 last_state = current_state
 
-                cv2.imshow("ROI", roi)
+                cv2.imshow("Warped roi", display_warped_roi)
 
-            # --- End of ROI processing ---
+            # --- End of warped_roi processing ---
 
             #frame_waitkey_count += 1
             #if frame_waitkey_count%5 == 0:
@@ -522,8 +489,8 @@ if __name__ == "__main__":
     cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
 
-    cv2.namedWindow("ROI", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("ROI", roi_window_width, roi_window_height)
+    cv2.namedWindow("Warped roi", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Warped roi", roi_window_width, roi_window_height)
 
 
 
