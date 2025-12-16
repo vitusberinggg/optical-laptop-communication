@@ -434,9 +434,8 @@ if __name__ == "__main__":
     # Video path
 
     base = os.path.dirname(__file__)
-    path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
+    path = os.path.join(base, "webcam_simulation", "sender_v7_3color.mp4")
     
-
     # --- Video capture setup ---
 
     if using_webcam:

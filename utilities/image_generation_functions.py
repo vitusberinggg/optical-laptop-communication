@@ -11,7 +11,8 @@ from utilities.global_definitions import (
     number_of_columns, number_of_rows, 
     bit_cell_height, bit_cell_width,
     aruco_marker_dictionary, small_aruco_marker_side_length, 
-    large_aruco_marker_side_length, aruco_marker_margin, aruco_marker_ids
+    large_aruco_marker_side_length, large_aruco_marker_side_length_without_margin, 
+    aruco_marker_margin, aruco_marker_ids
 )
 
 # --- Functions ---
@@ -152,6 +153,46 @@ def create_large_aruco_marker_frame(position = "right"):
     marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
 
     frame[y_coordinate:y_coordinate + large_aruco_marker_side_length, x_coordinate:x_coordinate + large_aruco_marker_side_length] = marker_bgr
+
+    return frame
+
+def create_large_aruco_marker_frame_without_margin(position = "right"):
+    
+    """
+    Creates a gray frame with a single large ArUco marker on the left or right.
+
+    Arguments:
+        position (str): "right" or "left" side for the marker (default "right").
+
+    Returns:
+        np.ndarray: The frame with the large ArUco marker.
+        
+    """
+
+    frame = create_color_frame(gray_bgr)
+
+    y_coordinate = 0
+
+    if position == "right":
+        x_coordinate = sender_output_width - large_aruco_marker_side_length_without_margin
+
+    elif position == "left":
+        x_coordinate = 0
+
+    else:
+        raise ValueError("position must be 'left' or 'right'")
+    
+    if position == "right":
+        aruco_marker_id = aruco_marker_ids[0]
+
+    else:
+       aruco_marker_id = aruco_marker_ids[1]
+
+    marker = cv2.aruco.generateImageMarker(aruco_marker_dictionary, aruco_marker_id, large_aruco_marker_side_length_without_margin)
+    marker_bgr = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
+
+    frame[y_coordinate:y_coordinate + large_aruco_marker_side_length_without_margin, 
+          x_coordinate:x_coordinate + large_aruco_marker_side_length_without_margin] = marker_bgr
 
     return frame
 

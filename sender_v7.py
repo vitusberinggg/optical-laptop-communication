@@ -12,7 +12,8 @@ import numpy as np
 from utilities.encoding_functions import message_to_frame_several_bit_arrays
 from utilities.image_generation_functions import (
     render_multicolor_frame, create_color_frame,
-    create_color_reference_frame, create_seven_color_reference_frame, create_large_aruco_marker_frame
+    create_color_reference_frame, create_seven_color_reference_frame, 
+    create_large_aruco_marker_frame_without_margin
 )
 
 from utilities.global_definitions import (
@@ -26,7 +27,7 @@ from utilities.global_definitions import (
 
 # --- Helper function ---
 
-def frame_with_margin(frame, margin=15):
+def frame_with_margin(frame, margin=margin):
     """
     Places `frame` inside a full-screen background with a fixed pixel margin.
     If the frame is too big to fit with the margin, it will be scaled down
@@ -78,7 +79,7 @@ def send_message(message):
     
     """
 
-    color_reference_frame = create_seven_color_reference_frame()
+    color_reference_frame = create_color_reference_frame()
 
     sync_frames = []
 
@@ -112,13 +113,14 @@ def send_message(message):
     # Aruco marker frames
 
     aruco_frames = [
-    create_large_aruco_marker_frame(position = "right"),
-    create_large_aruco_marker_frame(position = "left")
+    create_large_aruco_marker_frame_without_margin(position = "right"),
+    create_large_aruco_marker_frame_without_margin(position = "left")
 ]
 
     for aruco_frame in aruco_frames:
 
         aruco_marker_frame_start_time = time.monotonic()
+        aruco_frame = frame_with_margin(aruco_frame)
 
         while time.monotonic() - aruco_marker_frame_start_time < aruco_marker_frame_duration:
             
