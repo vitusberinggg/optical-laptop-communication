@@ -192,12 +192,13 @@ dominant_color_steps = 4
 
 # --- Audio definitions ---
 
-audio_file = "audio_files/The Chords - Sh-Boom.mp3"
+audio_file = "audio_files/The Chords - Sh-Boom_2000Hz_8_bit-PCM_Mono.wav"
+#audio_file = "audio_files/The Chords - Sh-Boom.mp3"
 
-number_of_frequencies = 8 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
+number_of_frequencies = 100 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
 number_of_amplitude_levels = 12 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
 
-quantized_amplitude_levels = np.linspace(0, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
+quantized_amplitude_levels = np.linspace(0.01, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
 
 bits_per_frequency = int(math.log2(number_of_frequencies))
 bits_per_amplitude_level = int(math.log2(bits_per_frequency))
