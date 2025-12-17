@@ -30,7 +30,7 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_bgr import dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv_audio
-from utilities.audio_functions import audio_compressor, audio_reconstructor
+from utilities.audio_functions import audio_reconstructor
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -61,7 +61,7 @@ debug_bytes = False
 # Video path
 
 base = os.path.dirname(__file__)
-path = os.path.join(base, "webcam_simulation", "sender_audio_2000Hz_(wav).mp4")
+path = os.path.join(base, "webcam_simulation", "sender_audio.mp4")
  
 # --- Video capture setup ---
 
@@ -316,8 +316,6 @@ def receive_data():
     """
 
     # --- End of debugging ---
-
-    #frequency_indices_per_time_frame, quantized_amplitude_levels_per_time_frame = audio_compressor(audio_file)
 
     try:
 
@@ -622,8 +620,6 @@ def receive_data():
             print(f"\n[INFO] Reconstructing and playing audio...")
 
             frequency_indices, amplitude_levels = decoded_audio_data
-
-            #_, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
 
             output_file = audio_reconstructor(frequency_indices, amplitude_levels)
 

@@ -195,7 +195,7 @@ dominant_color_steps = 4
 audio_file = "audio_files/The Chords - Sh-Boom_2000Hz_8_bit-PCM_Mono.wav"
 #audio_file = "audio_files/The Chords - Sh-Boom.mp3"
 
-number_of_frequencies = 100 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
+number_of_frequencies = 50 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
 number_of_amplitude_levels = 12 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
 
 quantized_amplitude_levels = np.linspace(0.01, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
@@ -209,7 +209,7 @@ bits_per_visual_frame = number_of_cells * bits_per_cell
 
 hop_length = 512 # The amount of samples between each spectrogram frame (shorter hop length --> more overlap between windows --> smoother time reconstruction but more computation)
 
-sample_rate = 8000 # The audio signal's average number of samples (values) per second
+sample_rate = 2000 # The audio signal's average number of samples (values) per second
 
 seconds_per_time_frame = hop_length / sample_rate # Duration of one STFT hop
 
