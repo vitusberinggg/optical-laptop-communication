@@ -94,6 +94,8 @@ idx_to_2bit = {
     4: 0b11,  # green
 }
 
+# Seven color calibration
+#"""
 idx_to_3bit = {
     0: 0b001,  # white
     1: 0b000,  # black
@@ -104,6 +106,9 @@ idx_to_3bit = {
     6: 0b110,  # cyan
     7: 0b111,  # magenta
 }
+#"""
+
+# Three color calibration
 """
 idx_to_3bit = {
     0: 0b001,  # white
