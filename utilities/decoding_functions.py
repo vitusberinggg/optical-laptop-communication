@@ -419,10 +419,71 @@ def core_decode_message(core_bitgrid, debug_bytes=False):
 
     return bits_to_message(byte_matrix)
 
-def core_decode_audio():
-    """
-    Docstring for core_decode_audio
-    """
+
+# Decode audio
+def core_decode_audio(core_bitgrid, debug_bytes = False):
+
+    if len(core_bitgrid) == 0:
+        print("\n[WARNING] No bitgrids collected yet.")
+        return None
+    
+    print(f"\n[INFO] Decoding {len(core_bitgrid)} bitgrids into audio data...")
+    
+    bitgrids_combined = np.vstack(core_bitgrid) # Combines all bitgrids
+    flat = bitgrids_combined.ravel()
+    
+    # Bitstream conversion
+
+    values = []
+
+    for value in flat:
+        formatted_value = format(value, f"0{bits_per_cell}b")
+        values.append(formatted_value)
+    
+    bitstream = "".join(values)
+
+    # Prevent partial 
+    if len(bitstream) < number_of_frequencies * (bits_per_frequency + bits_per_amplitude_level):
+        return None
+    
+    if debug_bytes:
+        print(f"[DEBUG] Total bits received: {len(bitstream)}")
+
+    bit_position = 0
+    
+    frequency_indices = []
+    amplitude_levels = []
+    
+    for _ in range(number_of_frequencies): # For each frequency:
+        
+        # Frequency bit extraction
+
+        frequency_bits = bitstream[bit_position:bit_position + bits_per_frequency]
+        bit_position += bits_per_frequency
+
+        frequency_value = int(frequency_bits, 2)
+        frequency_indices.append(frequency_value)
+        
+        # Amplitude bit extraction
+
+        amp_bits = bitstream[bit_position:bit_position + bits_per_amplitude_level]
+        bit_position += bits_per_amplitude_level
+        
+        amplitude_value = int(amp_bits, 2)
+        amplitude_levels.append(amplitude_value)
+
+    assert len(frequency_indices) == number_of_frequencies, \
+        f"Expected {number_of_frequencies} frequencies, got {len(frequency_indices)}"
+
+    assert len(amplitude_levels) == number_of_frequencies, \
+        f"Expected {number_of_frequencies} amplitudes, got {len(amplitude_levels)}"
+
+    assert bit_position <= len(bitstream), \
+        "Bitstream overrun while decoding frame"
+
+    return frequency_indices, amplitude_levels
+    
+
     
 
 

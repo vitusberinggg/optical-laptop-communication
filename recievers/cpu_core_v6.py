@@ -22,7 +22,7 @@ profiler.enable()
 # Non-library modules
 
 from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
-from decoding_pipeline.pipeline import pip
+from decoding_pipeline.pipeline import pip_message
 from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
@@ -497,13 +497,13 @@ if __name__ == "__main__":
     aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
     # Start pipeline
-    pip.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_message_worker=[5], core_watchdog=[4])
+    pip_message.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_message_worker=[5], core_watchdog=[4])
 
     try:
         receive_message()
     except KeyboardInterrupt:
         print("[Main] Caught Ctrl+C — shutting down pipeline")
-        pip.stop_pipeline()
+        pip_message.stop_pipeline()
 
     profiler.disable()
 
