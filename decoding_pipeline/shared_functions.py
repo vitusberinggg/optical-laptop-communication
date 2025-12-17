@@ -16,7 +16,8 @@ class shared:
         self._message_queue = None
         self._audio_queue = None
 
-        self._stop_flag = None
+        self._stop_event = None
+
         self._recall_flag = None
 
         self._last_decode_timestamp = None
@@ -38,7 +39,8 @@ class shared:
         self._message_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._audio_queue = multiprocessing.Queue(maxsize=queue_maxsize)
 
-        self._stop_flag = multiprocessing.Value('b', False)  # boolean stop flag
+        self._stop_event = multiprocessing.Event()
+
         self._recall_flag = multiprocessing.Value('b', False)
         self._last_frame = multiprocessing.Value('b', False)
 
@@ -54,7 +56,7 @@ class shared:
         return (
             self._frame_queue, self._command_queue, self._bitgrid_queue,
             self._message_queue, self._audio_queue, 
-            self._stop_flag, self._last_frame, self._recall_flag,
+            self._stop_event, self._last_frame, self._recall_flag,
             self._last_decode_timestamp, self._last_message_timestamp
         )
     
@@ -90,8 +92,6 @@ class shared:
 
         if self._frame_queue is None:
             raise RuntimeError("Pipeline not started. Call start_pipeline() first.")
-        
-        hcv_roi, add_frame, end_frame = frame_data
 
         '''
         np.copyto(self.shm_array, hcv_roi)

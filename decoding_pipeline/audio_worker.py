@@ -6,7 +6,13 @@ import numpy as np
 from decoding_pipeline.shared_functions import shared as shared_class
 from utilities.decoding_functions import core_decode_audio
 
-def audio_worker(bitgrid_queue, audio_queue, stop_flag, last_message_timestamp, debug_worker=True):
+def audio_worker(
+        bitgrid_queue, 
+        audio_queue, 
+        stop_event, 
+        last_message_timestamp, 
+        debug_worker=True
+    ):
 
     """
     Decoding worker process.
@@ -14,7 +20,7 @@ def audio_worker(bitgrid_queue, audio_queue, stop_flag, last_message_timestamp, 
     Arguments:
         bitgrid_queue (multiprocessing.Queue): Queue of bitgrids to decode.
         audio_queue (multiprocessing.Queue): Queue of frequency indices and quantized amplitude levels.
-        stop_flag (multiprocessing.Value): Boolean flag to signal stop.
+        stop_event (multiprocessing.Event): Event to signal stop.
         last_message_timestamp (multiprocessing.Value): Timestamp of last completed message bit.
         debug_worker (bool): Enable debug prints.
     """
@@ -24,7 +30,14 @@ def audio_worker(bitgrid_queue, audio_queue, stop_flag, last_message_timestamp, 
     last_queue_debug_print = 0
     last_debug_print = 0
 
-    while not stop_flag.value or not bitgrid_queue.empty():
+    assert stop_event is not None, \
+        "Checks if stop event is None"
+
+    assert bitgrid_queue is not None, \
+        "Checks if bitgrid queue is None"
+
+
+    while not stop_event.is_set() or not bitgrid_queue.empty():
 
         try:
             # Frame format: (hcv_roi, recall, add_frame, end_frame)

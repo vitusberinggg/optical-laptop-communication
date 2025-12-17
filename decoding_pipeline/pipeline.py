@@ -15,7 +15,8 @@ _bitgrid_queue = None
 _message_queue = None
 _audio_queue = None
 
-_stop_flag = None
+_stop_event = None
+
 _last_frame = None
 _recall_flag = None
 
@@ -45,7 +46,7 @@ class pipeline_message:
         """
 
         global _frame_queue, _command_queue, _bitgrid_queue, \
-            _message_queue, _recall_flag, _last_frame, _stop_flag, \
+            _message_queue, _recall_flag, _last_frame, _stop_event, \
             _last_decode_timestamp, _last_message_timestamp
                
 
@@ -54,16 +55,22 @@ class pipeline_message:
 
         (
             self._frame_queue, self._command_queue, self._bitgrid_queue,
-            self._message_queue, _, 
-            self._stop_flag, self._last_frame, self._recall_flag,
+            self._message_queue, self._audio_queue,
+            self._stop_event, self._last_frame, self._recall_flag,
             self._last_decode_timestamp, self._last_message_timestamp
         ) = shared_class.get_shared_objects()
 
         # Start decoding worker process
         self._decode_process = multiprocessing.Process(
             target=decoding_worker,
-            args=(_frame_queue, _command_queue, _bitgrid_queue, 
-                  _stop_flag, _last_frame, _last_decode_timestamp),
+            kwargs=dict(
+                frame_queue=self._frame_queue,
+                command_queue=self._command_queue,
+                bitgrid_queue=self._bitgrid_queue,
+                stop_event=self._stop_event,
+                last_decode_timestamp=self._last_decode_timestamp,
+                debug_worker=False
+            ),
             daemon=True
         )
         self._decode_process.start()
@@ -82,8 +89,13 @@ class pipeline_message:
         # Start message worker process
         self._message_process = multiprocessing.Process(
             target=message_worker,
-            args=(_bitgrid_queue, _message_queue, _recall_flag, 
-                  _last_frame, _stop_flag, _last_message_timestamp),
+            kwargs=dict(
+                bitgrid_queue=self._bitgrid_queue, 
+                message_queue=self._message_queue, 
+                stop_event=self._stop_event, 
+                last_message_timestamp=self._last_message_timestamp, 
+                debug_worker=True
+            ),
             daemon=True
         )
         self._message_process.start()
@@ -102,7 +114,12 @@ class pipeline_message:
         # Start watchdog process
         self._watchdog_process = multiprocessing.Process(
             target=watchdog,
-            args=(_last_decode_timestamp, _stop_flag),
+            kwargs=dict(
+                last_decode_timestamp=self._last_decode_timestamp, 
+                stop_flag=self._stop_event, 
+                watchdog_on=False, 
+                stall_threshold=1.0
+            ),
             daemon=True
         )
         self._watchdog_process.start()
@@ -122,13 +139,13 @@ class pipeline_message:
     def stop_pipeline(self):
 
         global _frame_queue, _command_queue, _bitgrid_queue, \
-               _message_queue, _stop_flag
+               _message_queue, _stop_event
 
-        if _stop_flag is None:
+        if _stop_event is None:
             return
 
         # signal shutdown
-        _stop_flag.value = True
+        _stop_event.set()
         # send explicit shutdown command
         try:
             _command_queue.put_nowait(("shutdown", None))
@@ -178,7 +195,7 @@ class pipeline_audio:
         """
 
         global _frame_queue, _command_queue, _bitgrid_queue, \
-            _audio_queue, _recall_flag, _last_frame, _stop_flag, \
+            _audio_queue, _recall_flag, _last_frame, _stop_event, \
             _last_decode_timestamp, _last_message_timestamp
                
 
@@ -187,16 +204,22 @@ class pipeline_audio:
 
         (
             self._frame_queue, self._command_queue, self._bitgrid_queue,
-            _, self._audio_queue, 
-            self._stop_flag, self._last_frame, self._recall_flag,
+            self._message_queue, self._audio_queue, 
+            self._stop_event, self._last_frame, self._recall_flag,
             self._last_decode_timestamp, self._last_message_timestamp
         ) = shared_class.get_shared_objects()
 
         # Start decoding worker process
         self._decode_process = multiprocessing.Process(
             target=decoding_worker,
-            args=(_frame_queue, _command_queue, _bitgrid_queue, 
-                  _stop_flag, _last_frame, _last_decode_timestamp),
+            kwargs=dict(
+                frame_queue=self._frame_queue,
+                command_queue=self._command_queue,
+                bitgrid_queue=self._bitgrid_queue,
+                stop_event=self._stop_event,
+                last_decode_timestamp=self._last_decode_timestamp,
+                debug_worker=False
+            ),
             daemon=True
         )
         self._decode_process.start()
@@ -215,8 +238,13 @@ class pipeline_audio:
         # Start audio worker process
         self._audio_process = multiprocessing.Process(
             target=audio_worker,
-            args=(_bitgrid_queue, _audio_queue, 
-                _stop_flag, _last_message_timestamp),
+            kwargs=dict(
+                bitgrid_queue=self._bitgrid_queue, 
+                audio_queue=self._audio_queue, 
+                stop_event=self._stop_event, 
+                last_message_timestamp=self._last_message_timestamp, 
+                debug_worker=True
+            ),
             daemon=True
         )
         self._audio_process.start()
@@ -235,7 +263,12 @@ class pipeline_audio:
         # Start watchdog process
         self._watchdog_process = multiprocessing.Process(
             target=watchdog,
-            args=(_last_decode_timestamp, _stop_flag),
+            kwargs=dict(
+                last_decode_timestamp=self._last_decode_timestamp, 
+                stop_flag=self._stop_event, 
+                watchdog_on=False, 
+                stall_threshold=1.0
+            ),
             daemon=True
         )
         self._watchdog_process.start()
@@ -255,13 +288,13 @@ class pipeline_audio:
     def stop_pipeline(self):
 
         global _frame_queue, _command_queue, _bitgrid_queue, \
-               _message_queue, _stop_flag
+               _message_queue, _stop_event
 
-        if _stop_flag is None:
+        if _stop_event is None:
             return
 
         # signal shutdown
-        _stop_flag.value = True
+        _stop_event.set()
         # send explicit shutdown command
         try:
             _command_queue.put_nowait(("shutdown", None))

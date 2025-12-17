@@ -408,7 +408,7 @@ def receive_data():
             # --- End of warped_roi processing ---
 
             frame_waitkey_count += 1
-            if frame_waitkey_count%5 == 0:
+            if frame_waitkey_count%1 == 0:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
