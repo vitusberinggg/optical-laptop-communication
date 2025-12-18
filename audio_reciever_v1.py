@@ -30,7 +30,7 @@ from webcam_simulation.webcamSimulator import VideoThreadedCapture
 from utilities.color_functions_bgr import dominant_color_bgr
 from utilities.screen_alignment_functions import roi_alignment_for_large_markers
 from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv_audio
-from utilities.audio_functions import audio_compressor, audio_reconstructor
+from utilities.audio_functions import audio_reconstructor
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
@@ -316,8 +316,6 @@ def receive_data():
     """
 
     # --- End of debugging ---
-
-    _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
 
     try:
 
@@ -623,9 +621,7 @@ def receive_data():
 
             frequency_indices, amplitude_levels = decoded_audio_data
 
-            _, _, spectrogram_phase, quantized_magnitude = audio_compressor(audio_file)
-
-            output_file = audio_reconstructor(frequency_indices, amplitude_levels, spectrogram_phase)
+            output_file = audio_reconstructor(frequency_indices, amplitude_levels)
 
             audio_data, sample_rate = soundfile.read(output_file)
             sounddevice.play(audio_data, sample_rate)

@@ -14,8 +14,12 @@ class shared:
         self._command_queue = None
         self._bitgrid_queue = None
         self._message_queue = None
-        self._stop_flag = None
+        self._audio_queue = None
+
+        self._stop_event = None
+
         self._recall_flag = None
+
         self._last_decode_timestamp = None
         self._last_message_timestamp = None
         self._last_frame = None
@@ -30,12 +34,16 @@ class shared:
         Initializes shared objects for the decoding pipeline.
         """
         self._frame_queue = multiprocessing.Queue(maxsize=queue_maxsize)
-        self._command_queue = multiprocessing.Queue()
+        self._command_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._bitgrid_queue = multiprocessing.Queue(maxsize=queue_maxsize)
         self._message_queue = multiprocessing.Queue(maxsize=queue_maxsize)
-        self._stop_flag = multiprocessing.Value('b', False)  # boolean stop flag
+        self._audio_queue = multiprocessing.Queue(maxsize=queue_maxsize)
+
+        self._stop_event = multiprocessing.Event()
+
         self._recall_flag = multiprocessing.Value('b', False)
         self._last_frame = multiprocessing.Value('b', False)
+
         self._last_decode_timestamp = multiprocessing.Value('d', time.time())  # double timestamp
         self._last_message_timestamp = multiprocessing.Value('d', time.time())
         print("[Shared] Shared objects initialized.")
@@ -45,9 +53,12 @@ class shared:
         """
         Returns the shared objects for the decoding pipeline.
         """
-        return (self._frame_queue, self._command_queue, self._bitgrid_queue,
-                self._message_queue, self._stop_flag, self._last_frame, self._recall_flag,
-                self._last_decode_timestamp, self._last_message_timestamp)
+        return (
+            self._frame_queue, self._command_queue, self._bitgrid_queue,
+            self._message_queue, self._audio_queue, 
+            self._stop_event, self._last_frame, self._recall_flag,
+            self._last_decode_timestamp, self._last_message_timestamp
+        )
     
     def log_queue(self, name, q):
         """
@@ -81,8 +92,6 @@ class shared:
 
         if self._frame_queue is None:
             raise RuntimeError("Pipeline not started. Call start_pipeline() first.")
-        
-        hcv_roi, add_frame, end_frame = frame_data
 
         '''
         np.copyto(self.shm_array, hcv_roi)
@@ -125,5 +134,32 @@ class shared:
 
         
         return decoded_message
+    
+
+    # --- Audio worker ---
+
+    def pull_decoded_audio_data(self, max_wait=0.5):
+        """
+        Pull a decoded audio data from the message worker without blocking the GUI.
+        
+        Arguments:
+            max_wait (float): Maximum time in seconds to wait for audio data.
+        """
+
+        self._bitgrid_queue.put(("<FLUSH>", None))
+        
+        start_time = time.time()
+
+        decoded_audio_data = None
+        while time.time() - start_time < max_wait:
+            try:
+                decoded_audio_data = self._audio_queue.get_nowait()
+                break  # message received
+            except queue.Empty:
+                time.sleep(0.01)  # yield CPU / allow GUI to check for input
+
+        
+        return decoded_audio_data
+    
 
 shared_class = shared()

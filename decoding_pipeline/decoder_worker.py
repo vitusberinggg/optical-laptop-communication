@@ -9,7 +9,15 @@ from utilities.decoding_functions import core_decode_bitgrid_hcv
 from utilities.color_functions_hcv import tracker, bitgrid_majority_calculator as numba, dominant_color_hcv
 from decoding_pipeline.shared_functions import shared_class
 
-def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_frame, last_decode_timestamp, debug_worker=False):
+def decoding_worker(
+        frame_queue, 
+        command_queue, 
+        bitgrid_queue, 
+        stop_event, 
+        last_decode_timestamp, 
+        debug_worker=False
+    ):
+    
     """
     Decoding worker process.
 
@@ -17,7 +25,7 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
         frame_queue (multiprocessing.Queue): Queue of frames to decode.
         command_queue (multiprocessing.Queue): Queue of LUT and color names
         bitgrid_queue (multiprocessing.Queue): Queue of bitgrids that is decoded
-        stop_flag (multiprocessing.Value): Boolean flag to signal stop.
+        stop_event (multiprocessing.Event): Event to signal stop.
         last_decode_timestamp (multiprocessing.Value): Timestamp of last completed decode.
         debug_worker (bool): Enable debug prints.
     """
@@ -25,10 +33,14 @@ def decoding_worker(frame_queue, command_queue, bitgrid_queue, stop_flag, last_f
     last_queue_debug_print = 0
     last_timing_debug_print = 0
     LUT_ready = False
-    complete = False
     bitgrid = [[]]  # Initialize bitgrid as empty list
 
-    while not stop_flag.value or not frame_queue.empty():
+    assert stop_event is not None, "stop_event must be provided"
+    assert frame_queue is not None, "frame_queue must be provided"
+    assert command_queue is not None, "command_queue must be provided"
+    assert bitgrid_queue is not None, "bitgrid_queue must be provided"
+
+    while not stop_event.is_set() or not frame_queue.empty():
 
         
         # Check for commands

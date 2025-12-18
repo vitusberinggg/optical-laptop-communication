@@ -15,42 +15,47 @@ import os
 import time
 import numpy as np
 
+import soundfile
+import sounddevice
+
 # Profiling initialization
 
 profiler = cProfile.Profile()
-profiler.enable()
+#profiler.enable()
 
 # Non-library modules
 
 from webcam_simulation.cpu_webcam_simulator import VideoProcessCapture
-from decoding_pipeline.pipeline import pip
+from decoding_pipeline.pipeline import pip_audio
 from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
     bgr_to_hcv
 )
+
 from utilities.color_functions_bgr import dominant_color_bgr
-from utilities.screen_alignment_functions import roi_alignment_for_large_markers, warp_alignment, homography_from_large_markers
-from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv
-from utilities.accuracy_calculator import accuracy_calculator
+from utilities.screen_alignment_functions import warp_alignment, homography_from_large_markers
+from utilities.decoding_functions import sync_interval_detector, decode_bitgrid_hcv_audio
+from utilities.audio_functions import audio_reconstructor
 
 from utilities.global_definitions import (
     laptop_webcam_pixel_height, laptop_webcam_pixel_width,
     sender_output_height, sender_output_width,
     roi_window_height, roi_window_width,
-    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
-    aruco_marker_dictionary, aruco_detector_parameters, large_aruco_marker_side_length, aruco_marker_margin,
+    aruco_marker_dictionary, aruco_detector_parameters, 
+    aruco_marker_dictionary, aruco_detector_parameters, 
     display_text_font, display_text_size, display_text_thickness,
     green_bgr, red_bgr, yellow_bgr,
-    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction, orange_time
+    roi_rectangle_thickness, minimized_roi_rectangle_thickness, minimized_roi_fraction, orange_time,
+    audio_file
 )
 
 # --- Definitions --- 
 
 using_webcam = False
 
-decoded_message = None
+decoded_audio_data = None
 
 # --- Pre-compile numba functions ---
 
@@ -62,7 +67,7 @@ def warmup_numbas():
 
 # --- Main function ---
 
-def receive_message():
+def receive_data():
 
     """
     Receives a message from the sender screen.
@@ -83,8 +88,8 @@ def receive_message():
     corners = None
     src_pts = None
 
-    wanted_width = 1920
-    wanted_height = 1080
+    wanted_width = 960
+    wanted_height = 540
 
     H = None
 
@@ -99,13 +104,13 @@ def receive_message():
     frame_waitkey_count = 0
 
     current_bit_colors = [] # Colors collected for the current bit
-    roi_coordinates = None
+    display_warped_roi = None
 
     has_printed_aruco_detector_message = False
     has_printed_decoding_message = False
     orange_detected = False
 
-    decoded_message = None
+    decoded_audio_data = None
 
     current_state = "aruco_marker_detection"
 
@@ -200,7 +205,6 @@ def receive_message():
                     
                 except Exception:
                     print("\n[WARNING] ArUco detection failed.")
-                    aruco_marker_side_length = 0
 
             # --- Display drawings ---
             
@@ -243,9 +247,9 @@ def receive_message():
                             
                 # "last_color_time" initialization
 
-                if not hasattr(receive_message, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
+                if not hasattr(receive_data, "first_color"): # If "recieve_message" doesn't yet have the attribute "first_color":
                     last_color_time = time.time()
-                    receive_message.first_color = ("Get first dominant color")
+                    receive_data.first_color = ("Get first dominant color")
 
                 # Calculates the time of how long it has been the same color
 
@@ -261,7 +265,9 @@ def receive_message():
 
                 cv2.putText(display, f"Current state: {current_state}", (20, 130), display_text_font, display_text_size, red_bgr, display_text_thickness)
 
-                if current_state == "aruco_marker_detection" and H is not None and color == "blue":
+                #if current_state == "aruco_marker_detection" and H is not None and color == "blue":
+                if current_state == "aruco_marker_detection" and H is not None and color == "red":
+                 
                     print("\n[INFO] Starting color calibration...")
                     current_state = "color_calibration"
 
@@ -271,7 +277,7 @@ def receive_message():
 
                 if current_state == "color_calibration":
                     
-                    if not hasattr(receive_message, "color_calibration"): # If "recieve_message()" doesn't yet have the attribute "color_calibration"
+                    if not hasattr(receive_data, "color_calibration"): # If "recieve_message()" doesn't yet have the attribute "color_calibration"
 
                         try:
 
@@ -281,22 +287,22 @@ def receive_message():
                             shared_class.push_LUT(LUT, color_names)
                             #shared_class.preallocate_shared_memory(warped_roi)
                             
-                            receive_message.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_message()" (to make sure calibration only happens once)
+                            receive_data.color_calibration = ("color calibrated") # Assigns the attribute "color_calibration" to "receive_data()" (to make sure calibration only happens once)
 
                         except Exception as e:
                             print("\n[INFO] Color calibration error:", e)
 
-                    if hasattr(receive_message, "color_calibration"): # If "recieve_message()" has the attribute "color_calibration":
+                    if hasattr(receive_data, "color_calibration"): # If "recieve_message()" has the attribute "color_calibration":
                         current_state = "syncing"
                 
                 # --- Syncing ---
 
                 if current_state == "syncing" and color in ["black", "white"]: # If we're syncing:
                     
-                    if not hasattr(receive_message, "syncing"):
+                    if not hasattr(receive_data, "syncing"):
 
                         print("\n[INFO] Trying to sync and get the interval...")
-                        receive_message.syncing = ("Initialized")
+                        receive_data.syncing = ("Initialized")
 
                     try:
                         interval, syncing = sync_interval_detector(color, True) # Try to sync and get the interval
@@ -315,7 +321,7 @@ def receive_message():
 
                 elif current_state == "end of sync":
                     if color != "orange" and last_color == "orange":
-                        #profiler.enable()
+                        profiler.enable()
                         current_state = "decoding"
 
                 # --- Decoding ---
@@ -352,8 +358,8 @@ def receive_message():
 
                         else:
                             if time.monotonic() - orange_start_time > orange_time:
-                                #profiler.disable()
-                                current_state = "waiting for message"
+                                profiler.disable()
+                                current_state = "waiting for audio"
 
                     try:
                         frame_data = (roi_hcv, add_frame, end_frame) # Create a tuple with the frame data
@@ -363,22 +369,22 @@ def receive_message():
                     except queue.Full: # If the queue is full:
                         pass # Skip
                         
-                elif current_state == "waiting for message":
-                    if not hasattr(receive_message, "waiting_for_message"):
-                        print("\n[INFO] Waiting for message to be decoded...")
-                        receive_message.waiting_for_message = ("Initialized")
+                elif current_state == "waiting for audio":
+                    if not hasattr(receive_data, "waiting_for_audio"):
+                        print("\n[INFO] Waiting for audio to be decoded...")
+                        receive_data.waiting_for_audio = ("Initialized")
 
-                    decoded_message = shared_class.pull_decoded_message()
+                    decoded_audio_data = shared_class.pull_decoded_audio_data()
 
-                    if decoded_message is not None:
-                        print("\n[INFO] Message done")
+                    if decoded_audio_data is not None:
+                        print("\n[INFO] Audio done")
                         break
                     
                 # "last_state_time" initialization
 
-                if not hasattr(receive_message, "first_state"):
+                if not hasattr(receive_data, "first_state"):
                     last_state_time = time.time()
-                    receive_message.first_state = ("Get first state")
+                    receive_data.first_state = ("Get first state")
 
                 # Calculates the time of how long it has been the same state
 
@@ -392,12 +398,17 @@ def receive_message():
                 last_color = color # Update the last color
                 last_state = current_state
 
-                cv2.imshow("Warped roi", display_warped_roi)
+                if display_warped_roi is not None:
+                    if not hasattr(receive_data, "Display_warped_roi"):
+                        cv2.namedWindow("Warped roi", cv2.WINDOW_NORMAL)
+                        cv2.resizeWindow("Warped roi", roi_window_width, roi_window_height)
+                        receive_data.Display_warped_roi = ("Created")
+                    cv2.imshow("Warped roi", display_warped_roi)
 
             # --- End of warped_roi processing ---
 
-            #frame_waitkey_count += 1
-            #if frame_waitkey_count%5 == 0:
+            frame_waitkey_count += 1
+            if frame_waitkey_count%1 == 0:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
@@ -407,11 +418,20 @@ def receive_message():
         if bits: # If there are remaining bits not yet converted:
             print(f"[INFO] Bits not yet converted: {bits}")
 
-        print(f"\n[INFO] Final message: {decoded_message}")
+        if decoded_audio_data is not None:
 
-        accuracy_percentage = accuracy_calculator(decoded_message)
+            print(f"\n[INFO] Reconstructing and playing audio...")
 
-        print(f"\n[INFO] Accuracy: {accuracy_percentage} %")
+            frequency_indices, amplitude_levels = decoded_audio_data
+
+            output_file = audio_reconstructor(frequency_indices, amplitude_levels)
+
+            audio_data, sample_rate = soundfile.read(output_file)
+            sounddevice.play(audio_data, sample_rate)
+            sounddevice.wait()
+
+        else:
+            print("\n[WARNING] No audio data was decoded.")
 
     finally:
         videoCapture.release()
@@ -430,9 +450,8 @@ if __name__ == "__main__":
     # Video path
 
     base = os.path.dirname(__file__)
-    path = os.path.join(base, "webcam_simulation", "sender_v6_long.mp4")
+    path = os.path.join(base, "webcam_simulation", "sender_v7_7color.mp4")
     
-
     # --- Video capture setup ---
 
     if using_webcam:
@@ -489,26 +508,21 @@ if __name__ == "__main__":
     cv2.namedWindow("Webcam Receiver", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Webcam Receiver", sender_output_width, sender_output_height)
 
-    cv2.namedWindow("Warped roi", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Warped roi", roi_window_width, roi_window_height)
-
-
-
     # --- ArUco detector setup ---
 
     aruco_detector = cv2.aruco.ArucoDetector(aruco_marker_dictionary, aruco_detector_parameters)
 
 
     # Start pipeline
-    pip.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_message_worker=[5], core_watchdog=[4])
+    pip_audio.start_pipeline(core_decode_worker=[9, 8, 7, 6], core_audio_worker=[5], core_watchdog=[4])
 
     try:
-        receive_message()
+        receive_data()
     except KeyboardInterrupt:
         print("[Main] Caught Ctrl+C — shutting down pipeline")
-        pip.stop_pipeline()
+        pip_audio.stop_pipeline()
 
-    profiler.disable()
+    #profiler.disable()
 
     stats = pstats.Stats(profiler)
     stats.strip_dirs() # Removes directorys

@@ -2,7 +2,13 @@
 
 import time
 
-def watchdog(last_decode_timestamp, stop_flag, watchdog_on=False, stall_threshold=1.0):
+def watchdog(
+        last_decode_timestamp, 
+        stop_flag, 
+        watchdog_on=False, 
+        stall_threshold=1.0
+    ):
+    
     """
     Watchdog process to detect decoding pipeline stalls.
 

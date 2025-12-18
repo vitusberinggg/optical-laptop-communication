@@ -94,6 +94,8 @@ idx_to_2bit = {
     4: 0b11,  # green
 }
 
+# Seven color calibration
+#"""
 idx_to_3bit = {
     0: 0b001,  # white
     1: 0b000,  # black
@@ -104,6 +106,9 @@ idx_to_3bit = {
     6: 0b110,  # cyan
     7: 0b111,  # magenta
 }
+#"""
+
+# Three color calibration
 """
 idx_to_3bit = {
     0: 0b001,  # white
@@ -192,12 +197,13 @@ dominant_color_steps = 4
 
 # --- Audio definitions ---
 
-audio_file = "audio_files/The Chords - Sh-Boom.mp3"
+audio_file = "audio_files/The Chords - Sh-Boom_2000Hz_8_bit-PCM_Mono.wav"
+#audio_file = "audio_files/The Chords - Sh-Boom.mp3"
 
-number_of_frequencies = 8 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
+number_of_frequencies = 50 # The number of frequencies we reduce the spectrograms to (lower amount --> fewer frequency details --> less data)
 number_of_amplitude_levels = 12 # The number of amplitude levels we keep per frequency bin (fewer levels --> coarser dynamics)
 
-quantized_amplitude_levels = np.linspace(0, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
+quantized_amplitude_levels = np.linspace(0.01, 1, number_of_amplitude_levels) # Creates the target number of amplitude levels equally spaced between 0 and 1
 
 bits_per_frequency = int(math.log2(number_of_frequencies))
 bits_per_amplitude_level = int(math.log2(bits_per_frequency))
@@ -208,7 +214,7 @@ bits_per_visual_frame = number_of_cells * bits_per_cell
 
 hop_length = 512 # The amount of samples between each spectrogram frame (shorter hop length --> more overlap between windows --> smoother time reconstruction but more computation)
 
-sample_rate = 8000 # The audio signal's average number of samples (values) per second
+sample_rate = 2000 # The audio signal's average number of samples (values) per second
 
 seconds_per_time_frame = hop_length / sample_rate # Duration of one STFT hop
 
