@@ -276,7 +276,8 @@ def receive_message():
 
                         try:
 
-                            corrected_ranges = color_offset_calculation(warped_roi)
+                            #corrected_ranges = color_offset_calculation(warped_roi)
+                            corrected_ranges = range_calibration(warped_roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
@@ -436,7 +437,7 @@ if __name__ == "__main__":
     # Video path
 
     base = os.path.dirname(__file__)
-    path = os.path.join(base, "webcam_simulation", "sender_v7_3color.mp4")
+    path = os.path.join(base, "webcam_simulation", "sender_v7_7color.mp4")
     
     # --- Video capture setup ---
 
