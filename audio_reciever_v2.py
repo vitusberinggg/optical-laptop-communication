@@ -31,7 +31,7 @@ from decoding_pipeline.shared_functions import shared_class
 
 from utilities.color_functions_hcv import (
     color_offset_calculation, tracker, build_color_LUT, dominant_color_hcv, 
-    bgr_to_hcv
+    bgr_to_hcv, range_calibration
 )
 
 from utilities.color_functions_bgr import dominant_color_bgr
@@ -281,7 +281,8 @@ def receive_data():
 
                         try:
 
-                            corrected_ranges = color_offset_calculation(warped_roi)
+                            #corrected_ranges = color_offset_calculation(warped_roi)
+                            corrected_ranges = range_calibration(warped_roi)
                             LUT, color_names = build_color_LUT(corrected_ranges)
                             tracker.colors(LUT, color_names)
                             shared_class.push_LUT(LUT, color_names)
